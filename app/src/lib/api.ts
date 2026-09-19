@@ -1,0 +1,372 @@
+// Empty string = same-origin (/api/* served by the Next rewrite proxy).
+export const API = process.env.NEXT_PUBLIC_THOTH_API ?? "";
+
+async function get<T>(path: string): Promise<T> {
+	const r = await fetch(`${API}${path}`, { cache: "no-store" });
+	if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+	return (await r.json()) as T;
+}
+
+export interface LayerItem {
+	id: string;
+	ts: string;
+	source: string;
+	layer: string;
+	title?: string;
+	body?: string;
+	url?: string;
+	severity?: string;
+	meta?: Record<string, unknown>;
+	geom?: { type: string; coordinates?: number[] } | null;
+}
+
+export const api = {
+	stats: () => get<{ items: { layer: string; count: string }[] }>("/api/stats"),
+	health: () =>
+		get<{
+			feeds: {
+				source: string;
+				last_ok: string | null;
+				last_attempt: string | null;
+				error: string | null;
+				content_ts: string | null;
+				first_ok_at: string | null;
+				frozen?: boolean;
+				warming?: boolean;
+				collector: string | null;
+				intervalSec: number | null;
+			}[];
+		}>("/api/health"),
+	versions: () =>
+		get<{ versions: { layer: string; version: string }[] }>("/api/versions"),
+	layer: (name: string, since?: string) =>
+		get<{ items: LayerItem[]; total: number }>(
+			`/api/layers/${name}${since ? `?since=${encodeURIComponent(since)}` : ""}`,
+		),
+	layerHistory: (name: string) =>
+		get<{ buckets: { bucket: string; n: number }[] }>(
+			`/api/layers/${name}/history?bucket=day`,
+		),
+	dossier: (lat: string, lng: string, radius = 300) =>
+		get<{
+			counts: { layer: string; count: string }[];
+			items: LayerItem[];
+			threat?: { score: number; level: string };
+		}>(`/api/dossier?lat=${lat}&lng=${lng}&radius_km=${radius}`),
+	alerts: (limit = 50) =>
+		get<{ items: LayerItem[] }>(`/api/alerts?limit=${limit}`),
+	brief: () =>
+		get<{
+			generated_at: string;
+			critical: LayerItem[];
+			watch: LayerItem[];
+			gaps: { source: string; error: string | null }[];
+			counts: { layer: string; count: string }[];
+		}>("/api/brief"),
+	theaters: () =>
+		get<{
+			theaters: Record<
+				string,
+				{
+					label: string;
+					center: [number, number];
+					zoom: number;
+					cities: number;
+				}
+			>;
+		}>("/api/theaters"),
+	sdn: (q: string) =>
+		get<{ items: Record<string, unknown>[] }>(
+			`/api/osint/sanctions?query=${encodeURIComponent(q)}&limit=20`,
+		),
+	osint: (kind: string, arg: string) =>
+		get<Record<string, unknown>>(
+			`/api/osint/${kind}?${new URLSearchParams(
+				kind === "aircraft"
+					? { reg: arg }
+					: kind === "airport"
+						? { code: arg }
+						: kind === "geo" || kind === "geocode"
+							? (() => {
+									const [la, ln] = arg.split(",");
+									return { lat: (la ?? "").trim(), lng: (ln ?? "").trim() };
+								})()
+							: kind === "mitre" ||
+									kind === "vessel" ||
+									kind === "company" ||
+									kind === "ror"
+								? { query: arg, q: arg }
+								: kind === "macro" || kind === "macro-imf"
+									? { country: arg }
+									: kind === "btc"
+										? { address: arg }
+										: kind === "cert"
+											? { domain: arg }
+											: kind === "asn"
+												? { q: arg }
+												: kind === "cve"
+													? /^cve-/i.test(arg)
+														? { id: arg }
+														: { q: arg }
+													: kind === "epss" ||
+															kind === "osv" ||
+															kind === "circl" ||
+															kind === "mitre-cve" ||
+															kind === "ghsa"
+														? { id: arg, q: arg }
+														: kind === "doh" ||
+																kind === "doh-google" ||
+																kind === "doh-cf"
+															? (() => {
+																	const [nm, ty] = arg.split(/\s+/);
+																	return {
+																		name: nm ?? "",
+																		...(ty ? { type: ty } : {}),
+																	};
+																})()
+															: kind === "token"
+																? { addr: arg, address: arg }
+																: kind === "deps"
+																	? (() => {
+																			const [eco, nver] = arg.split(/\s+/);
+																			const [nm, ...vp] = (nver ?? "").split(
+																				"@",
+																			);
+																			return nver
+																				? {
+																						eco,
+																						name: nver.includes("@")
+																							? nm
+																							: nver,
+																						version: vp.join("@") || nm,
+																					}
+																				: {
+																						eco: "npm",
+																						name: eco,
+																						version: "",
+																					};
+																		})()
+																	: kind === "planespotter"
+																		? { hex: arg, reg: arg, q: arg }
+																		: kind === "fdic" ||
+																				kind === "wikidata" ||
+																				kind === "wiki" ||
+																				kind === "books" ||
+																				kind === "stack" ||
+																				kind === "nominatim" ||
+																				kind === "omgeo" ||
+																				kind === "maltiverse" ||
+																				kind === "urlscan" ||
+																				kind === "crfunder" ||
+																				kind === "food" ||
+																				kind === "music" ||
+																				kind === "maltsearch" ||
+																				kind === "fda-drug" ||
+																				kind === "gene" ||
+																				kind === "ontology" ||
+																				kind === "protein" ||
+																				kind === "transit" ||
+																				kind === "name" ||
+																				kind === "funder" ||
+																				kind === "museum" ||
+																				kind === "rxnorm" ||
+																				kind === "chembl" ||
+																				kind === "sbdb" ||
+																				kind === "nasa-img" ||
+																				kind === "dailymed" ||
+																				kind === "holidays" ||
+																				kind === "npm-dl"
+																			? { query: arg, q: arg }
+																			: kind === "package"
+																				? (() => {
+																						const [eco, ...rest] =
+																							arg.split(/\s+/);
+																						return rest.length
+																							? { eco, name: rest.join(" ") }
+																							: { eco: "npm", name: eco };
+																					})()
+																				: kind === "daylight"
+																					? (() => {
+																							const [la, ln] = arg.split(",");
+																							return {
+																								lat: (la ?? "").trim(),
+																								lng: (ln ?? "").trim(),
+																							};
+																						})()
+																					: kind === "zip"
+																						? (() => {
+																								const [cc, ...rest] =
+																									arg.split(/\s+/);
+																								return rest.length
+																									? { cc, code: rest.join("") }
+																									: { cc: "us", code: cc };
+																							})()
+																						: { host: arg },
+			).toString()}`,
+		),
+	search: (q: string, layer?: string) =>
+		get<{ ok: boolean; count: number; items: LayerItem[] }>(
+			`/api/search?${new URLSearchParams({
+				q,
+				...(layer ? { layer } : {}),
+			}).toString()}`,
+		),
+	watchList: () =>
+		get<{
+			ok: boolean;
+			items: { id: string; kind: string; value: string; note: string }[];
+		}>("/api/watch"),
+	watchAdd: (kind: string, value: string) =>
+		fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ kind, value }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
+	watchDel: (id: string) =>
+		fetch(`${API}/api/watch/${encodeURIComponent(id)}`, {
+			method: "DELETE",
+		}).then((r) => r.json()) as Promise<{ ok: boolean }>,
+	watchMatches: () =>
+		get<{ ok: boolean; count: number; items: LayerItem[] }>(
+			"/api/watch/matches?limit=50",
+		),
+	portfolios: () =>
+		get<{
+			ok: boolean;
+			items: {
+				id: string;
+				name: string;
+				note: string;
+				positions: {
+					id: string;
+					symbol: string;
+					qty: string;
+					avg_price: string | null;
+					note: string;
+				}[];
+			}[];
+		}>("/api/portfolios"),
+	portfolioAdd: (name: string, note = "") =>
+		fetch(`${API}/api/portfolios`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name, note }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
+	portfolioDel: (id: string) =>
+		fetch(`${API}/api/portfolios/${encodeURIComponent(id)}`, {
+			method: "DELETE",
+		}).then((r) => r.json()) as Promise<{ ok: boolean }>,
+	positionAdd: (pid: string, symbol: string, qty: number, avg_price?: number) =>
+		fetch(`${API}/api/portfolios/${encodeURIComponent(pid)}/positions`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ symbol, qty, avg_price }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
+	positionDel: (pid: string, sym: string) =>
+		fetch(
+			`${API}/api/portfolios/${encodeURIComponent(pid)}/positions/${encodeURIComponent(sym)}`,
+			{ method: "DELETE" },
+		).then((r) => r.json()) as Promise<{ ok: boolean }>,
+	notes: (q?: string) =>
+		get<{
+			ok: boolean;
+			count: number;
+			items: {
+				id: string;
+				title: string;
+				body: string;
+				category: string;
+				tickers: string;
+				sentiment: string;
+				favorite: boolean;
+			}[];
+		}>(`/api/notes${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+	noteAdd: (note: {
+		title: string;
+		body?: string;
+		category?: string;
+		tickers?: string;
+		sentiment?: string;
+	}) =>
+		fetch(`${API}/api/notes`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(note),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
+	noteDel: (id: string) =>
+		fetch(`${API}/api/notes/${encodeURIComponent(id)}`, {
+			method: "DELETE",
+		}).then((r) => r.json()) as Promise<{ ok: boolean }>,
+	screens: () =>
+		get<{
+			ok: boolean;
+			items: { id: string; name: string; spec: unknown }[];
+		}>("/api/screens"),
+	screenAdd: (name: string, spec: Record<string, unknown>) =>
+		fetch(`${API}/api/screens`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name, spec }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
+	screenDel: (id: string) =>
+		fetch(`${API}/api/screens/${encodeURIComponent(id)}`, {
+			method: "DELETE",
+		}).then((r) => r.json()) as Promise<{ ok: boolean }>,
+	sitrep: (save: boolean) =>
+		save
+			? fetch(`${API}/api/sitrep`, { method: "POST" }).then((r) => r.json())
+			: get<{ ok: boolean; day: string | null; md: string }>("/api/sitrep"),
+	notify: (text: string) =>
+		fetch(`${API}/api/notify`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ text }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			error?: string;
+		}>,
+	exportUrl: (layer: string, format: string) =>
+		`${API}/api/layers/${encodeURIComponent(layer)}/export?format=${encodeURIComponent(format)}`,
+	imagery: (lon: number, lat: number) =>
+		get<{
+			ok: boolean;
+			scene: {
+				id: string;
+				datetime: string;
+				cloud_cover: number | null;
+				thumbnail: string;
+				tci: string;
+			} | null;
+		}>(`/api/imagery?lon=${lon}&lat=${lat}`),
+	trend: (layer: string, days: number) =>
+		get<{
+			ok: boolean;
+			depth_days: string | null;
+			series: { day: string; layer: string; n: string }[];
+			sitreps: { day: string; critical_count: number; watch_count: number }[];
+		}>(`/api/analytics/trend?layer=${encodeURIComponent(layer)}&days=${days}`),
+};
+
+export function esc(s: unknown): string {
+	return String(s ?? "");
+}

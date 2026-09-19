@@ -1,0 +1,92 @@
+# Thoth CI: typecheck + lint + unit + e2e (backend + app). Postgres+PostGIS service.
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb-ha:pg16
+        env:
+          POSTGRES_USER: thoth
+          POSTGRES_PASSWORD: thoth
+          POSTGRES_DB: thoth
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci --no-audit --no-fund
+        working-directory: backend
+      - run: npm run typecheck
+        working-directory: backend
+      - run: npm run lint
+        working-directory: backend
+      - run: npm run db:migrate
+        working-directory: backend
+        env: { DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth }
+      - run: npm run dev:api &
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
+          API_URL: http://localhost:4000
+          REQUESTS_PER_MIN: 2000
+      - run: sleep 5 && npm test
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
+          API_URL: http://localhost:4000
+      - run: psql $DATABASE_URL -c 'CREATE DATABASE thoth_test;' && DATABASE_URL=postgres://thoth:thoth@localhost:5432/thoth_test npm run db:migrate && npm run test:collectors
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
+          PGPASSWORD: thoth
+      - run: npx playwright install --with-deps chromium
+        working-directory: backend
+      - run: npx playwright test
+        working-directory: backend
+        env: { API_URL: http://localhost:4000 }
+  app:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb-ha:pg16
+        env:
+          POSTGRES_USER: thoth
+          POSTGRES_PASSWORD: thoth
+          POSTGRES_DB: thoth
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci --no-audit --no-fund
+        working-directory: app
+      - run: npx tsc --noEmit
+        working-directory: app
+      - run: npx biome check .
+        working-directory: app
+      - run: npx next build
+        working-directory: app
+      - run: npm test
+        working-directory: app
+      - run: npm ci --no-audit --no-fund && npm run db:migrate && (npm run dev:api &)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
+          REQUESTS_PER_MIN: 2000
+      - run: npx playwright install --with-deps chromium
+        working-directory: app
+      - run: (npx next start -p 3000 &) && sleep 8 && npx playwright test -c playwright.config.ts
+        working-directory: app
+        env:
+          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
+          NEXT_PUBLIC_THOTH_API: http://localhost:4000

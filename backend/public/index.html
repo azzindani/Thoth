@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOTH — legacy terminal (retired 2026-09-09, use :3000 app)</title>
+<!-- RETIRED 2026-09-09: superseded by data/thoth/app. File kept for reference
+     until 2026-10-09, then delete. Tunnel now points at the Next.js app. -->
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#000; --panel:#0a0a0a; --panel2:#111; --line:#2a2a2a; --line2:#3a3a3a;
+    --amber:#ffa028; --txt:#e8e8e8; --dim:#8a8a8a; --cyan:#4dd2ff; --red:#ff5d5d; --grn:#35d07f;
+    --mono:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+    /* primitive tokens — layout + touch (see docs/UI_PRIMITIVES.md) */
+    --rail:56px; --expl:232px; --insp:330px; --tap:44px; --gap:8px; --pad:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;overflow:hidden}
+  body{display:grid;grid-template-rows:30px 1fr 118px}
+  /* ── ticker ─────────────────────────────── */
+  #ticker{display:flex;align-items:center;gap:10px;background:#0c0c0c;border-bottom:1px solid var(--amber);padding:0 10px;white-space:nowrap;overflow:hidden}
+  #logo{color:#000;background:var(--amber);font-weight:700;padding:1px 8px;letter-spacing:2px}
+  #clock{color:var(--amber)}
+  #tape{flex:1;overflow:hidden;color:var(--dim)}
+  #tape span{display:inline-block;padding-left:100%;animation:tape 60s linear infinite}
+  @keyframes tape{to{transform:translateX(-100%)}}
+  #health-pill{color:var(--grn)}
+  #health-pill .stale{color:var(--amber)}
+  .tbtn{background:#000;color:var(--dim);border:1px solid var(--line2);padding:2px 7px;cursor:pointer;font:inherit;font-size:11px}
+  .tbtn.mode-on{color:var(--amber);border-color:var(--amber)}
+  /* ── main ───────────────────────────────── */
+  #main{display:grid;grid-template-columns:232px 1fr 330px;min-height:0}
+  #explorer{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:8px}
+  #map-wrap{position:relative;min-width:0}
+  #map{position:absolute;inset:0}
+  #inspector{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  h3{margin:2px 0 8px;font-size:11px;letter-spacing:2px;color:var(--amber);font-weight:700}
+  .chips{display:flex;gap:4px;margin-bottom:8px}
+  .chips button{background:#000;color:var(--dim);border:1px solid var(--line2);padding:2px 6px;cursor:pointer;font:inherit;font-size:11px}
+  .chips button.on{color:#000;background:var(--amber);border-color:var(--amber)}
+  .lrow{display:flex;align-items:center;gap:6px;padding:3px 4px;cursor:pointer}
+  .lrow:hover{background:var(--panel2)}
+  .lrow.off{opacity:.35}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .lrow .nm{flex:1}
+  .lrow .ct{color:var(--amber)}
+  #feeds{margin-top:10px;color:var(--dim);font-size:11px;line-height:1.7}
+  #feeds .stale{color:var(--amber)}
+  /* inspector tabs */
+  #tabs{display:flex}
+  #tabs button{flex:1;background:none;border:none;color:var(--dim);padding:7px 0;cursor:pointer;font:inherit;font-size:11px;letter-spacing:1px}
+  #tabs button.on{color:var(--amber);border-bottom:2px solid var(--amber)}
+  #insp-body{flex:1;overflow:auto;padding:8px}
+  #insp-body a{color:var(--cyan);text-decoration:none}
+  .kv{display:grid;grid-template-columns:70px 1fr;gap:2px 6px;margin:6px 0}
+  .kv b{color:var(--dim);font-weight:400}
+  .item{border-top:1px solid var(--line);padding:6px 0;cursor:pointer}
+  .item:hover{background:var(--panel2)}
+  .sev-critical{color:var(--red);font-weight:700}
+  .sev-watch{color:var(--amber)}
+  .sev-info{color:var(--dim)}
+  #insp-body input,#insp-body select{background:#000;color:var(--txt);border:1px solid var(--line2);padding:4px 6px;font:inherit;font-size:12px;width:100%;margin:2px 0}
+  .row2{display:flex;gap:4px}
+  .row2 input{flex:1}
+  .go{background:var(--amber);color:#000;border:none;padding:4px 10px;cursor:pointer;font:inherit;font-weight:700}
+  /* ── bottom ─────────────────────────────── */
+  #bottom{background:var(--panel);border-top:1px solid var(--line);display:grid;grid-template-rows:1fr 30px;padding:6px 10px 0}
+  #tl-head{display:flex;justify-content:space-between;color:var(--dim);font-size:11px}
+  #tl-head select{background:#000;color:var(--txt);border:1px solid var(--line2);font:inherit;font-size:11px}
+  #tl-canvas{width:100%;height:44px;display:block;cursor:pointer}
+  #cmdbar{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);margin:0 -10px;padding:0 10px}
+  #cmdbar .prompt{color:var(--amber);font-weight:700}
+  #cmd{flex:1;background:none;border:none;color:var(--txt);font:inherit;font-size:12px;outline:none}
+  #cmd-out{color:var(--dim);max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .maplibregl-popup-content{background:#0a0a0a!important;color:var(--txt);border:1px solid var(--amber);border-radius:0;font-family:var(--mono);font-size:12px}
+  .maplibregl-popup-content a{color:var(--cyan)}
+  body.nvg #map canvas{filter:grayscale(1) sepia(1) hue-rotate(70deg) saturate(3) brightness(.9)}
+  #counts{display:none}
+  /* ── responsive shell (docs/UI_PRIMITIVES.md §1). Desktop (≥1200px) unchanged. ── */
+  #sheet-toggle,#insp-close{display:none}
+  @media (max-width:1199px){
+    #main{grid-template-columns:var(--rail) 1fr}
+    #explorer{width:var(--rail);padding:8px 4px;overflow-x:hidden}
+    #explorer .lrow .nm,#explorer #feeds,#explorer h3,#explorer .chips,#explorer .credit{display:none}
+    #explorer .lrow{justify-content:center;padding:6px 0;min-height:var(--tap)}
+    #inspector{position:absolute;top:0;right:0;bottom:0;width:min(var(--insp),86vw);z-index:30;
+      border-left:1px solid var(--amber);box-shadow:-8px 0 24px #000;display:none}
+    body[data-bp="tab"] #inspector.open{display:flex}
+    #insp-close{display:block;background:none;border:none;color:var(--dim);font:inherit;font-size:16px;cursor:pointer;padding:4px 8px}
+    #tabs button{min-height:var(--tap)}
+  }
+  @media (max-width:767px){
+    body{grid-template-rows:30px 1fr auto}
+    #main{grid-template-columns:1fr;position:relative}
+    #explorer{position:absolute;left:0;right:0;bottom:0;top:auto;max-height:52vh;z-index:30;width:auto;
+      border-top:1px solid var(--amber);border-right:none;display:none}
+    body[data-bp="phone"] #explorer.open{display:block}
+    body[data-bp="phone"] #explorer .lrow .nm,body[data-bp="phone"] #explorer #feeds,
+    body[data-bp="phone"] #explorer h3,body[data-bp="phone"] #explorer .chips{display:block}
+    body[data-bp="phone"] #explorer .lrow{min-height:var(--tap)}
+    #inspector{top:0;left:0;width:auto;border-left:none}
+    #ticker .tbtn{display:none}
+    #sheet-toggle{display:inline;background:none;border:1px solid var(--line2);color:var(--amber);font:inherit;font-size:14px;cursor:pointer;padding:2px 8px;min-height:24px}
+    #bottom{grid-template-rows:auto auto}
+    #cmd-out{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="ticker">
+  <button id="sheet-toggle" aria-label="layers">☰</button>
+  <span id="logo">THOTH</span>
+  <span id="clock">--:--:--</span>
+  <div id="tape"><span id="tape-txt">booting…</span></div>
+  <span id="counts"></span>
+  <span id="health-pill">···</span>
+  <button class="tbtn mode-on" id="m-default">DARK</button>
+  <button class="tbtn" id="m-sat">SAT</button>
+  <button class="tbtn" id="m-nvg">NVG</button>
+  <button class="tbtn mode-on" id="m-globe">GLOBE</button>
+  <button class="tbtn" id="m-cinema">CINEMA</button>
+</div>
+
+<div id="main">
+  <div id="explorer">
+    <h3>OBJECT EXPLORER</h3>
+    <div class="row2" style="margin-bottom:8px"><select id="mission" style="flex:1;background:#000;color:var(--amber);border:1px solid var(--line2);font:inherit;font-size:11px;padding:3px">
+      <option value="">MISSION · ALL</option>
+      <option value="crisis">CRISIS DESK</option>
+      <option value="cyber">CYBER WATCH</option>
+      <option value="markets">MARKETS</option>
+      <option value="disaster">DISASTER RESPONSE</option>
+      <option value="intel">INTEL MAP</option>
+    </select></div>
+    <div class="chips" id="sev-chips">
+      <button data-sev="" class="on">ALL</button>
+      <button data-sev="critical">CRIT</button>
+      <button data-sev="watch">WATCH</button>
+      <button data-sev="info">INFO</button>
+    </div>
+    <div id="layer-rows"></div>
+    <h3 style="margin-top:10px">FEEDS</h3>
+    <div id="feeds"></div>
+    <div class="credit" style="margin-top:8px;color:var(--dim);font-size:10px">symbols: Lucide (ISC)</div>
+  </div>
+
+  <div id="map-wrap"><div id="map"></div></div>
+
+  <div id="inspector">
+    <div style="display:flex;align-items:stretch;border-bottom:1px solid var(--line)">
+      <div id="tabs" style="flex:1">
+        <button data-tab="object" class="on">OBJECT</button>
+        <button data-tab="area">AREA</button>
+        <button data-tab="sdn">SDN</button>
+        <button data-tab="alerts">ALERTS</button>
+        <button data-tab="video">VIDEO</button>
+      </div>
+      <button id="insp-close" aria-label="close panel">✕</button>
+    </div>
+    <div id="insp-body"><div style="color:var(--dim)">click a dot · right-click sets area</div></div>
+  </div>
+</div>
+
+<div id="bottom">
+  <div>
+    <div id="tl-head"><span>TIMELINE · <select id="tl-layer"></select></span><span id="tl-info"></span></div>
+    <canvas id="tl-canvas" width="1600" height="44"></canvas>
+  </div>
+  <div id="cmdbar"><span class="prompt">&gt;</span><input id="cmd" placeholder='help · quakes off · sat · dossier 51.5,-0.12 · sdn putin · alerts · aircraft FAC1282 · airport SIN · vessel koru · mitre phishing · ip 8.8.8.8' autocomplete="off" spellcheck="false"/><span id="cmd-out"></span></div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<script>
+const API = location.origin;
+/* Symbols: Lucide icons (ISC licence) — baked to map sprites in layer colors. */
+const LAYERS = {
+  quakes:    { color:'#ff5d5d', svg:'<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>' },
+  flights:   { color:'#4dd2ff', svg:'<path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8L4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1l3 2l2 3l1-1v-3l3-2l3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2"/>' },
+  fires:     { color:'#ff8c1a', svg:'<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0a5 5 0 0 1 1-3a1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/>' },
+  cctv:      { color:'#b8ff5d', svg:'<path d="M16.75 12h3.632a1 1 0 0 1 .894 1.447l-2.034 4.069a1 1 0 0 1-1.708.134l-2.124-2.97m1.696-5.627a1 1 0 0 1 .447 1.341l-3.106 6.211a1 1 0 0 1-1.342.447L3.61 12.3a2.92 2.92 0 0 1-1.3-3.91L3.69 5.6a2.92 2.92 0 0 1 3.92-1.3zM2 19h3.76a2 2 0 0 0 1.8-1.1L9 15m-7 6v-4m5-8h.01"/>' },
+  weather:   { color:'#7dd3fc', svg:'<path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="m13 12l-3 5h4l-3 5"/>' },
+  disasters: { color:'#c77dff', svg:'<path d="m21.73 18l-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4m0 4h.01"/>' },
+  telegram:  { color:'#22e0c8', svg:'<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zm7.318-19.539l-10.94 10.939"/>' },
+  spacewx:   { color:'#f0abfc', svg:'<path d="M4.9 16.1C1 12.2 1 5.8 4.9 1.9m2.9 2.8a6.14 6.14 0 0 0-.8 7.5"/><circle cx="12" cy="9" r="2"/><path d="M16.2 4.8c2 2 2.26 5.11.8 7.47M19.1 1.9a9.96 9.96 0 0 1 0 14.1m-9.6 2h5M8 22l4-11l4 11"/>' },
+  markets:   { color:'#ffd257', svg:'<path d="M16 7h6v6"/><path d="m22 7l-8.5 8.5l-5-5L2 17"/>' },
+  news:      { color:'#f5f0e1', svg:'<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>' },
+  gdacs:     { color:'#ff3d81', svg:'<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>' },
+  cyber:     { color:'#39ff88', svg:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>' },
+  oceans:    { color:'#60a5fa', svg:'<circle cx="12" cy="5" r="3"/><line x1="12" x2="12" y1="22" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>' },
+  bases:     { color:'#d4d4d4', svg:'<circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/>' },
+  chokepoints:{ color:'#fbbf24', svg:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>' },
+  conflicts: { color:'#ff6b6b', svg:'<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>' },
+  radiation: { color:'#eab308', svg:'<circle cx="12" cy="12" r="2"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' },
+  volcanoes: { color:'#ea580c', svg:'<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>' },
+  drones:    { color:'#67e8f6', svg:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1"/><path d="m12 12 6-6"/>' },
+  satellites:{ color:'#c4b5fd', svg:'<path d="M13 7 9 3 5 7l4 4"/><path d="m17 11 4-4-4-4-4 4"/><path d="m8 12 4 4 4-4"/><path d="m16 8 3 3"/><path d="M9 21a6 6 0 0 0-6-6"/>' },
+  ports:     { color:'#f59e0b', svg:'<rect x="2" y="7" width="20" height="10" rx="1"/><path d="M2 11h20M6 7v10M12 7v10M18 7v10"/>' },
+  airports:  { color:'#93c5fd', svg:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-4h6v4M9 7h.01M15 7h.01M9 11h.01M15 11h.01"/>' },
+  datacenters:{ color:'#818cf8', svg:'<rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/><path d="M7 7.5h.01M7 16.5h.01M11 7.5h.01M11 16.5h.01"/>' },
+  energy:    { color:'#fb923c', svg:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/>' },
+  signals:   { color:'#2dd4bf', svg:'<path d="M12 20v-4"/><circle cx="12" cy="12" r="2"/><path d="M8.5 15.5a5 5 0 0 1 0-7M15.5 8.5a5 5 0 0 1 0 7M5.6 18.4a9 9 0 0 1 0-12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>' },
+};
+function legendSvg(l, s=16){
+  return `<span style="display:inline-flex;width:${s}px;height:${s}px;color:${LAYERS[l].color};flex:none">`+
+    `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${LAYERS[l].svg}</svg></span>`;
+}
+/* bake icon: dark halo disc + layer-colored glyph → map sprite */
+function iconImage(name){
+  const L = LAYERS[name];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">`+
+    `<circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.72)"/>`+
+    `<g fill="none" stroke="${L.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${L.svg}</g></svg>`;
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const c = document.createElement('canvas'); c.width=c.height=48;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img,0,0,48,48);
+        resolve(ctx.getImageData(0,0,48,48));
+      }catch(e){ reject(e); }
+    };
+    img.onerror = ()=>reject(new Error('icon decode failed'));
+    img.src = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  });
+}
+async function ensureIcon(name){
+  const id = 'th-'+name;
+  if(map.hasImage(id)) return id;
+  const canvas = await iconImage(name);
+  if(!map.hasImage(id)) map.addImage(id, canvas);
+  return id;
+}
+const state = { visible:Object.fromEntries(Object.keys(LAYERS).map(k=>[k,true])), sev:'', since:null, cinema:false, spin:null, globe:true, tab:'object', sel:null };
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* ── UI primitives (docs/UI_PRIMITIVES.md §2): every builder escapes; skins via tokens. ── */
+const UI = {
+  el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!=null) d.innerHTML=html; return d; },
+  btn(label, {skin='tbtn', onClick=null}={}){ const b=UI.el('button',skin,esc(label)); if(onClick) b.onclick=onClick; return b; },
+  chip(label, active, onClick){ const b=UI.btn(label,{onClick}); if(active) b.classList.add('on'); return b; },
+  badge(text, kind){ const c={critical:'var(--red)',watch:'var(--amber)',info:'var(--dim)',stale:'var(--amber)',live:'var(--grn)'}[kind]||'var(--dim)';
+    return `<b style="color:${c}">${esc(text)}</b>`; },
+  layerRow(name, count, visible, onToggle){
+    const d=UI.el('div','lrow'+(visible?'':' off'),
+      `${legendSvg(name)}<span class="nm">${esc(name)}</span><b style="color:var(--amber)">${esc(count)}</b>`);
+    d.onclick=onToggle; return d; },
+  kv(pairs){ return `<div class="kv">${pairs.map(([k,v])=>`<b>${esc(k)}</b><span>${v}</span>`).join('')}</div>`; },
+  item(html, onClick){ const d=UI.el('div','item',html); if(onClick) d.onclick=onClick; return d; },
+  field(placeholder){ const i=document.createElement('input'); i.placeholder=placeholder; i.autocomplete='off'; i.spellcheck=false; return i; },
+  popup(html, lngLat, map){ return new maplibregl.Popup({closeButton:false,closeOnClick:false,offset:12}).setLngLat(lngLat).setHTML(html).addTo(map); },
+  /* responsive contract (docs §1): mirror matchMedia class onto body[data-bp] */
+  breakpoint(){
+    const w=window.innerWidth;
+    document.body.dataset.bp = w>=1200?'desk':w>=768?'tab':'phone';
+  },
+};
+UI.breakpoint(); window.addEventListener('resize', UI.breakpoint);
+
+/* clock */
+setInterval(()=>{ document.getElementById('clock').textContent = new Date().toISOString().slice(11,19)+'Z'; },1000);
+
+const map = new maplibregl.Map({ container:'map',
+  style:'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  center:[20,30], zoom:1.6, canvasContextAttributes:{antialias:true} });
+window.__thothMap = map;
+const SAT = { version:8, sources:{ sat:{ type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize:256, attribution:'Esri World Imagery' } }, layers:[{ id:'sat', type:'raster', source:'sat' }] };
+function applyProjection(){ try{ map.setProjection({ type: state.globe?'globe':'mercator' }); }catch{} }
+
+function toGeoJSON(items){
+  return { type:'FeatureCollection', features:(items||[])
+    .filter(i=>i.geom && (!state.sev || i.severity===state.sev))
+    .map(i=>({ type:'Feature', geometry:i.geom,
+      properties:{ id:i.id, title:i.title||i.id, url:i.url||'', layer:i.layer, severity:i.severity||'',
+        source:i.source, ts:i.ts, lon:i.geom.coordinates?.[0], lat:i.geom.coordinates?.[1],
+        airline:i.meta?.airline||'', rot:Number(i.meta?.track ?? 0)||0 } })) };
+}
+function setVis(n){
+  for(const id of [n,n+'-c',n+'-n'])
+    if(map.getLayer(id)) map.setLayoutProperty(id,'visibility',state.visible[n]?'visible':'none');
+}
+async function loadLayer(name){
+  const q = state.since?`?since=${encodeURIComponent(state.since)}`:'';
+  const j = await fetch(`${API}/api/layers/${name}${q}`).then(r=>r.json());
+  const data = toGeoJSON(j.items);
+  window.__thothData = window.__thothData||{}; window.__thothData[name] = j.items||[];
+  const src = map.getSource(name);
+  if(src) src.setData(data);
+  else{
+    map.addSource(name,{type:'geojson',data,cluster:true,clusterMaxZoom:12,clusterRadius:60});
+    const icon = await ensureIcon(name);
+    map.addLayer({ id:name, type:'symbol', source:name, filter:['!',['has','point_count']],
+      layout:{ 'icon-image':icon,
+        'icon-size':['case',['==',['get','severity'],'critical'],1.0,0.72],
+        'icon-allow-overlap':true, 'icon-rotation-alignment':'map',
+        'icon-rotate':['coalesce',['get','rot'],0] },
+      paint:{ 'icon-opacity':0.95 } });
+    /* cluster bubbles: layer color + count, click to zoom in */
+    map.addLayer({ id:name+'-c', type:'circle', source:name, filter:['has','point_count'],
+      paint:{ 'circle-color':LAYERS[name].color, 'circle-opacity':0.8,
+        'circle-stroke-width':2, 'circle-stroke-color':'#000',
+        'circle-radius':['step',['get','point_count'],14,50,20,200,27,1000,34] } });
+    map.addLayer({ id:name+'-n', type:'symbol', source:name, filter:['has','point_count'],
+      layout:{ 'text-field':['get','point_count_abbreviated'], 'text-size':11,
+        'text-allow-overlap':true, 'text-ignore-placement':true },
+      paint:{ 'text-color':'#000' } });
+    map.on('click', name+'-c', e=>{
+      const f=e.features[0];
+      map.getSource(name).getClusterExpansionZoom(f.properties.cluster_id,(err,z)=>{
+        if(!err) map.easeTo({center:f.geometry.coordinates,zoom:z});
+      });
+    });
+    map.on('click', name, e=>selectObject(e.features[0].properties, e.lngLat));
+    /* hover: instant summary popup (no click needed) */
+    const hov = new maplibregl.Popup({closeButton:false, closeOnClick:false, offset:12});
+    map.on('mousemove', name, e=>{
+      if(!e.features.length) return;
+      const p = e.features[0].properties;
+      map.getCanvas().style.cursor='pointer';
+      hov.setLngLat(e.lngLat).setHTML(
+        `<b>${esc(p.title||p.name||p.callsign||name)}</b>`+
+        (p.summary?`<br>${esc(String(p.summary).slice(0,140))}`:'')+
+        (p.mag?`<br>mag ${esc(p.mag)} · ${esc(p.place||'')}`:'')+
+        (p.callsign?`<br>${esc(p.callsign)} · ${esc(p.origin||'')}→${esc(p.dest||'')}`:'')
+      ).addTo(map);
+    });
+    map.on('mouseleave', name, ()=>{ hov.remove(); map.getCanvas().style.cursor=''; });
+  }
+  setVis(name);
+  return j.total;
+}
+
+/* explorer */
+async function refreshStats(){
+  const [stats,health] = await Promise.all([
+    fetch(`${API}/api/stats`).then(r=>r.json()),
+    fetch(`${API}/api/health`).then(r=>r.json()).catch(()=>({feeds:[]})),
+  ]);
+  const counts = new Map((stats.items||[]).map(i=>[i.layer,i.count]));
+  document.getElementById('counts').textContent = Object.keys(LAYERS).map(l=>`${l} ${counts.get(l)??0}`).join(' · ');
+  const rows = document.getElementById('layer-rows'); rows.innerHTML='';
+  for(const l of Object.keys(LAYERS)){
+    rows.appendChild(UI.layerRow(l, counts.get(l)??0, state.visible[l], ()=>{
+      state.visible[l]=!state.visible[l];
+      if(map.getLayer(l)) setVis(l);
+      refreshStats(); }));
+  }
+  const feeds=health.feeds||[];
+  const live=feeds.filter(f=>f.last_ok&&!f.frozen), stale=feeds.filter(f=>!f.last_ok&&!f.warming),
+    frozen=feeds.filter(f=>f.frozen), warming=feeds.filter(f=>f.warming&&f.last_ok);
+  document.getElementById('health-pill').innerHTML =
+    `${live.length} LIVE${stale.length?` · <span class="stale">${stale.length} STALE</span>`:''}${frozen.length?` · <span class="stale">${frozen.length} FROZEN</span>`:''}`;
+  document.getElementById('feeds').innerHTML = feeds
+    .map(f=>{ const st=f.frozen?['FROZEN','var(--red)']:f.last_ok?['ok','var(--grn)']:f.warming?['WARMING','var(--dim)']:['STALE','var(--amber)'];
+      return `<div><span style="color:${st[1]}">●</span> ${esc(f.source)} <span style="color:var(--dim)">${st[0]}</span></div>`; }).join('');
+  // ticker tape: markets pulse + news headlines + counts
+  try{
+    const [mkt,news] = await Promise.all([
+      fetch(`${API}/api/layers/markets`).then(r=>r.json()).catch(()=>({items:[]})),
+      fetch(`${API}/api/layers/news`).then(r=>r.json()).catch(()=>({items:[]})),
+    ]);
+    const items=(mkt.items||[]).slice(0,5).map(i=>esc(i.title)).join(' /// ');
+    const heads=(news.items||[]).slice(0,5).map(i=>`NEWS: ${esc(i.title)}`).join(' /// ') || 'NEWS: feeds recovering — retrying';
+    document.getElementById('tape-txt').textContent =
+      `${items} /// ${heads} /// ` + Object.keys(LAYERS).map(l=>`${l.toUpperCase()} ${(counts.get(l)??0)}`).join(' /// ');
+  }catch{}
+}
+document.querySelectorAll('#sev-chips button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#sev-chips button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); state.sev=b.dataset.sev;
+  Object.keys(LAYERS).forEach(n=>loadLayer(n));
+});
+
+/* inspector */
+function setTab(t){
+  state.tab=t;
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ setTab(b.dataset.tab); if(b.dataset.tab==='alerts') loadAlerts(); if(b.dataset.tab==='video') loadVideo(); });
+/* video wall: 24/7 livestreams (globenewslive LiveVideoPanel pattern, verified IDs) */
+/* NOTE 2026-09-09: 6/8 globenewslive stream IDs rotted (oEmbed 401/403/404 —
+   broadcasters rotate live video IDs). Only oEmbed-200 IDs ship; re-verify via
+   https://www.youtube.com/oembed?url=… before re-adding. */
+const STREAMS=[
+  ['France 24 EN','h3MuIUNCCzI','Global'],
+  ['NASA TV','21X5lGlDOfg','Space'],
+];
+function loadVideo(sel){
+  setTab('video');
+  document.getElementById('inspector').classList.add('open');
+  const body=document.getElementById('insp-body');
+  const v=STREAMS.find(s=>s[1]===sel)||STREAMS[0];
+  body.innerHTML=`<h3>LIVE VIDEO · ${esc(v[0])}</h3>
+    <iframe width="100%" height="180" src="https://www.youtube.com/embed/${v[1]}?autoplay=${sel?1:0}"
+      frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <div>${STREAMS.map(s=>`<div class="item" data-v="${s[1]}"><b>${esc(s[0])}</b><br><span style="color:var(--dim)">${esc(s[2])} · 24/7</span></div>`).join('')}</div>`;
+  body.querySelectorAll('.item').forEach(el=>el.onclick=()=>loadVideo(el.dataset.v));
+}
+/* missions: one click re-points every layer (worldmonitor workspaces pattern) */
+const MISSIONS={
+  crisis:['quakes','gdacs','conflicts','news','drones','fires','telegram','cctv'],
+  cyber:['cyber','markets','datacenters','signals'],
+  markets:['markets','energy','chokepoints','ports','news'],
+  disaster:['quakes','fires','weather','gdacs','oceans','volcanoes','disasters','news'],
+  intel:['bases','airports','datacenters','signals','satellites','cctv','flights','ports','chokepoints','conflicts'],
+};
+document.getElementById('mission').onchange=e=>{
+  const m=MISSIONS[e.target.value];
+  for(const l of Object.keys(LAYERS)){ state.visible[l]=!m||m.includes(l); setVis(l); }
+  refreshStats(); cmdOut(e.target.value?('mission '+e.target.value):'mission all');
+};
+/* sheet toggles (tab/phone only — desktop ignores .open) */
+document.getElementById('sheet-toggle').onclick=()=>
+  document.getElementById('explorer').classList.toggle('open');
+document.getElementById('insp-close').onclick=()=>
+  document.getElementById('inspector').classList.remove('open');
+function selectObject(p, lngLat){
+  setTab('object'); state.sel=p;
+  document.getElementById('inspector').classList.add('open');
+  document.getElementById('insp-body').innerHTML = `
+    <h3>OBJECT · ${legendSvg(p.layer,14)} ${esc(p.layer)}</h3>
+    <div style="font-size:14px;color:var(--amber)">${esc(p.title)}</div>
+    <div class="kv">
+      <b>SEV</b><span class="sev-${esc(p.severity||'info')}">${esc(p.severity||'info').toUpperCase()}</span>
+      <b>SRC</b><span>${esc(p.source)}</span>
+      ${p.airline?`<b>AIRLINE</b><span>${esc(p.airline)}</span>`:''}
+      <b>TS</b><span>${esc(p.ts)}</span>
+      <b>POS</b><span>${Number(p.lat).toFixed(2)},${Number(p.lon).toFixed(2)}</span>
+      <b>ID</b><span style="word-break:break-all">${esc(p.id)}</span>
+    </div>
+    ${p.url?`<a href="${esc(p.url)}" target="_blank">SOURCE ↗</a>`:''}`;
+}
+async function loadArea(lat, lng, radius=300){
+  setTab('area');
+  const body = document.getElementById('insp-body');
+  body.innerHTML = 'loading…';
+  const [d,g] = await Promise.all([
+    fetch(`${API}/api/dossier?lat=${lat}&lng=${lng}&radius_km=${radius}`).then(r=>r.json()),
+    fetch(`${API}/api/osint/geo?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`).then(r=>r.json()).catch(()=>({})),
+  ]);
+  body.innerHTML = `<h3>AREA · ${lat},${lng} · ${radius}KM</h3>
+    ${g.label?`<div style="color:var(--amber);font-size:13px">${esc(g.label.split(',').slice(0,3).join(','))}</div>`:''}
+    <div>${(d.counts||[]).map(c=>`${c.layer} <b style="color:var(--amber)">${c.count}</b>`).join(' · ')||'nothing in window'}</div>
+    <div class="row2" style="margin:6px 0"><input id="ar-lat" value="${lat}"><input id="ar-lng" value="${lng}">
+    <select id="ar-r"><option>100</option><option selected>300</option><option>1000</option></select>
+    <button class="go" id="ar-go">GO</button></div>
+    ${(d.items||[]).slice(0,30).map(i=>`<div class="item" data-lat="${i.geom?.coordinates?.[1]??''}" data-lng="${i.geom?.coordinates?.[0]??''}">
+      <b>${i.layer}</b> · ${esc(i.title||'')}${i.url?` <a href="${i.url}" target="_blank">↗</a>`:''}
+      <br><span style="color:var(--dim)">${i.source} · ${String(i.ts).slice(0,10)}</span></div>`).join('')}`;
+  document.getElementById('ar-go').onclick = ()=>loadArea(
+    document.getElementById('ar-lat').value, document.getElementById('ar-lng').value,
+    document.getElementById('ar-r').value);
+  body.querySelectorAll('.item').forEach(el=>el.onclick=()=>{
+    const la=+el.dataset.lat, ln=+el.dataset.lng;
+    if(la&&ln) map.flyTo({center:[ln,la],zoom:6});
+  });
+}
+map.on('contextmenu', e=>loadArea(e.lngLat.lat.toFixed(2), e.lngLat.lng.toFixed(2), 300));
+async function loadSdn(q){
+  setTab('sdn');
+  const body = document.getElementById('insp-body');
+  if(!q){ body.innerHTML = `<h3>OFAC SDN · 20K ENTITIES</h3>
+    <div class="row2"><input id="sdn-q" placeholder="name…"><button class="go" id="sdn-go">GO</button></div>
+    <div style="color:var(--dim)">type a name, Enter to search</div>`;
+    const go=()=>{ const v=document.getElementById('sdn-q').value; if(v) loadSdn(v); };
+    document.getElementById('sdn-go').onclick=go;
+    document.getElementById('sdn-q').onkeydown=e=>{ if(e.key==='Enter') go(); };
+    return;
+  }
+  body.innerHTML='searching…';
+  const s = await fetch(`${API}/api/osint/sanctions?query=${encodeURIComponent(q)}&limit=20`).then(r=>r.json());
+  body.innerHTML = `<h3>SDN · "${esc(q)}" · ${s.items.length}</h3>` + (s.items.map(i=>`
+    <div class="item"><b style="color:var(--amber)">${esc(i.name)}</b> <span style="color:var(--dim)">${esc(i.schema||'')}</span>
+    <br><span style="color:var(--dim)">${esc((i.aliases||[]).slice(0,3).join(' · '))} ${(i.countries||[]).join(',')}</span></div>`).join('')||'no hits');
+}
+async function loadAlerts(){
+  setTab('alerts');
+  const body = document.getElementById('insp-body');
+  const a = await fetch(`${API}/api/alerts?limit=50`).then(r=>r.json());
+  body.innerHTML = `<h3>ALERTS · 24H · ${a.total}</h3>` + (a.items.map(i=>`
+    <div class="item" data-lat="${i.geom?.coordinates?.[1]??''}" data-lng="${i.geom?.coordinates?.[0]??''}">
+    <span class="sev-${i.severity}">●</span> <b>${i.layer}</b> · ${esc(i.title||'')}
+    <br><span style="color:var(--dim)">${i.source} · ${String(i.ts).slice(5,16).replace('T',' ')}</span></div>`).join('')||'none');
+  body.querySelectorAll('.item').forEach(el=>el.onclick=()=>{
+    const la=+el.dataset.lat, ln=+el.dataset.lng;
+    if(la&&ln) map.flyTo({center:[ln,la],zoom:5});
+  });
+}
+
+/* timeline */
+const tlSel = document.getElementById('tl-layer');
+for(const l of Object.keys(LAYERS)){ const o=document.createElement('option'); o.value=o.textContent=l; tlSel.appendChild(o); }
+tlSel.value='quakes';
+async function drawTimeline(){
+  const layer = tlSel.value;
+  const j = await fetch(`${API}/api/layers/${layer}/history?bucket=day`).then(r=>r.json()).catch(()=>({buckets:[]}));
+  const cv = document.getElementById('tl-canvas'), ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const bs = j.buckets||[];
+  document.getElementById('tl-info').textContent = `${layer} · ${bs.length} days · click = filter · dblclick = clear`;
+  if(!bs.length) return;
+  const max = Math.max(...bs.map(b=>Number(b.count)));
+  const w = cv.width/bs.length; cv._buckets=bs;
+  bs.forEach((b,i)=>{ const h=40*Number(b.count)/max;
+    ctx.fillStyle = LAYERS[layer].color; ctx.fillRect(i*w+1,44-h,w-2,h); });
+}
+document.getElementById('tl-canvas').onclick = async e=>{
+  const cv=e.target, r=cv.getBoundingClientRect();
+  const b=(cv._buckets||[])[Math.floor((e.clientX-r.left)/r.width*(cv._buckets||[]).length)];
+  if(!b) return;
+  state.since=b.bucket;
+  for(const n of Object.keys(LAYERS)) await loadLayer(n);
+  document.getElementById('tl-info').textContent += ` · since ${String(b.bucket).slice(0,10)}`;
+};
+document.getElementById('tl-canvas').ondblclick = async ()=>{
+  state.since=null;
+  for(const n of Object.keys(LAYERS)) await loadLayer(n);
+  drawTimeline();
+};
+
+/* modes */
+const stylesheets = { default:'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' };
+function setMode(m){
+  for(const id of ['m-default','m-sat','m-nvg']) document.getElementById(id).classList.remove('mode-on');
+  document.getElementById('m-'+m).classList.add('mode-on');
+  document.body.classList.toggle('nvg', m==='nvg');
+  map.setStyle(m==='sat'?SAT:stylesheets.default);
+  map.once('styledata', async ()=>{
+    applyProjection();
+    for(const l of Object.keys(LAYERS)) await loadLayer(l).catch(()=>{});
+  });
+}
+document.getElementById('m-default').onclick=()=>setMode('default');
+document.getElementById('m-sat').onclick=()=>setMode('sat');
+document.getElementById('m-nvg').onclick=()=>setMode('nvg');
+document.getElementById('m-globe').onclick=()=>{
+  state.globe=!state.globe;
+  document.getElementById('m-globe').classList.toggle('mode-on',state.globe);
+  applyProjection();
+};
+document.getElementById('m-cinema').onclick=()=>{
+  state.cinema=!state.cinema;
+  document.getElementById('m-cinema').classList.toggle('mode-on',state.cinema);
+  if(state.cinema){ const spin=()=>{ if(state.cinema){ map.easeTo({center:[map.getCenter().lng+20,20],duration:4000,easing:t=>t}); state.spin=setTimeout(spin,4100);} }; spin(); }
+  else clearTimeout(state.spin);
+};
+
+/* command bar (Bloomberg-style) */
+const cmdOut = t=>{ document.getElementById('cmd-out').textContent=t; };
+/* OSINT command lookups → inspector OBJECT tab */
+async function osintCmd(kind, arg){
+  if(!arg){ cmdOut(kind+' needs an argument'); return; }
+  setTab('object');
+  document.getElementById('inspector').classList.add('open');
+  const body=document.getElementById('insp-body');
+  body.innerHTML='looking up…';
+  const urls={ aircraft:`${API}/api/osint/aircraft?reg=${encodeURIComponent(arg)}`,
+    airport:`${API}/api/osint/airport?code=${encodeURIComponent(arg)}`,
+    vessel:`${API}/api/osint/vessel?q=${encodeURIComponent(arg)}`,
+    mitre:`${API}/api/osint/mitre?query=${encodeURIComponent(arg)}`,
+    ip:`${API}/api/osint/ip?host=${encodeURIComponent(arg)}` };
+  try{
+    let html='';
+    if(kind==='geo'){
+      const [la,ln]=arg.split(',');
+      const g=await fetch(`${API}/api/osint/geo?lat=${encodeURIComponent((la||'').trim())}&lng=${encodeURIComponent((ln||'').trim())}`).then(r=>r.json());
+      html=`<h3>GEO · ${esc(arg)}</h3><div style="font-size:14px">${esc(g.label||g.error||'unknown')}</div>`;
+    } else {
+      const j=await fetch(urls[kind]).then(r=>r.json());
+      html=`<h3>${esc(kind.toUpperCase())} · ${esc(arg)}</h3>`+osintHtml(kind,j);
+    }
+    body.innerHTML=html; cmdOut(kind+' '+arg);
+  }catch{ body.innerHTML=`<h3>${esc(kind.toUpperCase())}</h3><div>lookup failed</div>`; }
+}
+function osintHtml(kind,j){
+  if(!j||j.ok===false) return `<div>${esc(j?.error||'no result')}</div>`;
+  if(kind==='aircraft') return j.hit?UI.kv(Object.entries(j.hit).slice(0,8).map(([k,v])=>[k.toUpperCase(),esc(String(v)).slice(0,120)])):'<div>not on watchlist</div>';
+  if(kind==='airport') return j.hit?UI.kv([['NAME',esc(j.hit.name)],['CITY',esc(j.hit.city||'')],['ICAO',esc(j.hit.icao||'')],['POS',`${j.hit.lat},${j.hit.lon}`]]):'<div>unknown code</div>';
+  if(kind==='vessel') return (j.hits||[]).map(h=>`<div class="item"><b>${esc(h.name||h.mmsi)}</b><br><span style="color:var(--dim)">${esc(h.class||h.owner||h.kind||'')}</span></div>`).join('')||'<div>no match</div>';
+  if(kind==='mitre') return (j.items||[]).map(t=>`<div class="item"><b>${esc(t.id)}</b> · ${esc(t.name)}<br><span style="color:var(--dim)">${esc((t.tactics||[]).join(', '))}</span></div>`).join('')||'<div>no match</div>';
+  if(kind==='ip') return UI.kv([['IP',esc(j.query)],['GEO',esc(`${j.city||''} ${j.regionName||''} ${j.country||''}`)],['ISP',esc(j.isp||'')],['AS',esc(j.as||'')],['POS',`${j.lat},${j.lon}`]]);
+  return '';
+}
+document.getElementById('cmd').onkeydown = async e=>{
+  if(e.key!=='Enter') return;
+  const [c,...rest] = e.target.value.trim().split(/\s+/);
+  const arg = rest.join(' ');
+  const L = Object.keys(LAYERS).find(l=>l.startsWith((c||'').toLowerCase()));
+  if(L && (!arg || /^(on|off)$/i.test(arg))){
+    if(!arg) state.visible[L]=!state.visible[L]; else state.visible[L]=!/^off$/i.test(arg);
+    if(map.getLayer(L)) setVis(L);
+    refreshStats(); cmdOut(`${L} ${state.visible[L]?'ON':'OFF'}`);
+  }
+  else if(/^(sat|dark|nvg|globe|cinema)$/i.test(c||'')){
+    const m=c.toLowerCase()==='dark'?'default':c.toLowerCase();
+    if(m==='globe') document.getElementById('m-globe').click();
+    else if(m==='cinema') document.getElementById('m-cinema').click();
+    else setMode(m); cmdOut('mode '+m);
+  }
+  else if(/^dossier$/i.test(c||'') && arg){
+    const [la,ln]=arg.split(','); loadArea(la?.trim(),ln?.trim(),300); cmdOut('dossier '+arg);
+  }
+  else if(/^sdn$/i.test(c||'')){ loadSdn(arg); cmdOut('sdn '+arg); }
+  else if(/^alerts$/i.test(c||'')){ loadAlerts(); cmdOut('alerts loaded'); }
+  else if(/^(aircraft|airport|vessel|mitre|ip|geo)$/i.test(c||'')){ osintCmd(c.toLowerCase(), arg); }
+  else if(/^help$/i.test(c||'')){ cmdOut('layers: name on|off · sat|dark|nvg|globe|cinema · dossier lat,lng · sdn q · alerts · aircraft|airport|vessel|mitre|ip|geo + arg'); }
+  else cmdOut('? try help');
+  e.target.value='';
+};
+document.addEventListener('keydown',e=>{
+  if(e.key==='/'||((e.ctrlKey||e.metaKey)&&e.key==='k')){ e.preventDefault(); document.getElementById('cmd').focus(); }
+  const i=parseInt(e.key,10), names=Object.keys(LAYERS);
+  if(i>=1&&i<=names.length && document.activeElement?.id!=='cmd'){
+    const l=names[i-1]; state.visible[l]=!state.visible[l];
+    if(map.getLayer(l)) setVis(l);
+    refreshStats();
+  }
+  if(e.key==='Escape') setTab('object');
+});
+
+/* boot */
+map.on('load', async ()=>{
+  applyProjection();
+  await refreshStats();
+  await Promise.all(Object.keys(LAYERS).map(n=>loadLayer(n).catch(()=>{})));
+  drawTimeline(); loadAlerts();
+  setInterval(refreshStats,120000);
+  /* SSE with resume: track known layer versions; reconnect replays missed ticks */
+  let knownVers = {};
+  function connectStream(){
+    const q = Object.keys(knownVers).length?`?known=${btoa(JSON.stringify(knownVers))}`:'';
+    const es = new EventSource(`${API}/api/stream${q}`);
+    es.addEventListener('snapshot', e=>{
+      try{ for(const r of JSON.parse(e.data).versions) knownVers[r.layer]=r.version; }catch{}
+    });
+    es.addEventListener('layer_changed', async e=>{
+      try{
+        const { layers, versions } = JSON.parse(e.data);
+        if(versions) for(const r of versions) knownVers[r.layer]=r.version;
+        for(const n of layers) if(LAYERS[n]) await loadLayer(n);
+        refreshStats(); drawTimeline();
+        if(state.tab==='alerts') loadAlerts();
+      }catch{}
+    });
+    es.onerror = ()=>{ es.close(); setTimeout(connectStream, 5000); };
+  }
+  connectStream();
+});
+</script>
+</body>
+</html>

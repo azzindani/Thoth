@@ -1,0 +1,30 @@
+{
+	"name": "thoth-backend",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev:api": "tsx src/api/server.ts",
+		"dev:worker": "tsx src/workers/run.ts",
+		"typecheck": "tsc --noEmit",
+		"db:migrate": "tsx src/scripts/migrate.ts",
+		"test": "tsx --test --test-concurrency=1 test/routes-core.test.ts test/routes-intel.test.ts test/routes-osint.test.ts test/routes-recon.test.ts test/unit.test.ts test/alive.test.ts",
+		"lint": "biome check src test",
+		"test:coverage": "DATABASE_URL=postgres://thoth:thoth@localhost:5432/thoth_test node --import tsx --experimental-test-coverage --test --test-concurrency=1 test/unit.test.ts test/collectors-vatsim.test.ts test/collectors-hans.test.ts test/collectors-autobahn.test.ts test/collectors-quakes.test.ts test/collectors-fires.test.ts test/collectors-disasters.test.ts test/collectors-perims.test.ts test/collectors-airwx.test.ts test/collectors-radiation.test.ts test/collectors-volcanoes.test.ts test/collectors-drones.test.ts test/collectors-conflicts.test.ts test/collectors-sanctions.test.ts test/collectors-otx.test.ts test/collectors-finnhub.test.ts test/collectors-fx.test.ts test/collectors-satellites.test.ts test/collectors-flights.test.ts test/collectors-metar.test.ts test/collectors-sentiment.test.ts test/collectors-research.test.ts test/collectors-health.test.ts test/collectors-hdx.test.ts test/collectors-civic.test.ts test/collectors-forecast.test.ts test/collectors-social.test.ts test/collectors-policy.test.ts test/collectors-airquality.test.ts test/collectors-crypto.test.ts test/collectors-solar.test.ts test/collectors-fxdepth.test.ts test/collectors-quakesnz.test.ts test/collectors-predict.test.ts test/collectors-radar.test.ts test/collectors-energyuk.test.ts test/collectors-litwatch.test.ts test/collectors-storms.test.ts test/collectors-rivers.test.ts test/collectors-imf.test.ts test/collectors-lib.test.ts test/collectors-transit-tfl.test.ts test/collectors-transit-ch.test.ts test/collectors-transit-other.test.ts test/collectors-energyeu.test.ts test/collectors-markets.test.ts test/collectors-weather.test.ts test/collectors-cyber.test.ts test/collectors-oceans.test.ts test/imagery.test.ts",
+		"test:collectors": "DATABASE_URL=postgres://thoth:thoth@localhost:5432/thoth_test node --import tsx --test --test-concurrency=1 test/collectors-vatsim.test.ts test/collectors-hans.test.ts test/collectors-autobahn.test.ts test/collectors-quakes.test.ts test/collectors-fires.test.ts test/collectors-disasters.test.ts test/collectors-perims.test.ts test/collectors-airwx.test.ts test/collectors-radiation.test.ts test/collectors-volcanoes.test.ts test/collectors-drones.test.ts test/collectors-conflicts.test.ts test/collectors-sanctions.test.ts test/collectors-otx.test.ts test/collectors-finnhub.test.ts test/collectors-fx.test.ts test/collectors-satellites.test.ts test/collectors-flights.test.ts test/collectors-metar.test.ts test/collectors-sentiment.test.ts test/collectors-research.test.ts test/collectors-health.test.ts test/collectors-hdx.test.ts test/collectors-civic.test.ts test/collectors-forecast.test.ts test/collectors-social.test.ts test/collectors-policy.test.ts test/collectors-airquality.test.ts test/collectors-crypto.test.ts test/collectors-solar.test.ts test/collectors-fxdepth.test.ts test/collectors-quakesnz.test.ts test/collectors-predict.test.ts test/collectors-radar.test.ts test/collectors-energyuk.test.ts test/collectors-litwatch.test.ts test/collectors-storms.test.ts test/collectors-rivers.test.ts test/collectors-imf.test.ts test/collectors-lib.test.ts test/collectors-transit-tfl.test.ts test/collectors-transit-ch.test.ts test/collectors-transit-other.test.ts test/collectors-energyeu.test.ts test/collectors-markets.test.ts test/collectors-weather.test.ts test/collectors-cyber.test.ts test/collectors-oceans.test.ts test/imagery.test.ts"
+	},
+	"dependencies": {
+		"express": "^4.19.2",
+		"pg": "^8.12.0",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.12",
+		"@types/express": "^4.17.21",
+		"@types/node": "^20.12.0",
+		"@types/pg": "^8.11.0",
+		"playwright": "^1.63.0",
+		"tsx": "^4.16.0",
+		"typescript": "^5.5.0"
+	}
+}

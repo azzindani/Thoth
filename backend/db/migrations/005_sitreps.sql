@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS sitreps (
+  day TEXT PRIMARY KEY,
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  critical_count INT NOT NULL DEFAULT 0,
+  watch_count INT NOT NULL DEFAULT 0,
+  gaps TEXT[] NOT NULL DEFAULT '{}',
+  body JSONB NOT NULL DEFAULT '{}'
+);

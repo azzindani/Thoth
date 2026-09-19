@@ -1,0 +1,965 @@
+{
+ "provenance": "WDC-SILSO monthly sunspot number (free)",
+ "items": [
+  {
+   "year": 2016,
+   "month": 9,
+   "mean": 44.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2016,
+   "month": 10,
+   "mean": 33.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2016,
+   "month": 11,
+   "mean": 21.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2016,
+   "month": 12,
+   "mean": 18.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 1,
+   "mean": 26.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 2,
+   "mean": 26.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 3,
+   "mean": 17.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 4,
+   "mean": 32.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 5,
+   "mean": 18.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 6,
+   "mean": 19.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 7,
+   "mean": 17.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 8,
+   "mean": 32.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 9,
+   "mean": 43.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 10,
+   "mean": 13.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 11,
+   "mean": 5.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2017,
+   "month": 12,
+   "mean": 8.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 1,
+   "mean": 6.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 2,
+   "mean": 10.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 3,
+   "mean": 2.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 4,
+   "mean": 8.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 5,
+   "mean": 13.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 6,
+   "mean": 15.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 7,
+   "mean": 1.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 8,
+   "mean": 8.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 9,
+   "mean": 3.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 10,
+   "mean": 4.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 11,
+   "mean": 4.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2018,
+   "month": 12,
+   "mean": 3.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 1,
+   "mean": 7.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 2,
+   "mean": 0.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 3,
+   "mean": 9.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 4,
+   "mean": 9.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 5,
+   "mean": 9.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 6,
+   "mean": 1.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 7,
+   "mean": 0.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 8,
+   "mean": 0.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 9,
+   "mean": 1.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 10,
+   "mean": 0.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 11,
+   "mean": 0.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2019,
+   "month": 12,
+   "mean": 1.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 1,
+   "mean": 6.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 2,
+   "mean": 0.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 3,
+   "mean": 1.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 4,
+   "mean": 5.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 5,
+   "mean": 0.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 6,
+   "mean": 5.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 7,
+   "mean": 6.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 8,
+   "mean": 7.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 9,
+   "mean": 0.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 10,
+   "mean": 14.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 11,
+   "mean": 34.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2020,
+   "month": 12,
+   "mean": 23.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 1,
+   "mean": 10.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 2,
+   "mean": 8.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 3,
+   "mean": 17.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 4,
+   "mean": 24.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 5,
+   "mean": 21.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 6,
+   "mean": 25,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 7,
+   "mean": 34.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 8,
+   "mean": 22,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 9,
+   "mean": 51.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 10,
+   "mean": 37.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 11,
+   "mean": 34.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2021,
+   "month": 12,
+   "mean": 67.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 1,
+   "mean": 55.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 2,
+   "mean": 60.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 3,
+   "mean": 78.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 4,
+   "mean": 84,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 5,
+   "mean": 96.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 6,
+   "mean": 70.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 7,
+   "mean": 91.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 8,
+   "mean": 74.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 9,
+   "mean": 96,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 10,
+   "mean": 95.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 11,
+   "mean": 80.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2022,
+   "month": 12,
+   "mean": 112.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 1,
+   "mean": 144.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 2,
+   "mean": 111.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 3,
+   "mean": 123.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 4,
+   "mean": 97.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 5,
+   "mean": 137.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 6,
+   "mean": 160.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 7,
+   "mean": 160,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 8,
+   "mean": 114.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 9,
+   "mean": 134.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 10,
+   "mean": 99.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 11,
+   "mean": 107.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2023,
+   "month": 12,
+   "mean": 113.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 1,
+   "mean": 126,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 2,
+   "mean": 123,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 3,
+   "mean": 103.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 4,
+   "mean": 137,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 5,
+   "mean": 172.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 6,
+   "mean": 164.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 7,
+   "mean": 196.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 8,
+   "mean": 216,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 9,
+   "mean": 141.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 10,
+   "mean": 165.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 11,
+   "mean": 154.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2024,
+   "month": 12,
+   "mean": 154.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 1,
+   "mean": 137,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 2,
+   "mean": 155.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 3,
+   "mean": 134.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 4,
+   "mean": 141.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 5,
+   "mean": 78.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 6,
+   "mean": 114.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 7,
+   "mean": 125.9,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 8,
+   "mean": 133.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 9,
+   "mean": 129.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 10,
+   "mean": 114.8,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 11,
+   "mean": 91.7,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2025,
+   "month": 12,
+   "mean": 124.2,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 1,
+   "mean": 115,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 2,
+   "mean": 77.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 3,
+   "mean": 86.6,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 4,
+   "mean": 79.3,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 5,
+   "mean": 101.5,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 6,
+   "mean": 94.4,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 7,
+   "mean": 78.1,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  },
+  {
+   "year": 2026,
+   "month": 8,
+   "mean": 76,
+   "lat": 50.8,
+   "lon": 4.35,
+   "site": "SILSO Brussels"
+  }
+ ]
+}
