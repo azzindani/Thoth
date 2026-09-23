@@ -197,13 +197,15 @@ export function showPinned(
 	lngLat: unknown,
 	full: SelectFn,
 ): void {
+	// Claim the id first: the replaced pin's close handler must see that it
+	// is no longer the current card (and leave the click's mute alone).
+	const id = ++pinSeq;
 	for (const old of [...pinStore.keys()]) {
 		pinStore.get(old)?.pop.remove();
 		pinStore.delete(old);
 	}
 	// The pin replaces the hover, never joins it.
 	closeHovers();
-	const id = ++pinSeq;
 	const pop = new maplibregl.Popup({
 		closeButton: true,
 		closeOnClick: false,
@@ -220,6 +222,8 @@ export function showPinned(
 	});
 	pop.on("close", () => {
 		pinStore.delete(id);
+		// The current card was dismissed: hover is welcome again.
+		if (id === pinSeq) muted.clear();
 	});
 	pop
 		.setLngLat(lngLat as never)
@@ -253,6 +257,25 @@ function closeHovers(): void {
 	openHovers.clear();
 }
 
+/** Hover rules that outlive a single controller:
+ * - `muted`: the features under the last click. A click answers "what is
+ *   this?" with a pin or picker; the hover must not come back for them
+ *   while the pointer stays on them (it used to re-attach on the next
+ *   mousemove — the double hover, and "clicking doesn't dismiss it" on
+ *   near-invisible polygon washes). Cleared once the pointer moves on.
+ * - `moving`: the camera is animating (drag, zoom, flyTo). Cards are
+ *   anchored to the globe and would drift away from the pointer; no
+ *   layer mouseleave fires during a move, so they'd strand. */
+let muted = new Set<string>();
+let moving = false;
+const hoverKey = (layer: string, p: ObjProps) =>
+	`${layer}:${String(p.id ?? p.title ?? "")}`;
+/** An open stacked-items picker owns the pointer: no hover over it. */
+function pickerOpen(): boolean {
+	for (const r of pickStore.values()) if (r.pop.isOpen()) return true;
+	return false;
+}
+
 /** De-jittered hover: mousemove fires per pixel, but rebuilding popup HTML
  * per pixel is layout thrash (the visible stutter). Coalesce to one frame
  * and skip setHTML while the pointer stays on the same feature — the card
@@ -272,9 +295,17 @@ export function steadyHover(
 		raf = 0;
 		const cur = q;
 		q = null;
-		if (!cur) return;
+		if (!cur || moving || pickerOpen()) return;
+		const k = hoverKey(cur.layer, cur.p);
+		if (muted.has(k)) {
+			// Still on what was just clicked: stay quiet, and remember it so
+			// moving within the same feature doesn't re-trigger a render.
+			key = k;
+			return;
+		}
+		// Pointer reached something else: the click's mute has done its job.
+		muted.clear();
 		pop.setLngLat(cur.ll as never);
-		const k = `${cur.layer}:${String(cur.p.id ?? cur.p.title ?? "")}`;
 		// The pinned feature needs no hover echo on top of its own card.
 		for (const [, r] of pinStore) if (r.key === k) return;
 		if (k === key) {
@@ -306,6 +337,9 @@ export function steadyHover(
 			if (raf) cancelAnimationFrame(raf);
 			raf = 0;
 			q = null;
+			// Leaving the clicked feature ends its mute: coming back is a
+			// fresh hover.
+			muted.delete(key);
 			key = "";
 			openHovers.delete(pop);
 			pop.remove();
@@ -336,10 +370,25 @@ export function ensurePickHandler(map: maplibregl.Map): void {
 	const m = map as maplibregl.Map & { __thothPickBound?: boolean };
 	if (m.__thothPickBound) return;
 	m.__thothPickBound = true;
+	// Grabbing, zooming or flying the globe drops every hover card; a new
+	// one appears on the next pointer move once the camera settles.
+	map.on("mousedown", closeHovers);
+	map.on("touchstart", closeHovers);
+	map.on("movestart", () => {
+		moving = true;
+		closeHovers();
+	});
+	map.on("moveend", () => {
+		moving = false;
+	});
+	// Pointer left the canvas (onto a floating panel): layer mouseleave
+	// never fires for that path, so the card would strand.
+	map.on("mouseout", closeHovers);
 	map.on("click", (e) => {
 		// Click decides what is shown: any hover in flight stands down so
 		// the picker/pin never renders on top of (or under) a hover card.
 		closeHovers();
+		muted = new Set();
 		const feats: ObjProps[] = [];
 		try {
 			// ±10px tap box: icons render small, fingers and test pixels
@@ -362,6 +411,8 @@ export function ensurePickHandler(map: maplibregl.Map): void {
 				if (seen.has(key)) continue;
 				seen.add(key);
 				feats.push({ ...p, layer: p.layer || base });
+				// Hover keys use the layer the handler was bound with.
+				muted.add(hoverKey(base, p));
 			}
 		} catch {
 			return;
@@ -401,6 +452,10 @@ function showPickCard(
 		maxWidth: "320px",
 	});
 	pickStore.set(id, { cands, preview, full, map, lngLat, pop });
+	pop.on("close", () => {
+		pickStore.delete(id);
+		if (id === pickSeq) muted.clear();
+	});
 	const rows = cands
 		.map(
 			(c, i) =>

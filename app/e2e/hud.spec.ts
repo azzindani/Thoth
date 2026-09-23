@@ -354,12 +354,14 @@ test.describe
 				);
 			}
 			let sawPicker = false;
+			let clicked: ScreenPt | null = null;
 			for (let i = 0; i < 5 && !sawPicker; i++) {
 				const p = await stackPixel();
 				if (!p) {
 					await page.waitForTimeout(2000);
 					continue;
 				}
+				clicked = p;
 				await page.mouse.click(p.x, p.y);
 				await page.waitForTimeout(1200);
 				if (await page.locator(".maplibregl-popup-content .pick").isVisible())
@@ -369,6 +371,18 @@ test.describe
 			await expect(
 				page.locator(".maplibregl-popup-content .pick"),
 			).toContainText("stacked — pick one");
+			// No hover echo over the picker: nudging the pointer on the same
+			// stack used to re-attach the hover card on top (double hover).
+			if (clicked)
+				for (const [dx, dy] of [
+					[2, 0],
+					[0, 2],
+					[-2, -1],
+				]) {
+					await page.mouse.move(clicked.x + dx, clicked.y + dy);
+					await page.waitForTimeout(150);
+				}
+			await expect(pointCards()).toHaveCount(0);
 			await page.screenshot({ path: "e2e/shots/desk-picker.png" });
 			const first = await page
 				.locator(".maplibregl-popup-content .pick-row b")
@@ -545,6 +559,11 @@ test.describe
 			expect(shown.some((t) => airwxTitles.includes(t.trim()))).toBe(true);
 			await page.mouse.click(p.x, p.y);
 			await page.waitForTimeout(1200);
+			// Clicking inside the fill answers with a pin/picker; moving within
+			// the same polygon must not bring the hover card back.
+			await page.mouse.move(p.x + 3, p.y + 2, { steps: 3 });
+			await page.waitForTimeout(300);
+			await expect(pointCards()).toHaveCount(0);
 			// A point stacked over the fill routes through the picker instead.
 			if (await page.locator(".maplibregl-popup-content .pick").isVisible()) {
 				await page
@@ -558,6 +577,23 @@ test.describe
 			// Polygon click pins the preview — dismiss for later tests.
 			await expect(page.locator("#fullview")).toBeHidden();
 			await dismissPin();
+			// Dismissing the pin ends the click's mute: hover works again, and
+			// grabbing the globe drops it (it used to ride the rotation).
+			let back = false;
+			for (let i = 0; i < 3 && !back; i++) {
+				await page.mouse.move(p.x + 40, p.y + 40);
+				await page.mouse.move(p.x, p.y, { steps: 3 });
+				back = await pointCards()
+					.first()
+					.waitFor({ timeout: 2500 })
+					.then(() => true)
+					.catch(() => false);
+			}
+			expect(back, "hover returns after the pin closes").toBe(true);
+			await page.mouse.down();
+			await page.mouse.move(p.x + 80, p.y + 20, { steps: 8 });
+			await expect(pointCards()).toHaveCount(0);
+			await page.mouse.up();
 		});
 
 		test("layer toggle + sev chips + mission presets", async () => {
