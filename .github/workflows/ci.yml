@@ -169,4 +169,5 @@ jobs:
       - name: Build backend image
         run: docker build -t thoth-backend:ci backend
       - name: Build app image
+        if: ${{ !cancelled() }}  # report both images even if the first fails
         run: docker build -t thoth-app:ci --build-arg THOTH_API_INTERNAL=http://api:4000 app
