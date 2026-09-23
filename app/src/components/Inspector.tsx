@@ -126,14 +126,8 @@ export default function Inspector({
 
 	return (
 		<div className="inspector" id="inspector">
-			<div
-				style={{
-					display: "flex",
-					alignItems: "stretch",
-					borderBottom: "1px solid var(--line)",
-				}}
-			>
-				<div className="tabs" id="tabs" style={{ flex: 1 }}>
+			<div className="insp-head">
+				<div className="tabs" id="tabs">
 					{(
 						[
 							"object",
