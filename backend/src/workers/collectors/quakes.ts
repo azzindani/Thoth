@@ -31,6 +31,7 @@ export async function collect() {
 	try {
 		assertSafeUrl(URL);
 		const res = await stealthFetch(URL);
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const json = (await res.json()) as { features?: unknown };
 		await storeRaw("usgs", layer, res.status, json);
 		const feats = z.array(Feature).parse(json.features ?? []);

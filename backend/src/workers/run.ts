@@ -1,10 +1,21 @@
 import { config } from "../config.js";
+import { closePool } from "../db/client.js";
 import { log } from "../lib/logger.js";
+import { errMsg, flushVersions } from "./lib/store.js";
 import { COLLECTORS, type CollectorName } from "./registry.js";
 
 // BP7: staggered + jittered intervals, overlap guard, --once mode for cron/CI.
 // Usage: npm run dev:worker | node dist/workers/run.js --once quakes
-const running = new Set<string>();
+//
+// Lifecycle: SIGTERM/SIGINT stop scheduling, let in-flight collectors finish
+// (bounded by DRAIN_MS), flush pending layer versions, close the pool. A
+// collector still running past its interval is logged as stuck — the overlap
+// guard would otherwise skip it forever without a word.
+const STAGGER_MS = 2000;
+const DRAIN_MS = 25_000; // under docker's default 30s stop timeout
+const running = new Map<CollectorName, number>(); // name → start ms
+const timers: NodeJS.Timeout[] = [];
+let stopping = false;
 
 function jittered(ms: number): number {
 	const pct = config.POLL_JITTER_PCT / 100;
@@ -12,11 +23,20 @@ function jittered(ms: number): number {
 }
 
 async function runOnce(name: CollectorName): Promise<void> {
-	if (running.has(name)) {
-		log.warn("collector overlap skipped", { collector: name });
+	if (stopping) return;
+	const started = running.get(name);
+	if (started !== undefined) {
+		const ageSec = Math.round((Date.now() - started) / 1000);
+		const stuck = ageSec > COLLECTORS[name].intervalSec;
+		(stuck ? log.error : log.warn)("collector overlap skipped", {
+			collector: name,
+			running_sec: ageSec,
+			stuck,
+		});
 		return;
 	}
-	running.add(name);
+	const t0 = Date.now();
+	running.set(name, t0);
 	try {
 		const mod = (await import(COLLECTORS[name].module)) as {
 			collect: () => Promise<unknown>;
@@ -24,13 +44,33 @@ async function runOnce(name: CollectorName): Promise<void> {
 		const res = (await mod.collect()) as Record<string, unknown>;
 		log.info("collector tick", {
 			collector: name,
+			ms: Date.now() - t0,
 			...(typeof res === "object" ? res : { res }),
 		});
 	} catch (e: unknown) {
-		log.error("collector crashed", { collector: name, error: String(e) });
+		log.error("collector crashed", { collector: name, error: errMsg(e) });
 	} finally {
+		// Safety net for collectors that store without a trailing markHealth.
+		await flushVersions().catch((e: unknown) =>
+			log.error("version flush failed", { collector: name, error: errMsg(e) }),
+		);
 		running.delete(name);
 	}
+}
+
+async function shutdown(sig: string) {
+	if (stopping) return;
+	stopping = true;
+	for (const t of timers) clearTimeout(t);
+	log.info("worker stopping", { sig, in_flight: [...running.keys()] });
+	const deadline = Date.now() + DRAIN_MS;
+	while (running.size && Date.now() < deadline)
+		await new Promise((r) => setTimeout(r, 250));
+	if (running.size)
+		log.warn("worker drain timed out", { in_flight: [...running.keys()] });
+	await flushVersions().catch(() => {});
+	await closePool().catch(() => {});
+	process.exit(0);
 }
 
 async function main() {
@@ -42,18 +82,28 @@ async function main() {
 			process.exit(2);
 		}
 		await runOnce(name);
+		await closePool();
 		process.exit(0);
 	}
 	const names = Object.keys(COLLECTORS) as CollectorName[];
 	names.forEach((n, i) => {
-		setTimeout(() => {
-			runOnce(n);
-			setInterval(() => runOnce(n), jittered(COLLECTORS[n].intervalSec * 1000));
-		}, i * 2000);
+		timers.push(
+			setTimeout(() => {
+				runOnce(n);
+				timers.push(
+					setInterval(
+						() => runOnce(n),
+						jittered(COLLECTORS[n].intervalSec * 1000),
+					),
+				);
+			}, i * STAGGER_MS),
+		);
 	});
-	log.info("worker up", { collectors: names });
+	log.info("worker up", { collectors: names.length, env: config.NODE_ENV });
 }
 
+for (const sig of ["SIGTERM", "SIGINT"] as const)
+	process.on(sig, () => void shutdown(sig));
 process.on("unhandledRejection", (e) =>
 	log.error("unhandled rejection", { error: String(e) }),
 );
