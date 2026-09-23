@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
 import { Field, ItemRow } from "../lib/ui";
+import { WATCH_AREAS_EVENT } from "./MapView";
 
 export function FeedTab({ layer, title }: { layer: string; title: string }) {
 	const [items, setItems] = useState<LayerItem[] | null>(null);
@@ -207,6 +208,56 @@ export function BriefBlock() {
 	);
 }
 
+/** "Watch this area" (P5): saves the dossier circle as an area watch;
+ * anything live that later lands inside raises a WATCH toast. */
+function WatchArea({
+	area,
+}: {
+	area: { lat: string; lng: string; r: string; label: string };
+}) {
+	const [label, setLabel] = useState(area.label || `${area.lat},${area.lng}`);
+	const [state, setState] = useState<"idle" | "busy" | "on" | "err">("idle");
+	return (
+		<div className="row2 watch-area" style={{ margin: "8px 0" }}>
+			<Field
+				value={label}
+				aria-label="watch name"
+				onChange={(e) => {
+					setLabel(e.target.value);
+					setState("idle");
+				}}
+			/>
+			<button
+				type="button"
+				className="ghost-btn"
+				id="watch-area"
+				disabled={state === "busy" || !label.trim()}
+				onClick={async () => {
+					setState("busy");
+					try {
+						const r = await api.watchArea(
+							label.trim(),
+							Number(area.lat),
+							Number(area.lng),
+							Number(area.r),
+						);
+						setState(r.ok ? "on" : "err");
+						if (r.ok) window.dispatchEvent(new Event(WATCH_AREAS_EVENT));
+					} catch {
+						setState("err");
+					}
+				}}
+			>
+				{state === "on"
+					? "WATCHING"
+					: state === "err"
+						? "RETRY"
+						: `WATCH ${area.r} KM`}
+			</button>
+		</div>
+	);
+}
+
 export function AreaTab({
 	area,
 	goArea,
@@ -272,6 +323,7 @@ export function AreaTab({
 					{area.label}
 				</div>
 			)}
+			<WatchArea area={area} />
 			<div>
 				{area.counts.length === 0 && "nothing in window"}
 				{area.counts.map((c) => (

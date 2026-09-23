@@ -111,6 +111,51 @@ export function refreshForCamera(map: maplibregl.Map, opts: LoadOpts) {
 	if (due.length) return loadAll(map, due, opts);
 }
 
+// ── area watches (ROADMAP P5) ───────────────────────────────────────────
+/** Event the page listens for to redraw watched areas after a change. */
+export const WATCH_AREAS_EVENT = "thoth:watch-areas";
+
+/** Watched areas as a dashed accent outline + faint wash. Not a data layer:
+ * never picked, never counted. */
+export function setWatchAreas(
+	map: maplibregl.Map,
+	areas: { id: string; label: string; geom: unknown }[],
+) {
+	const data = {
+		type: "FeatureCollection",
+		features: areas.map((a) => ({
+			type: "Feature",
+			geometry: a.geom,
+			properties: { id: a.id, label: a.label },
+		})),
+	};
+	const src = map.getSource("watch-areas") as
+		| maplibregl.GeoJSONSource
+		| undefined;
+	if (src) {
+		src.setData(data as never);
+		return;
+	}
+	map.addSource("watch-areas", { type: "geojson", data: data as never });
+	map.addLayer({
+		id: "watch-areas-fill",
+		type: "fill",
+		source: "watch-areas",
+		paint: { "fill-color": PALETTE.accent, "fill-opacity": 0.05 },
+	} as never);
+	map.addLayer({
+		id: "watch-areas",
+		type: "line",
+		source: "watch-areas",
+		paint: {
+			"line-color": PALETTE.accent,
+			"line-width": 1.5,
+			"line-opacity": 0.8,
+			"line-dasharray": [3, 2],
+		},
+	} as never);
+}
+
 // ── time replay (ROADMAP P5) ────────────────────────────────────────────
 // Every layer's last full slice is kept; during a replay each source shows
 // only features observed in the window ending at the replay clock. No

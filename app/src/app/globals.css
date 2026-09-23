@@ -2202,6 +2202,50 @@ body:not(.insp-wide) .dt-wrap {
 	}
 }
 
+/* ── since you last looked (SinceDigest.tsx) ─────────────────────────── */
+.since {
+	position: absolute;
+	z-index: 25;
+	top: var(--top);
+	left: 50%;
+	transform: translateX(-50%);
+	width: min(640px, calc(100vw - var(--inset) * 2));
+	max-height: 48vh;
+	display: flex;
+	flex-direction: column;
+	padding: 12px 14px;
+	border-radius: var(--r-card);
+	background: var(--glass2);
+	-webkit-backdrop-filter: var(--blur);
+	backdrop-filter: var(--blur);
+	border: 1px solid var(--line2);
+	box-shadow: var(--hl), var(--shadow-card);
+	animation: pal-in var(--t) var(--ease);
+}
+.since-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+.since-title {
+	margin: 0;
+}
+.since-body {
+	overflow: auto;
+	min-height: 0;
+	margin-top: 8px;
+}
+.since-escalated {
+	color: var(--red);
+}
+.since-new {
+	color: var(--txt);
+}
+.since-resolved {
+	color: var(--dim);
+}
+
 /* ── time replay (Replay.tsx) ─────────────────────────────────────────── */
 .replay {
 	border: 0;

@@ -197,8 +197,12 @@ export function registerCore(app: express.Express): void {
 
 	app.get("/api/alerts", async (req, res) => {
 		const limit = req.query.limit ? Number(req.query.limit) : 50;
+		const hours = req.query.hours ? Number(req.query.hours) : 24;
 		try {
-			const items = await getAlerts(Number.isFinite(limit) ? limit : 50);
+			const items = await getAlerts(
+				Number.isFinite(limit) ? limit : 50,
+				Number.isFinite(hours) ? hours : 24,
+			);
 			res.json({
 				items,
 				total: items.length,

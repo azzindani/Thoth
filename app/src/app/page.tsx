@@ -5,7 +5,13 @@ import CmdBar from "../components/CmdBar";
 import EntityGraph from "../components/EntityGraph";
 import Explorer from "../components/Explorer";
 import Inspector, { CompleteView, type Tab } from "../components/Inspector";
-import MapView, { loadAll, type ObjProps, setVis } from "../components/MapView";
+import MapView, {
+	loadAll,
+	type ObjProps,
+	setVis,
+	setWatchAreas,
+	WATCH_AREAS_EVENT,
+} from "../components/MapView";
 import MiniMap from "../components/MiniMap";
 import {
 	type Action,
@@ -14,6 +20,7 @@ import {
 } from "../components/Palette";
 import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
 import Replay from "../components/Replay";
+import SinceDigest from "../components/SinceDigest";
 import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
@@ -537,6 +544,28 @@ export default function Terminal() {
 		}
 	}
 
+	// Watched areas (P5) drawn on the map; redrawn after any change.
+	const refreshWatchAreas = useCallback(async () => {
+		const m = mapRef.current;
+		if (!m) return;
+		try {
+			const j = await api.watchList();
+			setWatchAreas(
+				m,
+				j.items
+					.filter((w) => w.kind === "area" && w.geom)
+					.map((w) => ({ id: w.id, label: w.value, geom: w.geom })),
+			);
+		} catch {
+			/* keep */
+		}
+	}, []);
+	useEffect(() => {
+		const on = () => void refreshWatchAreas();
+		window.addEventListener(WATCH_AREAS_EVENT, on);
+		return () => window.removeEventListener(WATCH_AREAS_EVENT, on);
+	}, [refreshWatchAreas]);
+
 	// Theater names for the palette (the explorer has its own copy).
 	useEffect(() => {
 		if (!palOpen || theaterList.length) return;
@@ -698,6 +727,7 @@ export default function Terminal() {
 				actions={palOpen ? buildActions() : []}
 			/>
 			<ShortcutSheet open={keysOpen} onClose={() => setKeysOpen(false)} />
+			<SinceDigest />
 			<Ticker
 				mode={mode}
 				setMode={(m) => setMode(m === "dark" ? "default" : m)}
@@ -753,6 +783,7 @@ export default function Terminal() {
 					mapCb={(m) => {
 						mapRef.current = m;
 						syncPadding();
+						void refreshWatchAreas();
 						// shareable URL state: #c=lng,lat,z (world-dashboard urlstate pattern)
 						m.on("moveend", () => {
 							try {

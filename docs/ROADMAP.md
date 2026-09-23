@@ -93,8 +93,18 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
       A local filter over each layer's last slice — no refetch while
       scrubbing; static catalogs and daily layers stay as background;
       LIVE restores the live picture.
-- [ ] **Area watches**: draw a circle/polygon; alert when anything enters.
-- [ ] **Since you last looked**: new / escalated / resolved digest.
+- [x] **Area watches**: draw a circle/polygon; alert when anything enters.
+      *Shipped:* watch kind `area` (migration 009: geometry column) —
+      circle via lat/lon/radius_km or a GeoJSON polygon over the API; in
+      the app, Area tab → name → WATCH saves the dossier circle. Live
+      events inside match (catalogs never) and raise the existing WATCH
+      toasts; watched areas draw as a dashed accent outline.
+- [x] **Since you last looked**: new / escalated / resolved digest.
+      *Shipped:* the browser snapshots the critical/watch items it showed
+      and diffs the 72 h alert window on return (after ≥ 10 min away):
+      new, escalated (watch → critical), resolved (gone while still in
+      the window). A dismissible card lists them as a data table; rows
+      fly the map. `/api/alerts?hours=` (1–168).
 - [ ] **Country pages**: advisories, conflicts, hazards, outages,
       sanctions, markets, news per country.
 - [ ] **Saved workspaces**: layers + camera + windows + filters, named and

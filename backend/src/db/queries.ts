@@ -94,15 +94,17 @@ export async function searchSanctions(q: string, limit = 20) {
 	);
 }
 
-export async function getAlerts(limit = 50) {
-	const lim = Math.min(Math.max(limit, 1), 200);
+export async function getAlerts(limit = 50, hours = 24) {
+	const lim = Math.min(Math.max(limit, 1), 500);
+	const h = Math.min(Math.max(hours, 1), 168);
 	return query(
 		`SELECT id, ts, source, layer, title, url, severity,
             ST_AsGeoJSON(geom)::json AS geom
-     FROM events WHERE severity IN ('critical','watch') AND ts > now() - interval '24 hours'
+     FROM events WHERE severity IN ('critical','watch')
+       AND ts > now() - make_interval(hours => $2::int)
        AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
      ORDER BY ts DESC LIMIT $1`,
-		[lim],
+		[lim, h],
 	);
 }
 

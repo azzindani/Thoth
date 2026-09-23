@@ -168,8 +168,8 @@ export const api = {
 			items: LayerItem[];
 			threat?: { score: number; level: string };
 		}>(`/api/dossier?lat=${lat}&lng=${lng}&radius_km=${radius}`),
-	alerts: (limit = 50) =>
-		get<{ items: LayerItem[] }>(`/api/alerts?limit=${limit}`),
+	alerts: (limit = 50, hours = 24) =>
+		get<{ items: LayerItem[] }>(`/api/alerts?limit=${limit}&hours=${hours}`),
 	brief: () =>
 		get<{
 			generated_at: string;
@@ -329,8 +329,25 @@ export const api = {
 	watchList: () =>
 		get<{
 			ok: boolean;
-			items: { id: string; kind: string; value: string; note: string }[];
+			items: {
+				id: string;
+				kind: string;
+				value: string;
+				note: string;
+				geom?: { type: string; coordinates: unknown } | null;
+			}[];
 		}>("/api/watch"),
+	/** Area watch (P5): a circle; anything live that lands inside matches. */
+	watchArea: (label: string, lat: number, lon: number, radius_km: number) =>
+		fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ kind: "area", value: label, lat, lon, radius_km }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
 	watchAdd: (kind: string, value: string) =>
 		fetch(`${API}/api/watch`, {
 			method: "POST",
