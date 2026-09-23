@@ -705,18 +705,28 @@ test.describe
 				box.x + box.width * 0.75,
 				box.y + box.height * 0.3,
 			);
-			await page.waitForTimeout(2500);
-			const after = await page.evaluate(() =>
-				(
-					window as unknown as {
-						__thothMap?: { getCenter: () => { lng: number; lat: number } };
-					}
-				).__thothMap?.getCenter(),
-			);
-			expect(
-				Math.abs((after?.lng ?? 0) - (before?.lng ?? 0)) +
-					Math.abs((after?.lat ?? 0) - (before?.lat ?? 0)),
-			).toBeGreaterThan(1);
+			// The fly is animated: on CI's software GL a frame can take ~1 s, so
+			// wait for the camera to arrive rather than a fixed time.
+			await expect
+				.poll(
+					async () => {
+						const after = await page.evaluate(() =>
+							(
+								window as unknown as {
+									__thothMap?: {
+										getCenter: () => { lng: number; lat: number };
+									};
+								}
+							).__thothMap?.getCenter(),
+						);
+						return (
+							Math.abs((after?.lng ?? 0) - (before?.lng ?? 0)) +
+							Math.abs((after?.lat ?? 0) - (before?.lat ?? 0))
+						);
+					},
+					{ timeout: 20000 },
+				)
+				.toBeGreaterThan(1);
 		});
 
 		test("status strip: SSE state, monitor rows, cadence hints", async () => {

@@ -61,7 +61,10 @@ test("area watch: save the dossier circle and draw it on the map", async ({
 	await expect(body).toContainText("AREA · 38.4,142.4", { timeout: 20000 });
 	await body.locator(".watch-area input").fill("e2e area watch");
 	await body.locator("#watch-area").click();
-	await expect(body.locator("#watch-area")).toHaveText("WATCHING");
+	// The save is a write through the app proxy: allow for a loaded runner.
+	await expect(body.locator("#watch-area")).toHaveText("WATCHING", {
+		timeout: 20000,
+	});
 	try {
 		await expect
 			.poll(() =>
@@ -171,7 +174,9 @@ test("map note pinned from the Area tab; sitrep of the view carries it", async (
 	await expect(body).toContainText("AREA · 38.4,142.4", { timeout: 20000 });
 	await body.locator(".note-here input").fill("e2e map note");
 	await body.locator("#note-here").click();
-	await expect(body.locator("#note-here")).toHaveText("NOTED");
+	await expect(body.locator("#note-here")).toHaveText("NOTED", {
+		timeout: 20000,
+	});
 	try {
 		await expect
 			.poll(() =>
