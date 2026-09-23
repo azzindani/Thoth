@@ -152,6 +152,7 @@ export function setVis(
 		`${n}-o-watch`,
 		`${n}-o-info`,
 		`${n}-p`,
+		`${n}-h`,
 	])
 		if (map.getLayer(id))
 			map.setLayoutProperty(id, "visibility", visible[n] ? "visible" : "none");
@@ -253,6 +254,19 @@ export async function loadLayer(
 				},
 			} as never);
 		}
+		// Lines (cables, tracklines) are 1–2px: an invisible 12px band under
+		// them makes hover and tap forgiving. Only line geometries.
+		map.addLayer({
+			id: `${name}-h`,
+			type: "line",
+			source: name,
+			filter: [
+				"in",
+				["geometry-type"],
+				["literal", ["LineString", "MultiLineString"]],
+			],
+			paint: { "line-width": 12, "line-opacity": 0 },
+		} as never);
 		// Mixed-geometry layers (navwarn: a mine sighting is a position, not
 		// an area) — points render as severity-ringed dots, never dropped.
 		map.addLayer({
@@ -287,7 +301,8 @@ export async function loadLayer(
 			phov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
 			armThumb(phov, p);
 		});
-		for (const hoverId of [name, `${name}-p`]) {
+		// Fill, points, and the line hit band (lines have no fill to hover).
+		for (const hoverId of [name, `${name}-p`, `${name}-h`]) {
 			map.on("mousemove", hoverId, (e) => {
 				const f = e.features?.[0];
 				if (!f) return;

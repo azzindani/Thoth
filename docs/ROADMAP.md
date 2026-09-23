@@ -51,13 +51,16 @@ The monitor shows *now*; it must also show *history*, *cadence* and *why*.
       the padded, grid-snapped view and re-slices only visible layers whose
       last slice was truncated — complete layers never reload on pans.
 
-## P3 — Source batches `[ ]`
+## P3 — Source batches `[~]`
 
 Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
-- [ ] Batch 32: Copernicus EMS activations, FAA airport status, Finnish
-      AIS (Digitraffic marine), UNHCR displacement, FEWS NET IPC phases,
-      submarine cables (static), RIPE RIS Live (BGP), ENISA EUVD, Tor exits,
-      UK FCDO advisories.
+- [x] Batch 32: Copernicus EMS activations, FAA airport status, Finnish
+      AIS (Digitraffic marine), UNHCR displacement, submarine cables,
+      ENISA EUVD, Tor exits, UK FCDO advisories — new `vessels`,
+      `displacement`, `cables` layers.
+- [ ] Deferred from batch 32: FEWS NET IPC phases (keyless API shape
+      unconfirmed — verify from a networked host first), RIPE RIS Live
+      (websocket stream; needs a streaming worker, not a poll collector).
 - [ ] Following batches: largest remaining keyless feeds per uncovered
       theme (see ENDPOINTS.md "NOT free" list for what stays out).
 

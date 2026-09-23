@@ -208,6 +208,26 @@ export const LAYERS: Record<string, LayerDef> = {
 		svg: '<path d="M6 20a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2"/><path d="M8 18V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v14"/><path d="M10 20h4"/><circle cx="16" cy="20" r="2"/><circle cx="8" cy="20" r="2"/>',
 		intervalSec: 21600,
 	},
+	// Live AIS positions (Digitraffic, Baltic). A heading arrow: the symbol
+	// layer rotates it by meta.track.
+	vessels: {
+		color: "#7dd3fc",
+		svg: '<path d="M12 2 19 21 12 17 5 21Z"/>',
+		intervalSec: 600,
+	},
+	// People displaced from each origin country (UNHCR, annual).
+	displacement: {
+		color: "#fdba74",
+		svg: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+		intervalSec: 86400,
+	},
+	// Submarine cable routes (lines) + landing stations (points).
+	cables: {
+		color: "#a5b4fc",
+		svg: '<path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"/><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"/><path d="M21 21v-2h-4"/><path d="M3 5h4V3"/><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"/>',
+		intervalSec: 86400,
+		polygon: true,
+	},
 };
 
 export const LAYER_NAMES = Object.keys(LAYERS);
@@ -257,10 +277,21 @@ export const LAYER_GROUPS: [string, string[]][] = [
 	],
 	[
 		"Movement",
-		["flights", "satellites", "transit", "ports", "airports", "chokepoints"],
+		[
+			"flights",
+			"vessels",
+			"satellites",
+			"transit",
+			"ports",
+			"airports",
+			"chokepoints",
+		],
 	],
-	["Infrastructure", ["energy", "datacenters", "cctv"]],
-	["Society & markets", ["news", "markets", "policy", "research", "health"]],
+	["Infrastructure", ["energy", "cables", "datacenters", "cctv"]],
+	[
+		"Society & markets",
+		["news", "displacement", "markets", "policy", "research", "health"],
+	],
 ];
 
 export function groupedLayers(names: string[]): [string, string[]][] {

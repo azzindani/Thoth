@@ -161,6 +161,21 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   remembered; tablet/phone = swipeable stack); hover/pin/picker cards
   anchor inside the free area (`fitAnchor`). e2e: new floating.spec.ts
   (5 tests), full suite 33/34 locally (ASN needs network).
+- [x] Sources batch32 (2026-09-23, ROADMAP P3): vessels (Digitraffic
+  AIS), displacement (UNHCR), cables (submarine cable routes + landings),
+  FAA NAS status, Copernicus EMS, ENISA EUVD, Tor exits, UK FCDO. Three
+  new layers; polygon layers gain an invisible 12px line pick band
+  (`<layer>-h`) and outline picks, so 1px routes hover and click. Slow
+  catalog-like sources (state-travel, uk-fcdo, unhcr, cables, EMS) no
+  longer raise false "frozen" alerts. Contract tests 235/235 (+12).
+- Batch32 live verification: built without egress, so formats follow the
+  published docs (NAS status XML lists, EMS `results[]`+WKT centroid with
+  RSS fallback, Digitraffic `features[].properties.timestampExternal`,
+  UNHCR `items[]` with `coo_iso`, cable-geo.json, EUVD list endpoints,
+  Onionoo `relays[]`, GOV.UK `links.children` + `details.alert_status`).
+  EMS is the least certain (undocumented dashboard API). Run
+  `npm run dev:worker -- --once <name>` for faa, ems, vessels, unhcr,
+  cables, euvd, torexits, fcdo on a networked host and check the monitor.
 - Batch31 live verification: the sandbox that built these has no egress,
   so field names follow the published formats (NGA `broadcast-warn`,
   readsb `nac_p`/`gpsOkBefore`, SPC 3-section CSV, tsunami.gov Atom

@@ -331,4 +331,13 @@ export const SOURCE_MAP: Record<
 	"yr-forecast": { collector: "weather", intervalSec: 300 },
 	"yr-nowcast": { collector: "weather", intervalSec: 300 },
 	zenodo: { collector: "research", intervalSec: 21600 },
+	// Batch 32 (ROADMAP P3).
+	"faa-nas": { collector: "faa", intervalSec: 300 },
+	"copernicus-ems": { collector: "ems", intervalSec: 3600 },
+	"digitraffic-ais": { collector: "vessels", intervalSec: 600 },
+	unhcr: { collector: "unhcr", intervalSec: 86400 },
+	"submarine-cables": { collector: "cables", intervalSec: 86400 },
+	"enisa-euvd": { collector: "euvd", intervalSec: 3600 },
+	"tor-onionoo": { collector: "torexits", intervalSec: 3600 },
+	"uk-fcdo": { collector: "fcdo", intervalSec: 21600 },
 };

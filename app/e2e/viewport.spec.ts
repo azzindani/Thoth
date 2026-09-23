@@ -44,3 +44,47 @@ test("zooming in fills a truncated layer for the view", async ({ page }) => {
 	expect(j.total).toBeGreaterThan(0);
 	await expect.poll(() => count(page, "airports")).toBe(j.total);
 });
+
+test("cable routes are lines you can pick", async ({ page }) => {
+	test.setTimeout(180000);
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	await expect
+		.poll(() => count(page, "cables"), { timeout: 120000 })
+		.toBeGreaterThan(0);
+	await page.evaluate(
+		() =>
+			new Promise<void>((r) => {
+				const m = (
+					window as unknown as {
+						__thothMap: MLMap & {
+							once: (e: string, f: () => void) => void;
+						};
+					}
+				).__thothMap;
+				m.jumpTo({ center: [14, 36], zoom: 4.2 });
+				m.once("idle", () => r());
+				setTimeout(r, 5000);
+			}),
+	);
+	// A point on the fixture route (8,35 → 14,36), a few px off the 1px line.
+	const at = await page.evaluate(() => {
+		const m = (
+			window as unknown as {
+				__thothMap: {
+					project: (c: [number, number]) => { x: number; y: number };
+					getContainer: () => HTMLElement;
+				};
+			}
+		).__thothMap;
+		const q = m.project([11, 35.5]);
+		const r = m.getContainer().getBoundingClientRect();
+		return { x: r.left + q.x, y: r.top + q.y + 4 };
+	});
+	await page.mouse.click(at.x, at.y);
+	await expect(page.locator(".maplibregl-popup").first()).toContainText(
+		"Submarine cable",
+		{ timeout: 10000 },
+	);
+});
