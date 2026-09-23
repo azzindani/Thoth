@@ -1,4 +1,4 @@
-// Layer catalog: the single source of truth for all 25 layers (global-monitor pattern).
+// Layer catalog: the single source of truth for every map layer (global-monitor pattern).
 // Symbols: Lucide icon paths (ISC licence). Colors must stay in primitives tokens.
 export interface LayerDef {
 	color: string;
@@ -186,6 +186,28 @@ export const LAYERS: Record<string, LayerDef> = {
 		svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>',
 		intervalSec: 86400,
 	},
+	// NGA navigational warnings: firing/launch boxes, mines, GNSS notices.
+	// Mixed geometry — areas, tracklines and single positions (see the
+	// point fallback in MapView's polygon branch).
+	navwarn: {
+		color: "#38bdf8",
+		svg: '<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
+		intervalSec: 1800,
+		polygon: true,
+	},
+	// GNSS interference cells derived from ADS-B navigation accuracy.
+	gpsjam: {
+		color: "#f472b6",
+		svg: '<line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><path d="M7.11 7.11C5.83 8.39 5 10.1 5 12c0 3.87 3.13 7 7 7 1.9 0 3.61-.83 4.89-2.11"/><path d="M18.71 13.96c.19-.63.29-1.29.29-1.96 0-3.87-3.13-7-7-7-.67 0-1.33.1-1.96.29"/><line x1="2" x2="22" y1="2" y2="22"/>',
+		intervalSec: 1800,
+		polygon: true,
+	},
+	// US State Dept travel advisory level per country (capital anchor).
+	advisories: {
+		color: "#fca5a5",
+		svg: '<path d="M6 20a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2"/><path d="M8 18V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v14"/><path d="M10 20h4"/><circle cx="16" cy="20" r="2"/><circle cx="8" cy="20" r="2"/>',
+		intervalSec: 21600,
+	},
 };
 
 export const LAYER_NAMES = Object.keys(LAYERS);
@@ -223,6 +245,9 @@ export const LAYER_GROUPS: [string, string[]][] = [
 		[
 			"conflicts",
 			"drones",
+			"navwarn",
+			"gpsjam",
+			"advisories",
 			"telegram",
 			"cyber",
 			"bases",
@@ -261,6 +286,7 @@ export const MISSIONS: Record<string, string[]> = {
 		"fires",
 		"telegram",
 		"cctv",
+		"advisories",
 	],
 	cyber: ["cyber", "markets", "datacenters", "signals"],
 	markets: ["markets", "energy", "chokepoints", "ports", "news"],
@@ -293,6 +319,9 @@ export const MISSIONS: Record<string, string[]> = {
 		"research",
 		"health",
 		"policy",
+		"navwarn",
+		"gpsjam",
+		"advisories",
 	],
 	wartime: [
 		"drones",
@@ -304,6 +333,8 @@ export const MISSIONS: Record<string, string[]> = {
 		"cctv",
 		"satellites",
 		"airports",
+		"navwarn",
+		"gpsjam",
 	],
 };
 

@@ -179,6 +179,23 @@ export const COLLECTORS = {
 		intervalSec: 1800,
 		ttlSec: 3600,
 	},
+	navwarn: {
+		module: "./collectors/navwarn.js",
+		intervalSec: 1800,
+		ttlSec: 3600,
+	},
+	gpsjam: { module: "./collectors/gpsjam.js", intervalSec: 1800, ttlSec: 3600 },
+	spc: { module: "./collectors/spc.js", intervalSec: 900, ttlSec: 1800 },
+	tsunami: {
+		module: "./collectors/tsunami.js",
+		intervalSec: 300,
+		ttlSec: 900,
+	},
+	advisories: {
+		module: "./collectors/advisories.js",
+		intervalSec: 21600,
+		ttlSec: 86400,
+	},
 	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
 } as const;
 
