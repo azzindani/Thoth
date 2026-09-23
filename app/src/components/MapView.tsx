@@ -657,6 +657,17 @@ const SAT_LAYER = {
 	source: "sat",
 } as unknown as maplibregl.LayerSpecification;
 
+// The live map, for components that only need to move the camera (tabs,
+// lists) — no prop threading through the page.
+let liveMap: maplibregl.Map | null = null;
+export function flyTo(lat: number, lon: number, zoom = 5) {
+	liveMap?.flyTo({
+		center: [lon, lat],
+		zoom: Math.max(liveMap.getZoom(), zoom),
+		speed: 1.4,
+	});
+}
+
 export default function MapView(props: Props) {
 	const divRef = useRef<HTMLDivElement>(null);
 	const mapRef = useRef<maplibregl.Map | null>(null);
@@ -687,6 +698,7 @@ export default function MapView(props: Props) {
 			attributionControl: { compact: true },
 		});
 		mapRef.current = map;
+		liveMap = map;
 		(window as unknown as { __thothMap?: maplibregl.Map }).__thothMap = map;
 		// right-click sets area dossier
 		map.on("contextmenu", (e) => {
@@ -729,6 +741,7 @@ export default function MapView(props: Props) {
 		return () => {
 			map.remove();
 			mapRef.current = null;
+			liveMap = null;
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);

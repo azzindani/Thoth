@@ -161,6 +161,12 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   remembered; tablet/phone = swipeable stack); hover/pin/picker cards
   anchor inside the free area (`fitAnchor`). e2e: new floating.spec.ts
   (5 tests), full suite 33/34 locally (ASN needs network).
+- [x] Intelligence layer (2026-09-23, ROADMAP P4): duplicate quake merge,
+  incidents (DBSCAN clusters corroborated across layers/sources, with
+  timeline), anomalies (7-day median/MAD per layer and 5° cell; dead-feed
+  guard), Incidents tab (two data tables, rows fly the map). Tests: intel
+  7/7 (collectors 242/242), e2e incidents tab. Live behaviour needs real
+  feeds + a day of samples; tune EPS/thresholds from production data.
 - [x] Sources batch32 (2026-09-23, ROADMAP P3): vessels (Digitraffic
   AIS), displacement (UNHCR), cables (submarine cable routes + landings),
   FAA NAS status, Copernicus EMS, ENISA EUVD, Tor exits, UK FCDO. Three

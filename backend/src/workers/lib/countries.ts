@@ -344,3 +344,28 @@ export function locateCountry(
 	}
 	return null;
 }
+
+/** Nearest capital's country (display name) within `maxKm`, for naming a
+ * map cell ("near Latvia"). Coarse by design: capitals, not borders. */
+export function nearestCountry(
+	lat: number,
+	lon: number,
+	maxKm = 1200,
+): string | null {
+	const rad = Math.PI / 180;
+	let best: string | null = null;
+	let bestKm = maxKm;
+	for (const [k, [la, lo]] of Object.entries(CAPITALS)) {
+		const dLat = (la - lat) * rad;
+		const dLon = (lo - lon) * rad;
+		const a =
+			Math.sin(dLat / 2) ** 2 +
+			Math.cos(lat * rad) * Math.cos(la * rad) * Math.sin(dLon / 2) ** 2;
+		const km = 12742 * Math.asin(Math.min(1, Math.sqrt(a)));
+		if (km < bestKm) {
+			bestKm = km;
+			best = k;
+		}
+	}
+	return best ? best.replace(/\b[a-z]/g, (c) => c.toUpperCase()) : null;
+}

@@ -100,11 +100,14 @@ export async function getAlerts(limit = 50) {
 		`SELECT id, ts, source, layer, title, url, severity,
             ST_AsGeoJSON(geom)::json AS geom
      FROM events WHERE severity IN ('critical','watch') AND ts > now() - interval '24 hours'
+       AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
      ORDER BY ts DESC LIMIT $1`,
 		[lim],
 	);
 }
 
+// Readers hide reports judged duplicates of another (event_dups, P4): one
+// quake is one dot, not three.
 export async function getLayerSlice(
 	layer: string,
 	limit = 500,
@@ -114,14 +117,16 @@ export async function getLayerSlice(
 		return query(
 			`SELECT id, ts, source, layer, title, body, url, severity, confidence,
               ST_AsGeoJSON(geom)::json AS geom, entities, meta
-       FROM events WHERE layer = $1 AND ts > $2 ORDER BY ts DESC LIMIT $3`,
+       FROM events WHERE layer = $1 AND ts > $2 AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
+       ORDER BY ts DESC LIMIT $3`,
 			[layer, since, limit],
 		);
 	}
 	return query(
 		`SELECT id, ts, source, layer, title, body, url, severity, confidence,
             ST_AsGeoJSON(geom)::json AS geom, entities, meta
-     FROM events WHERE layer = $1 ORDER BY ts DESC LIMIT $2`,
+     FROM events WHERE layer = $1 AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
+     ORDER BY ts DESC LIMIT $2`,
 		[layer, limit],
 	);
 }
@@ -161,6 +166,7 @@ export async function getLayerView(
               geom, entities, meta, ST_Centroid(geom) AS c
        FROM events
        WHERE layer = $1 AND geom IS NOT NULL AND ${envelopes}
+         AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
          AND ($6::timestamptz IS NULL OR ts > $6)
      ), ranked AS (
        SELECT *, row_number() OVER (

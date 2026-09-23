@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import { closePool } from "../db/client.js";
 import { log } from "../lib/logger.js";
+import { intelPass } from "./intel.js";
 import { errMsg, flushVersions } from "./lib/store.js";
 import { instrumentFetch, withRun } from "./lib/telemetry.js";
 import {
@@ -33,6 +34,7 @@ const HEARTBEAT_MS = 15_000;
 const REQUEST_POLL_MS = 5_000;
 const ALERT_MS = 60_000;
 const PRUNE_MS = 3_600_000;
+const INTEL_MS = 300_000;
 let stopping = false;
 
 function jittered(ms: number): number {
@@ -180,6 +182,13 @@ async function main() {
 				);
 		}, ALERT_MS),
 	);
+	// Intelligence layer (P4): duplicates, incidents, anomaly samples.
+	const doIntel = () =>
+		intelPass()
+			.then((r) => log.info("intel pass", r))
+			.catch((e: unknown) => log.warn("intel failed", { error: errMsg(e) }));
+	timers.push(setTimeout(doIntel, 90_000));
+	timers.push(setInterval(doIntel, INTEL_MS));
 	const doPrune = () =>
 		prune()
 			.then((r) => log.info("retention prune", r))
