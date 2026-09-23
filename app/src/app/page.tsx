@@ -125,6 +125,12 @@ export default function Terminal() {
 		restoring.current = false;
 		setHidden((h) => (h[k] === v ? h : { ...h, [k]: v }));
 	}, []);
+	// Toggle from the latest state, never a render-time snapshot: a click
+	// that lands before a pending re-render must still flip the panel.
+	const togglePanel = useCallback((k: keyof Hidden) => {
+		restoring.current = false;
+		setHidden((h) => ({ ...h, [k]: !h[k] }));
+	}, []);
 
 	// Reveal the inspector for explicit content only (osint lookups, other
 	// tabs, the full view) — a bare map-tap preview must never yank a panel
@@ -200,13 +206,13 @@ export default function Terminal() {
 				// expanding the rail). Tablet/phone: open/close the sheet.
 				const b = document.body;
 				if (b.dataset.bp === "desk" && !b.classList.contains("focus"))
-					setPanel("insp", !document.body.classList.contains("hide-insp"));
+					togglePanel("insp");
 				else document.getElementById("inspector")?.classList.toggle("open");
 			}
 		}
 		document.addEventListener("keydown", onKey);
 		return () => document.removeEventListener("keydown", onKey);
-	}, [mission, applyMission, setPanel, toggleClear]);
+	}, [mission, applyMission, setPanel, togglePanel, toggleClear]);
 
 	// breakpoint mirror (responsive contract)
 	useEffect(() => {
@@ -635,7 +641,7 @@ export default function Terminal() {
 					aria-expanded={!hidden[k]}
 					aria-label={`${hidden[k] ? "Show" : "Hide"} ${PANEL_LABEL[k].toLowerCase()} panel`}
 					title={`${hidden[k] ? "Show" : "Hide"} ${PANEL_LABEL[k].toLowerCase()} (\\ hides all)`}
-					onClick={() => setPanel(k, !hidden[k])}
+					onClick={() => togglePanel(k)}
 				>
 					<svg className="pt-chev" viewBox="0 0 24 24" aria-hidden="true">
 						<path d="m15 18-6-6 6-6" />
