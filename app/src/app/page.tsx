@@ -26,6 +26,14 @@ import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
 import { API, api } from "../lib/api";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
+import {
+	deleteWorkspace,
+	listWorkspaces,
+	saveWorkspace,
+	type Workspace,
+	workspaceFromHash,
+	workspaceLink,
+} from "../lib/workspace";
 
 type Hidden = { expl: boolean; insp: boolean; dock: boolean };
 const NO_HIDDEN: Hidden = { expl: false, insp: false, dock: false };
@@ -63,12 +71,17 @@ export default function Terminal() {
 	const [mission, setMission] = useState("");
 	const [palOpen, setPalOpen] = useState(false);
 	const [replayOn, setReplayOn] = useState(false);
+	const [countryQ, setCountryQ] = useState<string | undefined>(undefined);
+	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 	const [keysOpen, setKeysOpen] = useState(false);
 	const [theaterList, setTheaterList] = useState<[string, string][]>([]);
 	const [osint, setOsint] = useState<{ kind: string; arg: string } | null>(
 		null,
 	);
-	const [toasts, setToasts] = useState<{ id: string; title: string }[]>([]);
+	// kind: critical (red badge, the default), watch (amber), notice (none).
+	const [toasts, setToasts] = useState<
+		{ id: string; title: string; kind?: "critical" | "watch" | "notice" }[]
+	>([]);
 	const [sse, setSse] = useState({ ok: false, last: 0, n: 0 });
 	const [changelog, setChangelog] = useState(false);
 	const [focus, setFocus] = useState(false);
@@ -350,7 +363,8 @@ export default function Terminal() {
 						[
 							...fresh.slice(0, 3).map((w) => ({
 								id: w.id,
-								title: `WATCH · ${w.title ?? w.id}`,
+								title: w.title ?? w.id,
+								kind: "watch" as const,
 							})),
 							...t,
 						].slice(0, 5),
@@ -544,6 +558,56 @@ export default function Terminal() {
 		}
 	}
 
+	// A short-lived status toast (workspace saved, link copied…).
+	const notice = useCallback((title: string) => {
+		const id = `notice:${Date.now()}`;
+		setToasts((t) =>
+			[{ id, title, kind: "notice" as const }, ...t].slice(0, 5),
+		);
+		setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
+	}, []);
+
+	// Saved workspaces (P5): capture what is on screen; apply one back.
+	useEffect(() => setWorkspaces(listWorkspaces()), []);
+	function captureWorkspace(name: string): Workspace {
+		const m = mapRef.current;
+		const c = m?.getCenter();
+		return {
+			v: 1,
+			name,
+			hidden: LAYER_NAMES.filter((l) => !visible[l]),
+			camera: {
+				c: [c?.lng ?? 20, c?.lat ?? 30],
+				z: m?.getZoom() ?? 1.6,
+				b: m?.getBearing() ?? 0,
+				p: m?.getPitch() ?? 0,
+			},
+			mission,
+			sev,
+			mode,
+			globe,
+			tab,
+			panels: hidden,
+		};
+	}
+	const applyWorkspace = useCallback((w: Workspace) => {
+		setVisible(
+			Object.fromEntries(LAYER_NAMES.map((l) => [l, !w.hidden.includes(l)])),
+		);
+		setMission(w.mission);
+		setSev(w.sev);
+		setMode(w.mode);
+		setGlobe(w.globe);
+		setTab(w.tab as Tab);
+		setHidden(w.panels);
+		mapRef.current?.jumpTo({
+			center: w.camera.c,
+			zoom: w.camera.z,
+			bearing: w.camera.b ?? 0,
+			pitch: w.camera.p ?? 0,
+		});
+	}, []);
+
 	// Watched areas (P5) drawn on the map; redrawn after any change.
 	const refreshWatchAreas = useCallback(async () => {
 		const m = mapRef.current;
@@ -587,6 +651,7 @@ export default function Terminal() {
 		const tabs: Tab[] = [
 			"object",
 			"area",
+			"country",
 			"sdn",
 			"alerts",
 			"incidents",
@@ -710,6 +775,46 @@ export default function Terminal() {
 				},
 			},
 			{
+				id: "ws-save",
+				group: "Workspace",
+				label: "Save this view as a workspace…",
+				run: () => {
+					const name = window.prompt("Workspace name")?.trim();
+					if (!name) return;
+					setWorkspaces(saveWorkspace(captureWorkspace(name.slice(0, 60))));
+					notice(`Workspace saved · ${name}`);
+				},
+			},
+			{
+				id: "ws-link",
+				group: "Workspace",
+				label: "Copy a link to this view",
+				run: () => {
+					const url = workspaceLink(captureWorkspace("Shared view"));
+					navigator.clipboard
+						?.writeText(url)
+						.then(() => notice("Link to this view copied"))
+						.catch(() => window.prompt("Copy this link", url));
+				},
+			},
+			...workspaces.flatMap((w) => [
+				{
+					id: `ws-open-${w.name}`,
+					group: "Workspace",
+					label: `Open · ${w.name}`,
+					run: () => {
+						applyWorkspace(w);
+						notice(`Workspace · ${w.name}`);
+					},
+				},
+				{
+					id: `ws-del-${w.name}`,
+					group: "Workspace",
+					label: `Delete · ${w.name}`,
+					run: () => setWorkspaces(deleteWorkspace(w.name)),
+				},
+			]),
+			{
 				id: "keys",
 				group: "Help",
 				label: "Keyboard shortcuts",
@@ -784,6 +889,12 @@ export default function Terminal() {
 						mapRef.current = m;
 						syncPadding();
 						void refreshWatchAreas();
+						// A shared workspace link (#ws=…) opens on that view.
+						const ws = workspaceFromHash();
+						if (ws) {
+							applyWorkspace(ws);
+							notice(`Workspace · ${ws.name}`);
+						}
 						// shareable URL state: #c=lng,lat,z (world-dashboard urlstate pattern)
 						m.on("moveend", () => {
 							try {
@@ -807,6 +918,7 @@ export default function Terminal() {
 						setOsint({ kind, arg });
 						setTab("object");
 					}}
+					country={countryQ}
 				/>
 			</div>
 			<div className="bottom" id="bottom">
@@ -850,6 +962,10 @@ export default function Terminal() {
 					onSdn={() => setTab("sdn")}
 					onAlerts={() => setTab("alerts")}
 					onTab={(t) => setTab(t as Tab)}
+					onCountry={(name) => {
+						setCountryQ(name);
+						setTab("country");
+					}}
 					onOsint={(kind, arg) => {
 						setOsint({ kind, arg });
 						setTab("object");
@@ -881,8 +997,17 @@ export default function Terminal() {
 			{toasts.length > 0 && (
 				<div className="toasts">
 					{toasts.map((t) => (
-						<div key={t.id} className="toast">
-							<b style={{ color: "var(--red)" }}>● CRITICAL</b> · {t.title}
+						<div key={t.id} className={`toast toast-${t.kind ?? "critical"}`}>
+							{t.kind === "notice" ? null : t.kind === "watch" ? (
+								<>
+									<b style={{ color: "var(--amber)" }}>● WATCH</b> ·{" "}
+								</>
+							) : (
+								<>
+									<b style={{ color: "var(--red)" }}>● CRITICAL</b> ·{" "}
+								</>
+							)}
+							{t.title}
 						</div>
 					))}
 				</div>

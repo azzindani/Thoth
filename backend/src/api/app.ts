@@ -10,6 +10,7 @@ import {
 	securityHeaders,
 } from "./middleware.js";
 import { registerCore } from "./routes-core.js";
+import { registerCountry } from "./routes-country.js";
 import { registerIntel } from "./routes-intel.js";
 import { registerMonitor } from "./routes-monitor.js";
 import { registerOsint } from "./routes-osint.js";
@@ -49,6 +50,7 @@ export function createApp(): express.Express {
 	registerRecon(app);
 	registerIntel(app);
 	registerMonitor(app);
+	registerCountry(app);
 
 	app.use("/api", notFound);
 	app.use(errorHandler);

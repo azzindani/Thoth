@@ -289,6 +289,29 @@ describe("new capability endpoints (search / watch / cert / asn)", () => {
 		);
 		assert.ok(week.total >= day.total);
 	});
+	it("country page: advisories at the capital, events nearby", async () => {
+		const c = await get<{
+			country: { name: string };
+			advisories: { title: string; source: string }[];
+			counts: { layer: string; n: number }[];
+			items: unknown[];
+		}>("/api/country?q=Afghanistan");
+		assert.equal(c.country.name, "Afghanistan");
+		assert.ok(c.advisories.some((a) => /Afghanistan/.test(a.title)));
+		// One row per issuer, however many the store holds.
+		assert.equal(
+			c.advisories.length,
+			new Set(c.advisories.map((a) => a.source)).size,
+		);
+		const j = await get<{ counts: { layer: string }[] }>(
+			"/api/country?q=Japan&radius_km=800",
+		);
+		assert.ok(j.counts.some((x) => x.layer === "quakes"));
+		assert.equal((await fetch(`${API}/api/country?q=Atlantis`)).status, 404);
+		assert.equal((await fetch(`${API}/api/country`)).status, 400);
+		const list = await get<{ items: string[] }>("/api/country/list");
+		assert.ok(list.items.includes("Japan") && list.items.length > 150);
+	});
 	it("watch rejects bad kind", async () => {
 		const res = await fetch(`${API}/api/watch`, {
 			method: "POST",
