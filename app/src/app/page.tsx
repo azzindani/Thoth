@@ -71,6 +71,7 @@ export default function Terminal() {
 	const [graph, setGraph] = useState(false);
 	// syncPadding is defined below; effects above it reach it through this.
 	const syncPaddingRef = useRef<(animate?: boolean) => void>(() => {});
+	const padSnap = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const seenCrit = useRef<Set<string>>(new Set());
 	const mapRef = useRef<maplibregl.Map | null>(null);
 	const getMap = useCallback(() => mapRef.current, []);
@@ -238,6 +239,8 @@ export default function Terminal() {
 				"--dock-h",
 				`${dock.offsetHeight}px`,
 			);
+		// A newer layout supersedes a pending snap from an earlier ease.
+		clearTimeout(padSnap.current);
 		const map = mapRef.current;
 		if (!map) return;
 		const bp = document.body.dataset.bp;
@@ -264,8 +267,18 @@ export default function Terminal() {
 			right: right ? right + GAP : 0,
 		};
 		try {
-			if (animate) map.easeTo({ padding, duration: 260 });
-			else map.setPadding(padding);
+			if (animate) {
+				map.easeTo({ padding, duration: 260 });
+				// Any other camera move (a drag, a flyTo, a resize) cancels the
+				// ease midway and would strand the padding: land it exactly.
+				padSnap.current = setTimeout(() => {
+					try {
+						map.setPadding(padding);
+					} catch {
+						/* map gone */
+					}
+				}, 320);
+			} else map.setPadding(padding);
 		} catch {
 			/* map not ready */
 		}
