@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // GDELT DOC 2.1, keyless. Artlist mode returns articles (no geo — geom stays null, like globenewslive brief feed).
@@ -38,7 +39,7 @@ export async function collect() {
 			lastStatus = res.status;
 			if (res.ok) break;
 			if (res.status === 429 && attempt < 2) {
-				await new Promise((r) => setTimeout(r, 8000 * (attempt + 1)));
+				await sleep(8000 * (attempt + 1));
 				continue;
 			}
 			throw new Error(`HTTP ${res.status}`);

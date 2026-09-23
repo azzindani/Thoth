@@ -46,14 +46,16 @@ describe("forecast/marine", () => {
 		};
 		globalThis.fetch = (async (url: unknown) => {
 			const u = String(url);
-			if (u.includes("api.open-meteo.com"))
-				return new Response(
-					JSON.stringify(Array.from({ length: 24 }, (_, i) => fx(15 + i))),
-					{ status: 200 },
-				);
+			// Marine first: "marine-api.open-meteo.com" also contains
+			// "api.open-meteo.com", so the forecast stub would shadow it.
 			if (u.includes("marine-api.open-meteo.com"))
 				return new Response(
 					JSON.stringify(Array.from({ length: 20 }, () => marine)),
+					{ status: 200 },
+				);
+			if (u.includes("api.open-meteo.com"))
+				return new Response(
+					JSON.stringify(Array.from({ length: 24 }, (_, i) => fx(15 + i))),
 					{ status: 200 },
 				);
 			return new Response("no mock", { status: 500 });
