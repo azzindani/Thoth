@@ -1,14 +1,11 @@
 import type express from "express";
 import { z } from "zod";
 import { query } from "../db/client.js";
-import {
-	getBrief,
-	getLayerSlice as slice,
-	getVersions as versions,
-} from "../db/queries.js";
+import { getBrief, getLayerSlice as slice } from "../db/queries.js";
 import { pushTelegram } from "../workers/lib/push.js";
 import { queryImagery } from "./imagery.js";
-import { LayerParams, VERSION } from "./server.js";
+import { LayerParams } from "./shared.js";
+import { streamHandler } from "./stream.js";
 
 /** Intel routes: theaters, search, watch, sitrep, imagery, notify, trend, export, stream. */
 export function registerIntel(app: express.Express): void {
@@ -543,67 +540,6 @@ export function registerIntel(app: express.Express): void {
 		res.send(csv);
 	});
 
-	// Live SSE: emits layer_changed when layer_versions move, heartbeat 15s.
-	app.get("/api/stream", async (req, res) => {
-		// Resume: client passes ?known=<base64 JSON {layer:version}> (or Last-Event-ID
-		// with the same payload). Server replays every layer that moved since, so a
-		// reconnect never silently misses ticks (gate_sse.py pattern).
-		let known: Record<string, string> = {};
-		const rawKnown =
-			(req.query.known as string | undefined) ??
-			(req.headers["last-event-id"] as string | undefined);
-		if (rawKnown) {
-			try {
-				const txt = rawKnown.startsWith("{")
-					? rawKnown
-					: Buffer.from(rawKnown, "base64").toString("utf8");
-				const parsed = JSON.parse(txt) as unknown;
-				if (parsed && typeof parsed === "object")
-					known = parsed as Record<string, string>;
-			} catch {
-				/* unknown resume state → full catch-up */
-			}
-		}
-		res.writeHead(200, {
-			"Content-Type": "text/event-stream",
-			"Cache-Control": "no-cache",
-			Connection: "keep-alive",
-		});
-		res.write(
-			`event: connected\ndata: {"ts":"${new Date().toISOString()}","version":"${VERSION}"}\n\n`,
-		);
-		const last = new Map<string, string>(Object.entries(known));
-		let alive = true;
-		req.on("close", () => {
-			alive = false;
-		});
-		const timer = setInterval(async () => {
-			if (!alive) {
-				clearInterval(timer);
-				return;
-			}
-			try {
-				const v = await versions();
-				const changed = v.filter((r) => last.get(r.layer) !== r.version);
-				last.clear();
-				for (const r of v) last.set(r.layer, r.version);
-				res.write(
-					changed.length
-						? `event: layer_changed\ndata: ${JSON.stringify({ layers: changed.map((r) => r.layer), versions: changed, ts: new Date().toISOString() })}\n\n`
-						: `event: heartbeat\ndata: {"ts":"${new Date().toISOString()}"}\n\n`,
-				);
-			} catch {
-				/* keep stream open on transient DB errors */
-			}
-		}, 5000);
-		try {
-			const v = await versions();
-			for (const r of v) last.set(r.layer, r.version);
-			res.write(
-				`event: snapshot\ndata: ${JSON.stringify({ versions: v })}\n\n`,
-			);
-		} catch {
-			/* ignore */
-		}
-	});
+	// Live SSE: shared-poller hub, see stream.ts for the wire contract.
+	app.get("/api/stream", streamHandler);
 }
