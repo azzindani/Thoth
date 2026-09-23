@@ -1,5 +1,6 @@
 "use client";
 import * as maplibregl from "maplibre-gl";
+import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { api, type LayerItem } from "../lib/api";

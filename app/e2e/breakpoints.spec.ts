@@ -1,7 +1,7 @@
 // Thoth rail + phone suites: the UX that used to swallow map taps.
 // Serial + one shared page per breakpoint (slow CDN boot happens once).
 // Screenshots kept in e2e/shots/.
-import { expect, type Page, test } from "playwright/test";
+import { expect, type Page, test } from "./fixtures";
 
 async function boot(page: Page) {
 	await page.goto("/");

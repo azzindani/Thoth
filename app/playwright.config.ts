@@ -8,7 +8,7 @@ export default defineConfig({
 	reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
 	use: {
 		baseURL: process.env.E2E_URL ?? "http://localhost:3000",
-		trace: "retain-on-failure",
+		trace: "on-first-retry",
 		// Optional preinstalled Chromium (sandboxes that cannot download one).
 		launchOptions: process.env.PW_CHROMIUM_PATH
 			? { executablePath: process.env.PW_CHROMIUM_PATH }

@@ -242,6 +242,46 @@ function square(lat: number, lon: number, d = 0.5) {
 	};
 }
 
+// Dense traffic over Europe / the Mediterranean: live data always has many
+// flights and geolocated news there, and map specs hover the clusters that
+// form at world zoom. 3 rows per layer never cluster, so they'd test nothing.
+const DENSE: {
+	layer: string;
+	source: string;
+	n: number;
+	lat: number;
+	lon: number;
+}[] = [
+	{ layer: "flights", source: "adsb.lol", n: 40, lat: 45, lon: 12 },
+	{ layer: "news", source: "bbc", n: 24, lat: 41, lon: 20 },
+];
+
+async function seedDense(now: number): Promise<number> {
+	let n = 0;
+	for (const d of DENSE) {
+		for (let i = 0; i < d.n; i++) {
+			// Deterministic spiral: stable ids + positions on every run.
+			const r = 0.4 + (i % 8) * 0.9;
+			const a = i * 2.39996; // golden angle
+			await storeNormalized({
+				id: `fixture:${d.layer}:dense:${i}`,
+				ts: new Date(now - (i % 12) * 3600e3).toISOString(),
+				source: d.source,
+				layer: d.layer,
+				title: `${d.layer} fixture ${i + 1}`,
+				severity: i % 11 === 0 ? "watch" : "info",
+				confidence: 0.9,
+				lat: d.lat + r * Math.sin(a),
+				lon: d.lon + r * Math.cos(a),
+				meta: { fixture: true },
+			});
+			n++;
+		}
+		await markHealth(d.source, true);
+	}
+	return n;
+}
+
 async function clean() {
 	await query("DELETE FROM events WHERE id LIKE 'fixture:%'");
 	await query("DELETE FROM sanctions_entities WHERE id LIKE 'fixture:%'");
@@ -274,6 +314,7 @@ async function seed() {
 		}
 		await markHealth(f.source, true);
 	}
+	n += await seedDense(now);
 	await query(
 		`INSERT INTO sanctions_entities(id, schema, name, aliases, countries, dataset)
      VALUES ('fixture:putin', 'Person', 'Vladimir Vladimirovich PUTIN', '{"Putin"}', '{"ru"}', 'fixture')

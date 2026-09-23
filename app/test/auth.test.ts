@@ -36,6 +36,7 @@ describe("helpers", () => {
 	it("keeps probes and build assets public, nothing else", () => {
 		expect(isPublicPath("/healthz")).toBe(true);
 		expect(isPublicPath("/_next/static/chunks/a.js")).toBe(true);
+		expect(isPublicPath("/maplibre/maplibre-gl-worker.mjs")).toBe(true);
 		expect(isPublicPath("/")).toBe(false);
 		expect(isPublicPath("/api/notes")).toBe(false);
 		expect(isPublicPath("/healthz/../api")).toBe(false);
