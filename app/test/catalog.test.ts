@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+	groupedLayers,
+	LAYER_GROUPS,
 	LAYER_NAMES,
 	LAYERS,
 	MISSIONS,
@@ -28,5 +30,23 @@ describe("layer catalog integrity", () => {
 			expect(id).toMatch(/^[a-zA-Z0-9_-]{8,}$/);
 			expect(region.length).toBeGreaterThan(0);
 		}
+	});
+});
+
+describe("layer groups", () => {
+	it("every layer sits in exactly one named group", () => {
+		const all = LAYER_GROUPS.flatMap(([, ls]) => ls);
+		expect(new Set(all).size, "no layer listed twice").toBe(all.length);
+		for (const l of LAYER_NAMES) expect(all, `${l} grouped`).toContain(l);
+		for (const l of all) expect(LAYER_NAMES, `${l} exists`).toContain(l);
+	});
+	it("groupedLayers keeps order, drops empty groups, catches strays", () => {
+		const g = groupedLayers(["news", "quakes", "zzz"]);
+		expect(g.map(([n]) => n)).toEqual([
+			"Hazards",
+			"Society & markets",
+			"Other",
+		]);
+		expect(g[2][1]).toEqual(["zzz"]);
 	});
 });

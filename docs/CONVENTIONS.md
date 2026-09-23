@@ -39,8 +39,11 @@
 
 - Names say what it is (`content_ts`, not `ts2`). Comments say *why*.
 - Boring patterns. Frameworks over hand-rolls; services over scripts.
-- UI: Inter for chrome, mono for data; one accent, sentence case,
-  severity colors are data and never decoration.
+- UI: IBM Plex Sans for chrome, Plex Mono for every number; ONE accent
+  (faience) for selection/focus/primary action only; colour on data means
+  severity, healthy stays neutral; square hairline controls, no pills.
+  Full rules: UI_PRIMITIVES.md §0. New colours go in the :root tokens (and
+  palette.ts for map code), never inline.
 
 ## Frontend specifics
 

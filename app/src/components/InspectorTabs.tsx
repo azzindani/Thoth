@@ -186,20 +186,22 @@ export function BriefBlock() {
 	return (
 		<>
 			<h3>Brief · {String(b.generated_at).slice(11, 16)}Z</h3>
-			{b.critical.slice(0, 5).map((a) => (
-				<ItemRow key={a.id}>
-					<span className="sev-critical">●</span> <b>{a.layer}</b> · {a.title}
-				</ItemRow>
-			))}
-			{b.watch.slice(0, 5).map((a) => (
-				<ItemRow key={a.id}>
-					<span className="sev-watch">●</span> <b>{a.layer}</b> · {a.title}
-				</ItemRow>
+			{[
+				...b.critical.slice(0, 5).map((a) => ({ a, sev: "critical" })),
+				...b.watch.slice(0, 5).map((a) => ({ a, sev: "watch" })),
+			].map(({ a, sev }) => (
+				<div key={a.id} className="item sev-row" data-sev={sev}>
+					<span className="lyr">{a.layer}</span>
+					{a.title}
+				</div>
 			))}
 			{b.gaps.length > 0 && (
-				<div style={{ color: "var(--dim)" }}>
-					GAPS: {b.gaps.map((g) => g.source).join(", ")}
-				</div>
+				<details className="gaps">
+					<summary>{b.gaps.length} feeds without fresh data</summary>
+					<div className="gaps-list">
+						{b.gaps.map((g) => g.source).join(" · ")}
+					</div>
+				</details>
 			)}
 		</>
 	);

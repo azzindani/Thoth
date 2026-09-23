@@ -44,7 +44,7 @@ export const api = {
 			`/api/layers/${name}${since ? `?since=${encodeURIComponent(since)}` : ""}`,
 		),
 	layerHistory: (name: string) =>
-		get<{ buckets: { bucket: string; n: number }[] }>(
+		get<{ buckets: { bucket: string; count: string; n?: number }[] }>(
 			`/api/layers/${name}/history?bucket=day`,
 		),
 	dossier: (lat: string, lng: string, radius = 300) =>

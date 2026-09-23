@@ -129,6 +129,16 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
 - [x] CI deterministic (2026-09-23): fixture dataset + statics seeded, jobs split
   (static / db / app / docker image build), Node 22, dependabot. Upstream-bound
   checks left: alive warm-up (attempts only), RIPEstat/NVD/crt.sh lookups.
+- [x] UI redesign (2026-09-23): warm-black/bone tokens, faience single accent,
+  severity-only data colour, monochrome glyphs + per-severity map sprites,
+  neutral clusters with severity rings, square segmented controls, Plex
+  type, grouped layer list, DEFCON meter (replaced the dial), severity-edge
+  brief, collapsible feed gaps, phone map-first layout, tablet sheet anchored
+  under the status bar. Fixed on the way: timeline never drew (read b.n,
+  API serves count), phone sheet inherited tablet rail cells.
+- Basemap recolour: CARTO dark-matter stays as served (cool neutral). A
+  warm-tuned style (own style JSON over the same tiles) would finish the
+  palette; needs visual verification against live tiles. Owner: next UI pass.
 - CSP for the app — needs an audited allowlist (CARTO tiles, Esri imagery,
   Google Fonts, video embeds). Owner: next hardening pass.
 - Multi-replica API: rate-limit + SSE client state are in-process; move to

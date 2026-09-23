@@ -174,8 +174,13 @@ export default function Inspector({
 					<OsintView kind={osint.kind} arg={osint.arg} />
 				)}
 				{tab === "object" && !osint && !sel && (
-					<div style={{ color: "var(--dim)" }}>
-						click a dot · right-click sets area
+					<div className="empty">
+						<h3>No object selected</h3>
+						<p>
+							Tap or click a dot on the map to inspect it. Right-click a spot
+							for its area dossier, or type <code>help</code> in the command
+							line.
+						</p>
 					</div>
 				)}
 				{tab === "object" && sel && (

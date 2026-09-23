@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { LAYER_NAMES, LAYERS, MISSIONS } from "../lib/layer-catalog";
+import {
+	groupedLayers,
+	LAYER_NAMES,
+	LAYERS,
+	MISSIONS,
+} from "../lib/layer-catalog";
 import { Chip, Field, fmtCadence, LayerRow } from "../lib/ui";
 
 export default function Explorer({
@@ -40,7 +45,7 @@ export default function Explorer({
 	}, []);
 	return (
 		<div className="explorer" id="explorer">
-			<h3>Object explorer</h3>
+			<h3>View</h3>
 			{Object.keys(theaters).length > 0 && (
 				<div className="row2 theater" style={{ marginBottom: 8 }}>
 					<select
@@ -76,12 +81,13 @@ export default function Explorer({
 						{s === ""
 							? "All"
 							: s === "critical"
-								? "Crit"
+								? "Critical"
 								: s[0].toUpperCase() + s.slice(1)}
 					</Chip>
 				))}
 			</div>
-			<div className="findbox" style={{ marginBottom: 6 }}>
+			<h3 style={{ marginTop: 16 }}>Layers</h3>
+			<div className="findbox" style={{ marginBottom: 2 }}>
 				<Field
 					placeholder="Find layers…"
 					value={find}
@@ -89,38 +95,41 @@ export default function Explorer({
 				/>
 			</div>
 			<div id="layer-rows">
-				{shown.map((l) => {
-					const c = counts.get(l) ?? "0";
-					const cad = LAYERS[l] ? fmtCadence(LAYERS[l].intervalSec) : "?";
-					return (
-						<LayerRow
-							key={l}
-							name={l}
-							count={c}
-							visible={visible[l]}
-							onToggle={() => onToggle(l)}
-							title={`${c} events · refresh every ${cad}${LAYERS[l]?.polygon ? " · polygon" : ""}`}
-						/>
-					);
-				})}
+				{groupedLayers(shown).map(([group, layers]) => (
+					<div key={group} className="lgroup-wrap">
+						<div className="lgroup">{group}</div>
+						{layers.map((l) => {
+							const c = counts.get(l) ?? "0";
+							const cad = LAYERS[l] ? fmtCadence(LAYERS[l].intervalSec) : "?";
+							return (
+								<LayerRow
+									key={l}
+									name={l}
+									count={c}
+									visible={visible[l]}
+									onToggle={() => onToggle(l)}
+									title={`${l} · ${c} events · refresh every ${cad}${LAYERS[l]?.polygon ? " · polygon" : ""}`}
+								/>
+							);
+						})}
+					</div>
+				))}
 			</div>
 			{/* Feed health moved to the MONITOR inspector tab (tabular,
 			grouped by collector with period + stale depth). This link keeps
 			the production surface clean: layers here, servers there. */}
-			<button
-				className="tbtn"
-				id="monitor-link"
-				onClick={onMonitor}
-				title="open server monitor"
-				style={{ marginTop: 10, width: "100%" }}
-			>
-				▸ SERVER MONITOR
-			</button>
-			<div
-				className="credit"
-				style={{ marginTop: 8, color: "var(--dim)", fontSize: 10 }}
-			>
-				symbols: Lucide (ISC) · missions: {Object.keys(MISSIONS).length}
+			<div className="explorer-foot">
+				<button
+					className="tbtn"
+					id="monitor-link"
+					onClick={onMonitor}
+					title="open server monitor"
+				>
+					SERVER MONITOR
+				</button>
+				<div className="credit">
+					Symbols: Lucide (ISC) · {Object.keys(MISSIONS).length} missions
+				</div>
 			</div>
 		</div>
 	);

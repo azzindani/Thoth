@@ -57,9 +57,16 @@ describe("ui primitives", () => {
 describe("ThreatClock", () => {
 	it("shows DEFCON number from live brief", async () => {
 		const { container } = render(<ThreatClock />);
-		const txt = await screen.findByText("4", undefined, { timeout: 5000 });
+		const txt = await screen.findByText("DEFCON 4", undefined, {
+			timeout: 5000,
+		});
 		expect(txt).toBeInTheDocument();
-		expect(container.querySelector("svg")).toBeInTheDocument();
+		// meter: DEFCON 4 lights two of five cells
+		const cells = container.querySelectorAll(".tc-meter i");
+		expect(cells).toHaveLength(5);
+		expect(
+			[...cells].filter((c) => (c as HTMLElement).style.background),
+		).toHaveLength(2);
 	});
 });
 
@@ -76,7 +83,7 @@ describe("EntityGraph", () => {
 		);
 		expect(screen.getByText("Entity graph")).toBeInTheDocument();
 		await act(async () => {
-			screen.getByText("X").click();
+			screen.getByText("CLOSE").click();
 		});
 		expect(onClose).toHaveBeenCalledOnce();
 	});

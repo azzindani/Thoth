@@ -3,6 +3,11 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { Btn } from "../lib/ui";
 
+/** Market-tape sources: prices, rates, odds (not package downloads). */
+const TAPE_SOURCES =
+	/^(yahoo|cboe|cboe-eu|coingecko|cg-global|binance|coinbase|kraken|bitstamp|deribit|frankfurter|fxrates|ecb|nbp|boc-fx|cbr|moex|polymarket|kalshi|manifold|goldapi|nyfed|fiscaldata|fng)$/;
+const SEP = "   ·   ";
+
 interface Feed {
 	source: string;
 	last_ok: string | null;
@@ -56,20 +61,28 @@ export default function Ticker({
 				]);
 				if (stop) return;
 				const counts = new Map(stats.items.map((i) => [i.layer, i.count]));
+				// The markets layer also carries package-download and dev
+				// mindshare rows; the tape is for prices, rates and odds.
 				const items = (mkt.items || [])
-					.slice(0, 5)
+					.filter((i) => TAPE_SOURCES.test(i.source))
+					.slice(0, 6)
 					.map((i) => i.title)
-					.join(" /// ");
+					.join(SEP);
 				const heads =
 					(news.items || [])
 						.slice(0, 5)
-						.map((i) => `NEWS: ${i.title}`)
-						.join(" /// ") || "NEWS: feeds recovering — retrying";
+						.map((i) => `NEWS  ${i.title}`)
+						.join(SEP) || "NEWS  feeds recovering — retrying";
 				setTape(
-					`${items} /// ${heads} /// ` +
+					[
+						items,
+						heads,
 						[...counts.entries()]
 							.map(([l, c]) => `${l.toUpperCase()} ${c}`)
-							.join(" /// "),
+							.join(SEP),
+					]
+						.filter(Boolean)
+						.join(SEP),
 				);
 				const feeds = (health as { feeds: Feed[] }).feeds || [];
 				const live = feeds.filter((f) => f.last_ok && !f.frozen);
@@ -83,7 +96,7 @@ export default function Ticker({
 						? "var(--red)"
 						: defcon === 3
 							? "var(--amber)"
-							: "var(--grn)";
+							: "var(--txt2)";
 				const ent = [...counts.values()].reduce(
 					(a, c) => a + (Number(c) || 0),
 					0,
@@ -104,27 +117,30 @@ export default function Ticker({
 							? "var(--red)"
 							: kp >= 5
 								? "var(--amber)"
-								: "var(--grn)";
+								: "var(--txt2)";
+				const sep = <span className="sep">/</span>;
 				setPill(
 					<span>
-						<span style={{ color: dcol }}>DEFCON {defcon}</span> · {live.length}{" "}
-						LIVE
+						<span style={{ color: dcol }}>DEFCON {defcon}</span>
+						{sep}
+						{live.length} LIVE
 						{stale.length > 0 && (
 							<>
-								{" "}
-								· <span className="stale">{stale.length} STALE</span>
+								{sep}
+								<span className="stale">{stale.length} STALE</span>
 							</>
 						)}
 						{frozen.length > 0 && (
 							<>
-								{" "}
-								· <span className="stale">{frozen.length} FROZEN</span>
+								{sep}
+								<span className="stale">{frozen.length} FROZEN</span>
 							</>
 						)}
 						<span className="pill-ext">
-							{" "}
-							· {(ent >= 1000 ? `${(ent / 1000).toFixed(1)}K` : ent) || "—"} ENT
-							· <span style={{ color: kcol }}>Kp {kp ?? "—"}</span>
+							{sep}
+							{(ent >= 1000 ? `${(ent / 1000).toFixed(1)}K` : ent) || "—"} ENT
+							{sep}
+							<span style={{ color: kcol }}>Kp {kp ?? "—"}</span>
 						</span>
 					</span>,
 				);
@@ -151,7 +167,7 @@ export default function Ticker({
 					document.getElementById("explorer")?.classList.toggle("open")
 				}
 			>
-				☰
+				LAYERS
 			</button>
 			<span className="logo">THOTH</span>
 			<span className="clock">{clock}</span>
@@ -177,29 +193,37 @@ export default function Ticker({
 					padding: 0,
 				}}
 			>
-				<span style={{ color: !sse || sse.ok ? "var(--grn)" : "var(--amber)" }}>
-					●{" "}
+				<span
+					style={{ color: !sse || sse.ok ? "var(--faint)" : "var(--amber)" }}
+				>
+					{!sse || sse.ok ? "● " : "● RECONNECTING / "}
 				</span>
 				{pill}
 			</button>
-			<Btn on={mode === "default"} onClick={() => setMode("default")}>
-				DARK
-			</Btn>
-			<Btn on={mode === "sat"} onClick={() => setMode("sat")}>
-				SAT
-			</Btn>
-			<Btn on={mode === "nvg"} onClick={() => setMode("nvg")}>
-				NVG
-			</Btn>
-			<Btn on={globe} onClick={() => setGlobe(!globe)}>
-				GLOBE
-			</Btn>
-			<Btn on={mode === "cinema"} onClick={() => setMode("cinema")}>
-				CINEMA
-			</Btn>
-			<Btn on={focus} onClick={() => setFocus(!focus)}>
-				FOCUS
-			</Btn>
+			{/* Basemap is one choice (segmented); projection and layout modes
+			are independent toggles. */}
+			<fieldset className="seg" aria-label="basemap">
+				<Btn on={mode === "default"} onClick={() => setMode("default")}>
+					DARK
+				</Btn>
+				<Btn on={mode === "sat"} onClick={() => setMode("sat")}>
+					SAT
+				</Btn>
+				<Btn on={mode === "nvg"} onClick={() => setMode("nvg")}>
+					NVG
+				</Btn>
+			</fieldset>
+			<fieldset className="seg" aria-label="view">
+				<Btn on={globe} onClick={() => setGlobe(!globe)}>
+					GLOBE
+				</Btn>
+				<Btn on={mode === "cinema"} onClick={() => setMode("cinema")}>
+					CINEMA
+				</Btn>
+				<Btn on={focus} onClick={() => setFocus(!focus)}>
+					FOCUS
+				</Btn>
+			</fieldset>
 		</div>
 	);
 }

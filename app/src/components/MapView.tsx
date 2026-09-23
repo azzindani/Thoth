@@ -4,7 +4,8 @@ import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { api, type LayerItem } from "../lib/api";
-import { bakeIcon, LAYER_NAMES, LAYERS, mutedTone } from "../lib/layer-catalog";
+import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
+import { PALETTE, SEV_INK } from "../lib/palette";
 import {
 	armThumb,
 	ensurePickHandler,
@@ -135,7 +136,7 @@ export async function loadLayer(
 		// composite) + severity-coded dashed outlines that stay legible when
 		// stacked. Fill sits below the route/terminator chrome via no extra
 		// ordering — fills were already added before symbols.
-		const tone = mutedTone(LAYERS[name].color);
+		const tone = SEV_INK.info;
 		map.addSource(name, { type: "geojson", data: data as never });
 		map.addLayer({
 			id: name,
@@ -170,7 +171,7 @@ export async function loadLayer(
 			{
 				id: `${name}-o-crit`,
 				sev: "critical",
-				color: "#ff6b6b",
+				color: PALETTE.critical,
 				width: 2,
 				dash: [],
 				opacity: 0.95,
@@ -178,7 +179,7 @@ export async function loadLayer(
 			{
 				id: `${name}-o-watch`,
 				sev: "watch",
-				color: "#ffa028",
+				color: PALETTE.watch,
 				width: 1.5,
 				dash: [5, 3],
 				opacity: 0.85,
@@ -240,15 +241,30 @@ export async function loadLayer(
 				nw: ["+", ["case", ["==", ["get", "severity"], "watch"], 1, 0]],
 			},
 		});
-		const icon = await bakeIcon(name);
-		if (!map.hasImage(`th-${name}`)) map.addImage(`th-${name}`, icon);
+		// One sprite per severity: shape = layer, ink = severity.
+		for (const [suffix, ink] of [
+			["", SEV_INK.info],
+			["-watch", SEV_INK.watch],
+			["-crit", SEV_INK.critical],
+		] as const) {
+			const id = `th-${name}${suffix}`;
+			if (!map.hasImage(id)) map.addImage(id, await bakeIcon(name, ink));
+		}
 		map.addLayer({
 			id: name,
 			type: "symbol",
 			source: name,
 			filter: ["!", ["has", "point_count"]],
 			layout: {
-				"icon-image": `th-${name}`,
+				"icon-image": [
+					"match",
+					["get", "severity"],
+					"critical",
+					`th-${name}-crit`,
+					"watch",
+					`th-${name}-watch`,
+					`th-${name}`,
+				],
 				"icon-size": [
 					"case",
 					["==", ["get", "severity"], "critical"],
@@ -267,20 +283,35 @@ export async function loadLayer(
 			source: name,
 			filter: ["has", "point_count"],
 			paint: {
-				"circle-color": mutedTone(LAYERS[name].color),
-				"circle-opacity": 0.82,
-				"circle-stroke-width": 2,
-				"circle-stroke-color": "#000",
+				// Neutral disc; the ring carries the worst severity inside.
+				"circle-color": PALETTE.raise,
+				"circle-opacity": 0.92,
+				"circle-stroke-width": [
+					"case",
+					[">", ["get", "nc"], 0],
+					1.75,
+					[">", ["get", "nw"], 0],
+					1.5,
+					1,
+				],
+				"circle-stroke-color": [
+					"case",
+					[">", ["get", "nc"], 0],
+					PALETTE.critical,
+					[">", ["get", "nw"], 0],
+					PALETTE.watch,
+					PALETTE.dim,
+				],
 				"circle-radius": [
 					"step",
 					["get", "point_count"],
-					8,
+					9,
 					50,
-					11,
+					12,
 					200,
 					15,
 					1000,
-					20,
+					19,
 				],
 			} as never,
 		});
@@ -295,7 +326,7 @@ export async function loadLayer(
 				"text-allow-overlap": true,
 				"text-ignore-placement": true,
 			} as never,
-			paint: { "text-color": "#000" },
+			paint: { "text-color": PALETTE.txt },
 		});
 		map.on("click", `${name}-c`, (e) => {
 			// A picker just opened on this pixel — it owns the click, not zoom.
@@ -445,7 +476,7 @@ function addTerminator(map: maplibregl.Map) {
 				id: "terminator",
 				type: "fill",
 				source: "terminator",
-				paint: { "fill-color": "#000", "fill-opacity": 0.35 },
+				paint: { "fill-color": PALETTE.bg, "fill-opacity": 0.4 },
 			} as never);
 		}
 	}
@@ -519,9 +550,9 @@ function addRoutes(map: maplibregl.Map) {
 		type: "line",
 		source: "routes",
 		paint: {
-			"line-color": "#8f96ff",
-			"line-opacity": 0.28,
-			"line-width": 1.5,
+			"line-color": PALETTE.txt2,
+			"line-opacity": 0.22,
+			"line-width": 1,
 			"line-dasharray": [3, 3],
 		},
 	} as never);
