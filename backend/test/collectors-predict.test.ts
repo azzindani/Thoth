@@ -30,7 +30,7 @@ describe("predict", () => {
 			)) as typeof fetch;
 		const r = await predict();
 		assert.equal(r.ok, true);
-		const rows = await query<{ title: string }[]>(
+		const rows = await query<{ title: string }>(
 			"SELECT title FROM events WHERE source='manifold'",
 		);
 		assert.ok(rows.length >= 1);

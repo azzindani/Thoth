@@ -71,7 +71,7 @@ describe("litwatch", () => {
 		}) as typeof fetch;
 		const r = await litwatch();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('trials','pubmed','hn')",
 		);
 		assert.ok(rows.length >= 3);
@@ -103,7 +103,7 @@ describe("litwatch medrxiv", () => {
 		}) as typeof fetch;
 		const r = await litwatch();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='medrxiv'",
 		);
 		assert.equal(rows.length, 1);

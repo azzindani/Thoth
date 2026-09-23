@@ -3,10 +3,10 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
-COPY tsconfig.json biome.json ./
+COPY tsconfig.json ./
 COPY src ./src
-COPY test ./test
-RUN npm run typecheck && npm run lint && npx tsc -p tsconfig.json
+# Compiling is the image's typecheck; lint + tests are CI gates, not build steps.
+RUN npx tsc -p tsconfig.json
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
@@ -14,7 +14,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/db ./db
+COPY db ./db
 COPY static ./static
 COPY public ./public
 RUN addgroup -S thoth && adduser -S thoth -G thoth && chown -R thoth:thoth /app

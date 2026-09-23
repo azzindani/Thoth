@@ -59,7 +59,7 @@ describe("transit", () => {
 		}) as typeof fetch;
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('swiss-rail','sncf','metrotransit')",
 		);
 		assert.ok(rows.length >= 3);
@@ -114,11 +114,11 @@ describe("transit irail + digitraffic", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const irail = await query<{ id: string }[]>(
+		const irail = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='irail'",
 		);
 		assert.equal(irail.length, 1);
-		const dt = await query<{ id: string }[]>(
+		const dt = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='digitraffic' ORDER BY id",
 		);
 		assert.equal(dt.length, 2); // heartbeat + train row
@@ -177,7 +177,7 @@ describe("transit swiss LS-GE", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const ch = await query<{ id: string }[]>(
+		const ch = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='swiss-conn' AND id LIKE 'swissconn:LS-GE%'",
 		);
 		assert.equal(ch.length, 1);
@@ -246,7 +246,7 @@ describe("transit swiss LS-BE", () => {
 		// origin); assert LS-BE id present among swiss-conn rows. Scoped to
 		// this tick's departure time — the LS-GE suite shares the same table
 		// and origin with a different mocked time.
-		const ch = await query<{ id: string }[]>(
+		const ch = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='swiss-conn' AND id LIKE 'swissconn:LS-BE:2026-09-16T18:00%'",
 		);
 		assert.equal(ch.length, 1);
@@ -336,7 +336,7 @@ describe("transit swiss LS-FR + FR-BE", () => {
 		assert.equal(r.ok, true);
 		// Scoped to this tick's departure times (same reason as LS-BE above —
 		// the LS-GE/LS-BE suites share origin + table with other mock times).
-		const ch = await query<{ id: string }[]>(
+		const ch = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='swiss-conn' AND (id LIKE 'swissconn:LS-FR:2026-09-16T18:00%' OR id LIKE 'swissconn:FR-BE:2026-09-16T18:10%')",
 		);
 		assert.equal(ch.length, 2); // same Lausanne stub serves both legs
@@ -420,7 +420,7 @@ describe("transit swiss BE-ZH + GE-BE return legs", () => {
 		assert.equal(r.ok, true);
 		// Scoped to this tick's departure times (from=Bern stub serves both
 		// BE-GE and BE-ZH legs; from=Geneva serves GE-LS and GE-BE).
-		const ch = await query<{ id: string }[]>(
+		const ch = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='swiss-conn' AND (id LIKE 'swissconn:BE-ZH:2026-09-16T19:00%' OR id LIKE 'swissconn:GE-BE:2026-09-16T19:04%')",
 		);
 		assert.equal(ch.length, 2);

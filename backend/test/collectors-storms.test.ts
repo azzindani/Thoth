@@ -43,7 +43,7 @@ describe("storms", () => {
 		}) as typeof fetch;
 		const r = await storms();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='nhc'",
 		);
 		assert.equal(rows.length, 3); // 2 quiet heartbeats + 1 advisory

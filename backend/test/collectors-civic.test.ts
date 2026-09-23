@@ -41,7 +41,7 @@ describe("civic austin", () => {
 		}) as typeof fetch;
 		const r = await civic();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='austintraffic'",
 		);
 		assert.equal(rows.length, 1);
@@ -72,14 +72,14 @@ describe("civic sf311", () => {
 		}) as typeof fetch;
 		const r = await civic();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='sf311'",
 		);
 		assert.deepEqual(
 			rows.map((x) => x.id),
 			["sf311:19900052"],
 		);
-		const geo = await query<{ lat: number; lon: number }[]>(
+		const geo = await query<{ lat: number; lon: number }>(
 			"SELECT ST_Y(geom) AS lat, ST_X(geom) AS lon FROM events WHERE id='sf311:19900052'",
 		);
 		assert.ok(Math.abs(geo[0].lat - 37.78) < 0.01);

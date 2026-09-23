@@ -43,7 +43,7 @@ describe("fires collect()", () => {
 		]);
 		const r = await fires();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE layer='fires'",
 		);
 		assert.ok(rows.length >= 1, "fire stored");

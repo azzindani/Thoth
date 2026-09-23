@@ -50,7 +50,7 @@ describe("who-gho helpers", () => {
 		}) as typeof fetch;
 		const r = await who();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='who-gho'",
 		);
 		assert.ok(rows.length >= 1);
@@ -77,7 +77,7 @@ describe("health unesco-enrol (batch62)", () => {
 		}) as typeof fetch;
 		const r = await who();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='unesco-enrol' ORDER BY id",
 		);
 		assert.ok(rows.length >= 1);
@@ -110,7 +110,7 @@ describe("health faers", () => {
 		}) as typeof fetch;
 		const r = await who();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='fda-faers'",
 		);
 		assert.deepEqual(

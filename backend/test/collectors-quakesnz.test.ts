@@ -40,7 +40,7 @@ describe("quakes-nz", () => {
 		}) as typeof fetch;
 		const r = await nz();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='geonet'",
 		);
 		assert.deepEqual(
@@ -88,14 +88,14 @@ describe("quakes-nz", () => {
 		}) as typeof fetch;
 		const r = await nz();
 		assert.equal(r.ok, true);
-		const val = await query<{ id: string }[]>(
+		const val = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='geonet-val'",
 		);
 		assert.deepEqual(
 			val.map((x) => x.id),
 			["geonetval:taupo"],
 		);
-		const news = await query<{ id: string; severity: string }[]>(
+		const news = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='geonet-news'",
 		);
 		assert.equal(news.length, 1);

@@ -50,6 +50,7 @@ type Row = {
 	layer: string;
 	title?: string;
 	url?: string;
+	severity?: string;
 };
 
 async function get<T>(path: string): Promise<T> {

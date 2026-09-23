@@ -57,7 +57,7 @@ describe("hans", () => {
 		const r = await hans();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 2, "nameless volcano skipped");
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='hans' ORDER BY id",
 		);
 		assert.deepEqual(

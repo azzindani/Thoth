@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev:api": "tsx src/api/server.ts",
 		"dev:worker": "tsx src/workers/run.ts",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
 		"db:migrate": "tsx src/scripts/migrate.ts",
 		"test": "tsx --test --test-concurrency=1 test/routes-core.test.ts test/routes-intel.test.ts test/routes-osint.test.ts test/routes-recon.test.ts test/unit.test.ts test/alive.test.ts",
 		"lint": "biome check src test",

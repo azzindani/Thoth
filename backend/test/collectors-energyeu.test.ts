@@ -52,7 +52,7 @@ describe("energy-eu", () => {
 		}) as typeof fetch;
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('dk-spot','carbon-uk-hist')",
 		);
 		assert.equal(rows.length, 2);
@@ -148,7 +148,7 @@ describe("energy-eu energy-charts", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='energy-charts' ORDER BY id",
 		);
 		assert.equal(rows.length, 2); // wind + solar (negative + null skipped)
@@ -180,7 +180,7 @@ describe("energy-eu FR mix", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='energy-charts-fr' ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -220,7 +220,7 @@ describe("energy-eu ES + IT", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-es','energy-charts-it') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -267,7 +267,7 @@ describe("energy-eu NL + PL", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-nl','energy-charts-pl') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -322,7 +322,7 @@ describe("energy-eu BE + AT", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-be','energy-charts-at') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -385,7 +385,7 @@ describe("energy-eu SE + DK", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-se','energy-charts-dk') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -456,7 +456,7 @@ describe("energy-eu PT + GR", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-pt','energy-charts-gr') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -543,7 +543,7 @@ describe("energy-eu FI + NO + CZ", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-fi','energy-charts-no','energy-charts-cz') ORDER BY id",
 		);
 		assert.equal(rows.length, 3);
@@ -666,7 +666,7 @@ describe("energy-eu HU + SI + swiss LS-BE", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-hu','energy-charts-si') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -795,7 +795,7 @@ describe("energy-eu EU27 RO/SK/HR/IE/LU/EE/LV/LT", () => {
 		]);
 		const r = await energy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('energy-charts-ro','energy-charts-sk','energy-charts-hr') ORDER BY id",
 		);
 		assert.equal(rows.length, 3);

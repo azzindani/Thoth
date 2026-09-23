@@ -78,11 +78,11 @@ describe("transit tfl-bike + tfl-road", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const bikes = await query<{ id: string }[]>(
+		const bikes = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='tfl-bike' ORDER BY id",
 		);
 		assert.equal(bikes.length, 2); // sampler keeps every 53rd row: idx 0 + 53
-		const roads = await query<{ id: string }[]>(
+		const roads = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='tfl-road'",
 		);
 		assert.deepEqual(
@@ -133,7 +133,7 @@ describe("transit tfl-arr", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='tfl-arr'",
 		);
 		assert.deepEqual(
@@ -202,14 +202,14 @@ describe("transit tfl-arr-kx + swiss BE-GE", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const kx = await query<{ id: string }[]>(
+		const kx = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='tfl-arr-kx'",
 		);
 		assert.deepEqual(
 			kx.map((x) => x.id),
 			["tflarrkx:202451412"],
 		);
-		const ch = await query<{ id: string }[]>(
+		const ch = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='swiss-conn' AND id LIKE 'swissconn:BE-GE%'",
 		);
 		assert.equal(ch.length, 1);
@@ -277,14 +277,14 @@ describe("transit tfl-arr-eus + swiss GE-LS", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const eus = await query<{ id: string }[]>(
+		const eus = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='tfl-arr-eus'",
 		);
 		assert.deepEqual(
 			eus.map((x) => x.id),
 			["tflarreus:-774693282"],
 		);
-		const ch = await query<{ id: string }[]>(
+		const ch = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='swiss-conn' AND id LIKE 'swissconn:GE-LS%'",
 		);
 		assert.equal(ch.length, 1);
@@ -359,12 +359,12 @@ describe("transit tfl-status + irail-conn", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const st = await query<{ id: string; severity: string }[]>(
+		const st = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='tfl-status' ORDER BY id",
 		);
 		assert.equal(st.length, 2);
 		assert.ok(st.some((x) => x.severity === "watch")); // central severe
-		const ic = await query<{ id: string }[]>(
+		const ic = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='irail-conn'",
 		);
 		assert.equal(ic.length, 1);
@@ -427,7 +427,7 @@ describe("transit tfl-arr-gpk", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='tfl-arr-gpk'",
 		);
 		assert.deepEqual(
@@ -509,7 +509,7 @@ describe("transit tfl-arr-pac + tfl-arr-vic", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('tfl-arr-pac','tfl-arr-vic') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -592,7 +592,7 @@ describe("transit tfl-arr-ovl + tfl-arr-hsc", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('tfl-arr-ovl','tfl-arr-hsc') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -684,7 +684,7 @@ describe("transit tfl-arr-wlo + tfl-arr-lnb", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('tfl-arr-wlo','tfl-arr-lnb') ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -790,7 +790,7 @@ describe("transit tfl-arr-std + tfl-arr-cgt + tfl-arr-lvt", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('tfl-arr-std','tfl-arr-cgt','tfl-arr-lvt') ORDER BY id",
 		);
 		assert.equal(rows.length, 3);
@@ -897,7 +897,7 @@ describe("transit tfl-arr-eby + tfl-arr-hbn + tfl-arr-bnd", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('tfl-arr-eby','tfl-arr-hbn','tfl-arr-bnd') ORDER BY id",
 		);
 		assert.equal(rows.length, 3);
