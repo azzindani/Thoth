@@ -400,11 +400,14 @@ export function registerIntel(app: express.Express): void {
 		title: z.string().trim().min(1).max(200),
 		body: z.string().max(8000).default(""),
 		category: z
-			.enum(["idea", "earnings", "risk", "macro", "watch"])
+			.enum(["idea", "earnings", "risk", "macro", "watch", "place"])
 			.default("idea"),
 		tickers: z.string().max(200).default(""),
 		sentiment: z.enum(["BULLISH", "BEARISH", "NEUTRAL"]).default("NEUTRAL"),
 		favorite: z.coerce.boolean().default(false),
+		// Map notes (P5): optionally pinned to a place (both or neither).
+		lat: z.number().min(-90).max(90).optional(),
+		lon: z.number().min(-180).max(180).optional(),
 	});
 	app.get("/api/notes", async (req, res) => {
 		const q = String(req.query.q ?? "")
@@ -422,8 +425,11 @@ export function registerIntel(app: express.Express): void {
 	});
 	app.post("/api/notes", async (req, res) => {
 		const p = NoteParams.safeParse(req.body);
-		if (!p.success) {
-			res.status(400).json({ ok: false, error: "title required" });
+		if (!p.success || (p.data.lat == null) !== (p.data.lon == null)) {
+			res.status(400).json({
+				ok: false,
+				error: "title required; lat and lon go together",
+			});
 			return;
 		}
 		const id = `n:${Date.now().toString(36)}:${p.data.title
@@ -431,8 +437,8 @@ export function registerIntel(app: express.Express): void {
 			.replace(/[^a-z0-9]+/g, "-")
 			.slice(0, 40)}`;
 		await query(
-			`INSERT INTO notes(id, title, body, category, tickers, sentiment, favorite)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+			`INSERT INTO notes(id, title, body, category, tickers, sentiment, favorite, lat, lon)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 			[
 				id,
 				p.data.title,
@@ -441,6 +447,8 @@ export function registerIntel(app: express.Express): void {
 				p.data.tickers.toUpperCase(),
 				p.data.sentiment,
 				p.data.favorite,
+				p.data.lat ?? null,
+				p.data.lon ?? null,
 			],
 		);
 		res.json({ ok: true, id });

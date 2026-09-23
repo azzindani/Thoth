@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
 import { Field, ItemRow } from "../lib/ui";
-import { WATCH_AREAS_EVENT } from "./MapView";
+import { MAP_NOTES_EVENT, WATCH_AREAS_EVENT } from "./MapView";
 
 export function FeedTab({ layer, title }: { layer: string; title: string }) {
 	const [items, setItems] = useState<LayerItem[] | null>(null);
@@ -258,6 +258,58 @@ function WatchArea({
 	);
 }
 
+/** Map note (P5): a note pinned to this spot; drawn on the map and carried
+ * into the sitrep. */
+function NoteHere({ area }: { area: { lat: string; lng: string } }) {
+	const [text, setText] = useState("");
+	const [state, setState] = useState<"idle" | "busy" | "on" | "err">("idle");
+	const save = async () => {
+		const title = text.trim();
+		if (!title) return;
+		setState("busy");
+		try {
+			const r = await api.noteAdd({
+				title: title.slice(0, 200),
+				category: "place",
+				lat: Number(area.lat),
+				lon: Number(area.lng),
+			});
+			setState(r.ok ? "on" : "err");
+			if (r.ok) {
+				setText("");
+				window.dispatchEvent(new Event(MAP_NOTES_EVENT));
+			}
+		} catch {
+			setState("err");
+		}
+	};
+	return (
+		<div className="row2 note-here" style={{ margin: "8px 0" }}>
+			<Field
+				value={text}
+				placeholder="note at this spot…"
+				aria-label="map note"
+				onChange={(e) => {
+					setText(e.target.value);
+					setState("idle");
+				}}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") void save();
+				}}
+			/>
+			<button
+				type="button"
+				className="ghost-btn"
+				id="note-here"
+				disabled={state === "busy" || !text.trim()}
+				onClick={() => void save()}
+			>
+				{state === "on" ? "NOTED" : state === "err" ? "RETRY" : "NOTE HERE"}
+			</button>
+		</div>
+	);
+}
+
 export function AreaTab({
 	area,
 	goArea,
@@ -324,6 +376,7 @@ export function AreaTab({
 				</div>
 			)}
 			<WatchArea area={area} />
+			<NoteHere area={area} />
 			<div>
 				{area.counts.length === 0 && "nothing in window"}
 				{area.counts.map((c) => (

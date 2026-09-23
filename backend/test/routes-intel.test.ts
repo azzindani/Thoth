@@ -481,6 +481,32 @@ describe("terminal pillar (portfolios / notes / screens)", () => {
 			method: "DELETE",
 		});
 	});
+	it("map notes keep their place; half a coordinate is rejected", async () => {
+		const put = await fetch(`${API}/api/notes`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ title: "E2E map note", lat: 59.9, lon: 24.9 }),
+		});
+		assert.equal(put.status, 200);
+		const { id } = (await put.json()) as { id: string };
+		try {
+			const q = await get<{
+				items: { id: string; lat: number; lon: number }[];
+			}>("/api/notes?q=e2e+map+note");
+			const n = q.items.find((x) => x.id === id);
+			assert.deepEqual([n?.lat, n?.lon], [59.9, 24.9]);
+		} finally {
+			await fetch(`${API}/api/notes/${encodeURIComponent(id)}`, {
+				method: "DELETE",
+			});
+		}
+		const half = await fetch(`${API}/api/notes`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ title: "half", lat: 10 }),
+		});
+		assert.equal(half.status, 400);
+	});
 	it("notes rejects empty title", async () => {
 		const res = await fetch(`${API}/api/notes`, {
 			method: "POST",

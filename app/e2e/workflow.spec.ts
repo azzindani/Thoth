@@ -1,4 +1,5 @@
-// Analyst workflow (ROADMAP P5): "since you last looked" and area watches.
+// Analyst workflow (ROADMAP P5): "since you last looked", area watches,
+// country pages, workspaces, map notes and the sitrep report.
 import { expect, test } from "./fixtures";
 
 type WatchMap = {
@@ -154,4 +155,84 @@ test("workspaces: save a view, change it, reopen it; open a shared link", async 
 	await expect(
 		page.locator(".lrow", { hasText: "quakes" }).first(),
 	).toHaveClass(/off/);
+});
+
+test("map note pinned from the Area tab; sitrep of the view carries it", async ({
+	page,
+}) => {
+	test.setTimeout(150000);
+	await page.goto("/");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	await page.locator('#tabs button[data-tab="area"]').click();
+	const body = page.locator("#insp-body");
+	await body.locator("input").nth(0).fill("38.4");
+	await body.locator("input").nth(1).fill("142.4");
+	await body.locator("#ar-go").click();
+	await expect(body).toContainText("AREA · 38.4,142.4", { timeout: 20000 });
+	await body.locator(".note-here input").fill("e2e map note");
+	await body.locator("#note-here").click();
+	await expect(body.locator("#note-here")).toHaveText("NOTED");
+	try {
+		await expect
+			.poll(() =>
+				page.evaluate(async () => {
+					const m = (window as unknown as { __thothMap: WatchMap }).__thothMap;
+					const src = m.getSource("map-notes");
+					return src ? (await src.getData()).features.length : 0;
+				}),
+			)
+			.toBeGreaterThan(0);
+
+		// Look at the note's region, then build the report.
+		await page.evaluate(() =>
+			(
+				window as unknown as {
+					__thothMap: { jumpTo: (o: unknown) => void };
+				}
+			).__thothMap.jumpTo({ center: [142.4, 38.4], zoom: 4 }),
+		);
+		await page.locator("body").click({ position: { x: 5, y: 5 } });
+		await page.keyboard.press("Control+k");
+		await page.keyboard.type("sitrep report");
+		await page.keyboard.press("Enter");
+		const rep = page.locator("#sitrep");
+		await expect(rep.locator("#sitrep-kpis")).toBeVisible({ timeout: 30000 });
+		await expect(rep).toContainText("scope: view");
+		await expect(rep.locator("#sitrep-notes")).toContainText("e2e map note");
+		await expect(rep.locator("#sitrep-map")).toHaveAttribute(
+			"src",
+			/^data:image\/png/,
+		);
+		// The same report as Markdown.
+		const dl = page.waitForEvent("download");
+		await rep.locator("#sitrep-md").click();
+		const file = await dl;
+		expect(file.suggestedFilename()).toMatch(/^sitrep-\d{8}-\d{4}Z\.md$/);
+		const md = await new Promise<string>((resolve, reject) => {
+			file
+				.createReadStream()
+				.then((s) => {
+					let t = "";
+					s.on("data", (c) => {
+						t += c;
+					});
+					s.on("end", () => resolve(t));
+				})
+				.catch(reject);
+		});
+		expect(md).toContain("# THOTH SITREP");
+		expect(md).toContain("| e2e map note | 38.40, 142.40 |");
+		await rep.getByRole("button", { name: "close sitrep" }).click();
+		await expect(rep).toHaveCount(0);
+	} finally {
+		await page.evaluate(async () => {
+			const j = await fetch("/api/notes?q=e2e%20map%20note").then((r) =>
+				r.json(),
+			);
+			for (const n of j.items as { id: string }[])
+				await fetch(`/api/notes/${encodeURIComponent(n.id)}`, {
+					method: "DELETE",
+				});
+		});
+	}
 });

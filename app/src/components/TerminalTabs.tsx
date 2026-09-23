@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { Field, ItemRow } from "../lib/ui";
+import { flyTo, MAP_NOTES_EVENT } from "./MapView";
 
 export function PulseTab() {
 	const [items, setItems] = useState<LayerItem[] | null>(null);
@@ -251,6 +252,8 @@ export function NotesTab() {
 			category: string;
 			tickers: string;
 			sentiment: string;
+			lat: number | null;
+			lon: number | null;
 		}[]
 	>([]);
 	const [title, setTitle] = useState("");
@@ -304,7 +307,27 @@ export function NotesTab() {
 			{notes.map((n) => (
 				<ItemRow key={n.id}>
 					<b>{n.tickers || n.category}</b> · {n.title} · {n.sentiment}{" "}
-					<button onClick={() => api.noteDel(n.id).then(load)}>x</button>
+					{n.lat != null && n.lon != null && (
+						<button
+							type="button"
+							title="fly to this map note"
+							onClick={() =>
+								n.lat != null && n.lon != null && flyTo(n.lat, n.lon, 6)
+							}
+						>
+							MAP
+						</button>
+					)}{" "}
+					<button
+						onClick={() =>
+							api.noteDel(n.id).then(() => {
+								load();
+								window.dispatchEvent(new Event(MAP_NOTES_EVENT));
+							})
+						}
+					>
+						x
+					</button>
 					{n.body && (
 						<>
 							<br />

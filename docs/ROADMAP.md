@@ -85,7 +85,7 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
 - [ ] Remaining: explicit cross-layer rules (e.g. internet outage near a
       cable landing), and per-hour-of-week baselines once history exists.
 
-## P5 — Analyst workflow `[~]`
+## P5 — Analyst workflow `[x]`
 
 - [x] **Time replay**: scrub/play the last 24–72 h on the map.
       *Shipped:* REPLAY in the dock (and the palette): 72 h slider in
@@ -119,7 +119,18 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
       copy a link: `#ws=` carries hidden layers, camera, mission,
       severity filter, map mode, tab and panel layout in the URL itself.
       Pop-out windows are not part of a workspace yet.
-- [ ] **Map notes** → sitrep export with map snapshot / PDF.
+- [x] **Map notes** → sitrep export with map snapshot / PDF.
+      *Shipped:* notes gain an optional place (migration 010: lat/lon,
+      both or neither). Area tab → NOTE HERE pins a note to the dossier
+      point; pinned notes draw as labelled accent pins above the data
+      (never picked or counted); the Notes tab flies to them. Palette →
+      *Sitrep report of this view* (or `report` in the command line):
+      a snapshot of the map as drawn, then critical and watch items
+      (24 h), the top incidents and the map notes, limited to the view
+      (the world below zoom 3), plus feed gaps. PRINT / PDF uses the
+      browser's print dialog with a print stylesheet; .MD downloads the
+      same report as Markdown tables. The daily archived `sitrep`
+      command is unchanged.
 - [x] **Command palette** (Ctrl+K) and `?` shortcut sheet.
       *Shipped:* every tab, layer (show/hide reflects live state), map
       mode, mission, theater fly-to and panel action, fuzzy-ranked;

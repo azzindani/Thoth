@@ -43,7 +43,7 @@ type AnoMeta = {
 };
 
 /** Point or polygon → [lat, lon] to fly to. */
-function where(i: LayerItem): [number, number] | null {
+export function where(i: LayerItem): [number, number] | null {
 	const g = i.geom as {
 		type: string;
 		coordinates: unknown;
