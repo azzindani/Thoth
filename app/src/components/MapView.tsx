@@ -3,7 +3,7 @@ import * as maplibregl from "maplibre-gl";
 import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { api, type LayerItem } from "../lib/api";
+import { api, type CameraView, type LayerItem } from "../lib/api";
 import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
 import { PALETTE, SEV_INK } from "../lib/palette";
 import {
@@ -68,6 +68,49 @@ type LoadOpts = {
 	onFull: Props["onSelect"];
 };
 
+/** Viewport-aware slices (ROADMAP P2). Below zoom 3 the whole world is
+ * requested (the API samples it across regions); closer in, the visible
+ * bounds padded by half a screen and snapped outward to a zoom-sized grid,
+ * so small pans reuse the same request. */
+export function cameraView(map: maplibregl.Map): CameraView {
+	const z = Math.floor(map.getZoom() * 2) / 2;
+	if (z < 3) return { z };
+	const b = map.getBounds();
+	const padX = (b.getEast() - b.getWest()) / 2;
+	const padY = (b.getNorth() - b.getSouth()) / 2;
+	const step = 360 / 2 ** Math.floor(z);
+	const snap = (v: number, up: boolean) =>
+		(up ? Math.ceil(v / step) : Math.floor(v / step)) * step;
+	let w = snap(b.getWest() - padX, false);
+	let e = snap(b.getEast() + padX, true);
+	const s = Math.max(-90, snap(b.getSouth() - padY, false));
+	const n = Math.min(90, snap(b.getNorth() + padY, true));
+	if (e - w >= 360) {
+		w = -180;
+		e = 180;
+	} else {
+		const wrap = (v: number) => ((((v + 180) % 360) + 360) % 360) - 180;
+		w = wrap(w);
+		e = wrap(e) === -180 ? 180 : wrap(e);
+	}
+	return { z, bbox: [w, s, e, n] };
+}
+const viewKey = (v: CameraView) => `${v.z}|${v.bbox?.join(",") ?? "world"}`;
+/** Per layer: did the last slice leave rows out, and for which view. */
+const sliceState: Record<string, { truncated: boolean; key: string }> = {};
+
+/** After the camera settles: re-slice visible layers whose last slice was
+ *  truncated and was cut for a different view. Complete layers never
+ *  reload on camera moves (SSE still refreshes them on data changes). */
+export function refreshForCamera(map: maplibregl.Map, opts: LoadOpts) {
+	const key = viewKey(cameraView(map));
+	const due = LAYER_NAMES.filter(
+		(n) =>
+			opts.visible[n] && sliceState[n]?.truncated && sliceState[n].key !== key,
+	);
+	if (due.length) return loadAll(map, due, opts);
+}
+
 /** Popups (hover/pin/picker) live in map-popups.ts — outside React.
  * This file owns layers: sources, paint, icons, overlays. */
 
@@ -125,7 +168,9 @@ export async function loadLayer(
 		onFull: Props["onSelect"];
 	},
 ) {
-	const j = await api.layer(name, opts.since ?? undefined);
+	const view = cameraView(map);
+	const j = await api.layer(name, opts.since ?? undefined, view);
+	sliceState[name] = { truncated: !!j.truncated, key: viewKey(view) };
 	const data = toGeoJSON(j.items, opts.sev);
 	const src = map.getSource(name) as maplibregl.GeoJSONSource | undefined;
 	if (src) {
@@ -642,6 +687,21 @@ export default function MapView(props: Props) {
 			addTerminator(map);
 			addRoutes(map);
 			props.mapCb(map);
+			// Camera settled → fill in truncated layers for the new view.
+			let settle: ReturnType<typeof setTimeout> | undefined;
+			map.on("moveend", () => {
+				clearTimeout(settle);
+				settle = setTimeout(() => {
+					const q = propsRef.current;
+					void refreshForCamera(map, {
+						sev: q.sev,
+						since: q.since,
+						visible: q.visible,
+						onSelect: q.onSelect,
+						onFull: q.onFull,
+					});
+				}, 400);
+			});
 			const p = propsRef.current;
 			await loadAll(map, LAYER_NAMES, {
 				sev: p.sev,
@@ -701,6 +761,17 @@ export default function MapView(props: Props) {
 		const map = mapRef.current;
 		if (!map) return;
 		for (const n of LAYER_NAMES) setVis(map, n, props.visible);
+		// A layer switched on after the camera moved may hold another view's slice.
+		if (map.isStyleLoaded()) {
+			const q = propsRef.current;
+			void refreshForCamera(map, {
+				sev: q.sev,
+				since: q.since,
+				visible: props.visible,
+				onSelect: q.onSelect,
+				onFull: q.onFull,
+			});
+		}
 	}, [props.visible]);
 
 	return (

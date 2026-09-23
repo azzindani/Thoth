@@ -40,13 +40,16 @@ The monitor shows *now*; it must also show *history*, *cadence* and *why*.
 - [x] **Mass failure**: ≥ 25 % of feeds failing (min 10) collapses into
       one critical `ops:mass` alert; individual pushes are suppressed.
 
-## P2 — Scale the map past 500 rows per layer `[ ]`
+## P2 — Scale the map past 500 rows per layer `[x]`
 
-- [ ] Layer slices become viewport-aware: `bbox` + zoom-aware limits, with
+- [x] Layer slices become viewport-aware: `bbox` + zoom-aware limits, with
       spatial sampling at world zoom so every region is represented.
-- [ ] Client reloads layers on camera settle (debounced), keeps clustering.
-- [ ] Static catalogs (airports 5,280, bases, ports…) fully reachable when
+- [x] Client reloads layers on camera settle (debounced), keeps clustering.
+- [x] Static catalogs (airports 5,280, bases, ports…) fully reachable when
       zoomed in.
+      *Shipped:* `?z=&bbox=` on `/api/layers/:layer`; the client asks with
+      the padded, grid-snapped view and re-slices only visible layers whose
+      last slice was truncated — complete layers never reload on pans.
 
 ## P3 — Source batches `[ ]`
 

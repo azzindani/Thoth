@@ -115,7 +115,12 @@ Base: same-origin Next.js Route Handlers. All GET return `{items,total,serverTs,
 ```bash
 GET /api/stats                          # counts only, for badges — public, fast
 GET /api/versions                       # {layer: version} — public, live
-GET /api/layers/:layer?bbox=minLon,minLat,maxLon,maxLat&since=123
+GET /api/layers/:layer[?since=]          # newest 500 rows (inspector, ticker)
+GET /api/layers/:layer?z=6&bbox=w,s,e,n  # map view: rows inside bbox (w>e crosses
+                                        # the antimeridian); over the zoom's limit
+                                        # (1000 / 1800 / 3000 at z<3 / <5 / ≥5) rows are
+                                        # dealt round-robin across a zoom-sized grid,
+                                        # best severity first → {matched, truncated}
 GET /api/health                         # {uptime, perFeed:{lagSec,lastOk,hitRate}, dbSize}
 ```
 
