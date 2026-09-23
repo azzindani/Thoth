@@ -6,6 +6,7 @@ import { COLLECTORS, type CollectorName } from "./registry.js";
 
 // BP7: staggered + jittered intervals, overlap guard, --once mode for cron/CI.
 // Usage: npm run dev:worker | node dist/workers/run.js --once quakes
+//        node dist/workers/run.js --all-once [width]   (every collector, then exit)
 //
 // Lifecycle: SIGTERM/SIGINT stop scheduling, let in-flight collectors finish
 // (bounded by DRAIN_MS), flush pending layer versions, close the pool. A
@@ -73,7 +74,29 @@ async function shutdown(sig: string) {
 	process.exit(0);
 }
 
+/** One pass over every collector, `width` at a time (CI warm-up, backfill). */
+async function runAllOnce(width: number) {
+	const queue = Object.keys(COLLECTORS) as CollectorName[];
+	const t0 = Date.now();
+	await Promise.all(
+		Array.from({ length: width }, async () => {
+			for (let n = queue.shift(); n; n = queue.shift()) await runOnce(n);
+		}),
+	);
+	log.info("all collectors attempted", {
+		collectors: Object.keys(COLLECTORS).length,
+		ms: Date.now() - t0,
+	});
+}
+
 async function main() {
+	const all = process.argv.indexOf("--all-once");
+	if (all >= 0) {
+		const width = Number(process.argv[all + 1]) || 4;
+		await runAllOnce(Math.min(Math.max(width, 1), 16));
+		await closePool();
+		process.exit(0);
+	}
 	const once = process.argv.indexOf("--once");
 	if (once >= 0) {
 		const name = process.argv[once + 1] as CollectorName;
