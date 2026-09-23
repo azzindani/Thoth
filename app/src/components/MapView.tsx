@@ -1,5 +1,5 @@
 "use client";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { api, type LayerItem } from "../lib/api";

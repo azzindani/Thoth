@@ -1,5 +1,5 @@
 "use client";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 // MiniMap — floating world overview. Follows the main camera, draws the
@@ -17,7 +17,7 @@ export default function MiniMap({
 		let mini: maplibregl.Map | null = null;
 		let timer: ReturnType<typeof setInterval>;
 		(async () => {
-			const { default: ml } = await import("maplibre-gl");
+			const ml = await import("maplibre-gl");
 			if (stop || !divRef.current) return;
 			const m = new ml.Map({
 				container: divRef.current,

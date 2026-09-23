@@ -1,5 +1,5 @@
 "use client";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import { useEffect, useState } from "react";
 import { LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
 import type { ObjProps } from "./MapView";

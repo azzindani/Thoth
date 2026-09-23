@@ -2,7 +2,7 @@
 // Map popups live outside React: rich hover/pin/picker cards rendered as
 // popup HTML, actions dispatched through one delegated document listener
 // against stored records (no per-button closures).
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { api } from "../lib/api";
 import { LAYERS } from "../lib/layer-catalog";
 import { ageStr } from "../lib/ui";

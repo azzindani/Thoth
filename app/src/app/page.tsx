@@ -1,5 +1,5 @@
 "use client";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CmdBar from "../components/CmdBar";
 import EntityGraph from "../components/EntityGraph";
