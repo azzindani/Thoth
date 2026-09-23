@@ -448,11 +448,12 @@ export default function Terminal() {
 						<Timeline since={since} setSince={setSince} />
 					</div>
 					<button
-						className="go"
+						className={`ghost-btn${graph ? " on" : ""}`}
 						title="entity graph (e)"
 						onClick={() => setGraph((g) => !g)}
+						style={{ alignSelf: "center" }}
 					>
-						Graph
+						GRAPH
 					</button>
 				</div>
 				<CmdBar

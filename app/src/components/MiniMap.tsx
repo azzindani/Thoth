@@ -1,6 +1,7 @@
 "use client";
 import type * as maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
+import { PALETTE } from "../lib/palette";
 
 // MiniMap — floating world overview. Follows the main camera, draws the
 // viewport rectangle, click-to-fly. Hidden on phone (responsive contract).
@@ -39,7 +40,7 @@ export default function MiniMap({
 					id: "view",
 					type: "line",
 					source: "view",
-					paint: { "line-color": "#f5a623", "line-width": 1.5 },
+					paint: { "line-color": PALETTE.accent, "line-width": 1.25 },
 				});
 				m.addSource("dot", {
 					type: "geojson",
@@ -49,7 +50,7 @@ export default function MiniMap({
 					id: "dot",
 					type: "circle",
 					source: "dot",
-					paint: { "circle-color": "#f5a623", "circle-radius": 3 },
+					paint: { "circle-color": PALETTE.accent, "circle-radius": 2.5 },
 				});
 			});
 			timer = setInterval(() => {

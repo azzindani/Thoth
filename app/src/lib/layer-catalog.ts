@@ -190,6 +190,67 @@ export const LAYERS: Record<string, LayerDef> = {
 
 export const LAYER_NAMES = Object.keys(LAYERS);
 
+/** Explorer sections: 36 flat rows read as noise; six named groups give
+ * the list a scannable shape. Every layer belongs to exactly one group
+ * (test/catalog.test.ts); anything unlisted falls into "Other". */
+export const LAYER_GROUPS: [string, string[]][] = [
+	[
+		"Hazards",
+		[
+			"quakes",
+			"volcanoes",
+			"fires",
+			"perims",
+			"disasters",
+			"gdacs",
+			"radiation",
+		],
+	],
+	[
+		"Weather & space",
+		[
+			"weather",
+			"metar",
+			"forecast",
+			"airwx",
+			"airquality",
+			"oceans",
+			"spacewx",
+		],
+	],
+	[
+		"Security",
+		[
+			"conflicts",
+			"drones",
+			"telegram",
+			"cyber",
+			"bases",
+			"signals",
+			"theaters",
+		],
+	],
+	[
+		"Movement",
+		["flights", "satellites", "transit", "ports", "airports", "chokepoints"],
+	],
+	["Infrastructure", ["energy", "datacenters", "cctv"]],
+	["Society & markets", ["news", "markets", "policy", "research", "health"]],
+];
+
+export function groupedLayers(names: string[]): [string, string[]][] {
+	const seen = new Set<string>();
+	const out: [string, string[]][] = [];
+	for (const [g, ls] of LAYER_GROUPS) {
+		const hit = ls.filter((l) => names.includes(l));
+		for (const l of hit) seen.add(l);
+		if (hit.length) out.push([g, hit]);
+	}
+	const rest = names.filter((l) => !seen.has(l));
+	if (rest.length) out.push(["Other", rest]);
+	return out;
+}
+
 export const MISSIONS: Record<string, string[]> = {
 	crisis: [
 		"quakes",
@@ -261,10 +322,9 @@ export const STREAMS: [string, string, string][] = [
 	["NASA TV", "21X5lGlDOfg", "Space"],
 ];
 
-/** Bake a Lucide glyph on a dark halo disc → ImageData map sprite (osiris pattern). */
 /** Mute a layer color toward slate so 29 layers read as one calm system
  * instead of confetti. Hue survives (layer identity), loudness doesn't.
- * Severity still shouts: critical pins stay full red via severity paint. */
+ * Kept for back-compat; the map now renders monochrome (see bakeIcon). */
 export function mutedTone(hex: string): string {
 	const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
 	if (!m) return hex;
@@ -274,12 +334,15 @@ export function mutedTone(hex: string): string {
 	return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
 }
 
-export async function bakeIcon(name: string): Promise<ImageData> {
+/** Bake a Lucide glyph on a warm-black disc → ImageData map sprite.
+ * `ink` is the severity colour (bone for info): layers are told apart by
+ * shape, and colour on the map only ever means severity. */
+export async function bakeIcon(name: string, ink: string): Promise<ImageData> {
 	const L = LAYERS[name];
 	const svg =
 		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">` +
-		`<circle cx="12" cy="12" r="11" fill="rgba(8,9,10,0.78)"/>` +
-		`<g fill="none" stroke="${mutedTone(L.color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${L.svg}</g></svg>`;
+		`<circle cx="12" cy="12" r="11" fill="rgba(11,11,10,0.86)" stroke="${ink}" stroke-opacity="0.35" stroke-width="0.75"/>` +
+		`<g transform="translate(4.2 4.2) scale(0.65)" fill="none" stroke="${ink}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${L.svg}</g></svg>`;
 	const img = new Image();
 	await new Promise<void>((resolve, reject) => {
 		img.onload = () => resolve();

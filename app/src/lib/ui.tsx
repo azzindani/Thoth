@@ -3,20 +3,22 @@
 import type { ReactNode } from "react";
 import { LAYERS } from "./layer-catalog";
 
-export function Glyph({ layer, size = 16 }: { layer: string; size?: number }) {
+/** Layer symbol. Monochrome by design: it inherits the surrounding text
+ * colour (layers are told apart by shape; colour is reserved for severity). */
+export function Glyph({ layer, size = 15 }: { layer: string; size?: number }) {
 	const L = LAYERS[layer];
 	if (!L) return null;
 	return (
 		<span
+			className="glyph"
 			style={{
 				display: "inline-flex",
 				width: size,
 				height: size,
-				color: L.color,
 				flex: "none",
 			}}
 			dangerouslySetInnerHTML={{
-				__html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${L.svg}</svg>`,
+				__html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${L.svg}</svg>`,
 			}}
 		/>
 	);
@@ -67,7 +69,7 @@ const BADGE_COLOR: Record<string, string> = {
 	watch: "var(--amber)",
 	info: "var(--dim)",
 	stale: "var(--amber)",
-	live: "var(--grn)",
+	live: "var(--txt2)", // healthy stays quiet
 };
 
 export function Badge({ text, kind }: { text: ReactNode; kind: string }) {
@@ -114,15 +116,7 @@ export function LayerRow({
 		>
 			<Glyph layer={name} />
 			<span className="nm">{name}</span>
-			<b
-				style={{
-					color: "var(--dim)",
-					fontWeight: 500,
-					fontVariantNumeric: "tabular-nums",
-				}}
-			>
-				{count}
-			</b>
+			<b>{count}</b>
 		</div>
 	);
 }

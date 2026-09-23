@@ -56,7 +56,7 @@ export function hoverCard(
 	return (
 		`<div class="hov"><div class="hov-bar" style="background:${sevCol}"></div>` +
 		`<div class="hov-t">${esc(p.title || p.id || layer)}</div>` +
-		`<div class="hov-m"><span style="color:${sevCol}">● ${esc(sev[0].toUpperCase() + sev.slice(1))}</span>` +
+		`<div class="hov-m"><span class="sev-tag" style="color:${sevCol}">${esc(sev.toUpperCase())}</span>` +
 		` · ${esc(layer)}${p.airline ? ` · ${esc(p.airline)}` : ""}</div>` +
 		`<div class="hov-grid">` +
 		`<span>SRC</span><span>${esc(p.source || "?")}</span>` +

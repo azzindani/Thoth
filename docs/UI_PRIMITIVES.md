@@ -1,5 +1,36 @@
 # Thoth UI — responsive contract + primitive catalog
 
+## 0. Visual language (2026-09-23 redesign: "instrument on warm black")
+
+Tokens live in `app/src/app/globals.css` `:root`; `app/src/lib/palette.ts`
+mirrors the hex values for map/canvas/SVG code (`test/palette.test.ts` fails
+if they drift). The rules, in priority order:
+
+1. **Warm black + bone.** `--bg #0b0b0a`, text `--txt #e9e5da` → `--txt2`
+   → `--dim` → `--faint`. Hierarchy comes from luminance, not hue. No pure
+   `#000`/`#fff` anywhere.
+2. **One accent: faience turquoise `--accent #4fbfae`.** Selection, focus,
+   the active cell of a segmented control, links, and the single primary
+   action (`.go`, the pinned card's "Full view"). Never data, never
+   decoration. If you are reaching for it anywhere else, don't.
+3. **Colour on data = severity only.** Critical `--red`, watch `--amber`.
+   Healthy/OK/info is neutral (`--grn` is aliased to `--txt2` on purpose:
+   healthy stays quiet, only problems get colour). Charts use `--chart`.
+4. **Layers are told apart by shape, not hue.** Glyphs are monochrome
+   (`currentColor`); map sprites are baked per severity (`th-<layer>`,
+   `-watch`, `-crit`). Cluster discs are neutral; the ring shows the worst
+   severity inside. `LAYERS[].color` is kept in the catalog for back-compat
+   but is not rendered.
+5. **Square hairline controls.** Segmented controls (`.seg`, `.chips`) with
+   an accent underline for the active cell; ghost buttons (`.ghost-btn`)
+   for secondary actions. No pills, gradients, glows or rounded candy.
+6. **Type.** IBM Plex Sans for chrome, IBM Plex Mono (tabular) for every
+   number, clock, code and coordinate. Section labels are 10.5px uppercase
+   tracked (`h3`, `.lgroup`, `.tc-label`); body 12–13px. Four sizes, no
+   half-pixel one-offs.
+7. **Severity rows** (`.sev-row[data-sev]`) carry severity on a 2px left
+   edge with a mono layer label — not coloured bullets.
+
 Binding rule: the terminal MUST be usable on any screen width — phone, tablet,
 laptop, ultrawide. New UI work starts from primitives, never from one-off markup.
 Globe + flat map (osiris-style) is the agreed renderer; everything around it is
@@ -10,8 +41,8 @@ composed from the catalog below.
 | Class | Width | Layout |
 |---|---|---|
 | `desk` | ≥1200px | 3-column: explorer 232px · map fluid · inspector 330px. Reference look. |
-| `tab` | 768–1199px | Explorer collapses to 56px icon rail (icon + count, names/feeds hidden). Inspector becomes an overlay sheet, hidden until a selection/alerts tab opens it. |
-| `phone` | <768px | Single column: map only. Ticker condenses (logo + clock + health; mode buttons move into a `⋯` menu). Explorer opens as a bottom sheet via `☰`; inspector opens full-screen via selection. Timeline + cmdbar stack vertically. |
+| `tab` | 768–1199px | Explorer collapses to a 56px rail: glyph over its count (names/groups hidden; the row title carries the name). Inspector is an overlay sheet anchored below the status bar, hidden until a tab/selection opens it. |
+| `phone` | <768px | Map-first. Status bar: LAYERS button + mark + health (clock and mode controls hidden). Explorer and inspector share one bottom-sheet form (grabber, 60vh cap). The bottom strip collapses to the command line alone (timeline and threat readout are desk/tab tools); inputs are 16px so iOS never zooms. |
 
 Rules:
 - No fixed pixel widths outside the token + breakpoint system. Panels size in `px` tokens only at `desk`; everywhere else they are overlays/sheets.
