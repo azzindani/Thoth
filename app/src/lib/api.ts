@@ -7,6 +7,10 @@ async function get<T>(path: string): Promise<T> {
 	return (await r.json()) as T;
 }
 
+/** Map camera for viewport-aware layer slices: zoom, and a bbox
+ * [w, s, e, n] (w > e crosses the antimeridian) once zoomed in. */
+export type CameraView = { z: number; bbox?: [number, number, number, number] };
+
 export interface LayerItem {
 	id: string;
 	ts: string;
@@ -137,10 +141,23 @@ export const api = {
 		}>("/api/health"),
 	versions: () =>
 		get<{ versions: { layer: string; version: string }[] }>("/api/versions"),
-	layer: (name: string, since?: string) =>
-		get<{ items: LayerItem[]; total: number }>(
-			`/api/layers/${name}${since ? `?since=${encodeURIComponent(since)}` : ""}`,
-		),
+	/** Without `view`: the newest 500 rows. With a camera view: a slice
+	 * sampled across the view (see getLayerView on the API). */
+	layer: (name: string, since?: string, view?: CameraView) => {
+		const q = new URLSearchParams();
+		if (since) q.set("since", since);
+		if (view) {
+			q.set("z", String(view.z));
+			if (view.bbox) q.set("bbox", view.bbox.join(","));
+		}
+		const qs = q.toString();
+		return get<{
+			items: LayerItem[];
+			total: number;
+			matched?: number;
+			truncated?: boolean;
+		}>(`/api/layers/${name}${qs ? `?${qs}` : ""}`);
+	},
 	layerHistory: (name: string) =>
 		get<{ buckets: { bucket: string; count: string; n?: number }[] }>(
 			`/api/layers/${name}/history?bucket=day`,

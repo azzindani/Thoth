@@ -126,6 +126,63 @@ export async function getLayerSlice(
 	);
 }
 
+/** Rows per map request by zoom: world views sample, close views fill in. */
+export function viewLimit(z: number): number {
+	return z < 3 ? 1000 : z < 5 ? 1800 : 3000;
+}
+
+/**
+ * Map slice for a camera view (ROADMAP P2). Only rows with geometry inside
+ * `bbox` (w,s,e,n; w > e crosses the antimeridian) are considered. When
+ * more match than the zoom's limit, rows are dealt round-robin from a grid
+ * sized to the zoom: every occupied cell's best row (severity, then newest)
+ * before any cell's second — so at world zoom every region is represented,
+ * not just the newest 500 rows wherever they happen to be.
+ */
+export async function getLayerView(
+	layer: string,
+	view: {
+		z: number;
+		bbox?: [number, number, number, number];
+		since?: string;
+	},
+) {
+	const limit = viewLimit(view.z);
+	const [w, s, e, n] = view.bbox ?? [-180, -90, 180, 90];
+	// ~8 cells across a 512px tile at this zoom.
+	const cell = Math.max(360 / 2 ** (Math.max(0, view.z) + 3), 0.01);
+	const envelopes =
+		w <= e
+			? "geom && ST_MakeEnvelope($2, $3, $4, $5, 4326)"
+			: "(geom && ST_MakeEnvelope($2, $3, 180, $5, 4326) OR geom && ST_MakeEnvelope(-180, $3, $4, $5, 4326))";
+	const rows = await query<Record<string, unknown> & { n_total: string }>(
+		`WITH hit AS (
+       SELECT id, ts, source, layer, title, body, url, severity, confidence,
+              geom, entities, meta, ST_Centroid(geom) AS c
+       FROM events
+       WHERE layer = $1 AND geom IS NOT NULL AND ${envelopes}
+         AND ($6::timestamptz IS NULL OR ts > $6)
+     ), ranked AS (
+       SELECT *, row_number() OVER (
+                PARTITION BY floor(ST_X(c) / $7), floor(ST_Y(c) / $7)
+                ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'watch' THEN 1 ELSE 2 END,
+                         ts DESC, id) AS rn,
+              count(*) OVER () AS n_total
+       FROM hit
+     )
+     SELECT id, ts, source, layer, title, body, url, severity, confidence,
+            ST_AsGeoJSON(geom)::json AS geom, entities, meta, n_total
+     FROM ranked
+     ORDER BY rn, CASE severity WHEN 'critical' THEN 0 WHEN 'watch' THEN 1 ELSE 2 END,
+              ts DESC, id
+     LIMIT $8`,
+		[layer, w, s, e, n, view.since ?? null, cell, limit],
+	);
+	const matched = rows.length ? Number(rows[0].n_total) : 0;
+	const items = rows.map(({ n_total: _, ...r }) => r);
+	return { items, matched, limit, truncated: matched > items.length };
+}
+
 // Deterministic brief (no LLM): CRITICAL → WATCH → notable INFO, plus feed gaps.
 // Same shape every run for the same data — safe to cache, safe to diff.
 export async function getBrief() {

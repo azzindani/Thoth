@@ -7,6 +7,7 @@ import {
 	getDossier,
 	getLayerHistory,
 	getLayerSlice,
+	getLayerView,
 	getStats,
 	getVersions,
 } from "../db/queries.js";
@@ -16,6 +17,30 @@ import { LayerParams, VERSION } from "./shared.js";
 import { SOURCE_MAP } from "./source-map.js";
 
 const BOOT = Date.now();
+
+/** Camera view for map slices: zoom + optional bbox "w,s,e,n" (w > e
+ * crosses the antimeridian). */
+const ViewParams = z.object({
+	z: z.coerce.number().min(0).max(24).optional(),
+	bbox: z
+		.string()
+		.max(120)
+		.transform((s) => s.split(",").map(Number))
+		.refine(
+			(b) =>
+				b.length === 4 &&
+				b.every(Number.isFinite) &&
+				b[0] >= -180 &&
+				b[2] <= 180 &&
+				b[1] >= -90 &&
+				b[3] <= 90 &&
+				b[1] < b[3] &&
+				b[0] <= 180 &&
+				b[2] >= -180,
+		)
+		.transform((b) => b as [number, number, number, number])
+		.optional(),
+});
 
 /** Core routes: health, stats, versions, route index, layers, brief, alerts, dossier. */
 export function registerCore(app: express.Express): void {
@@ -129,10 +154,33 @@ export function registerCore(app: express.Express): void {
 			res.status(400).json({ ok: false, error: "bad layer or since" });
 			return;
 		}
-		const items = await getLayerSlice(p.data.layer, 500, p.data.since);
+		const v = ViewParams.safeParse({ z: req.query.z, bbox: req.query.bbox });
+		if (!v.success) {
+			res.status(400).json({ ok: false, error: "bad z or bbox" });
+			return;
+		}
+		// No camera → the classic newest-500 slice (inspector, ticker, exports).
+		if (v.data.z == null) {
+			const items = await getLayerSlice(p.data.layer, 500, p.data.since);
+			res.json({
+				items,
+				total: items.length,
+				serverTs: new Date().toISOString(),
+				versions: await getVersions(),
+			});
+			return;
+		}
+		const r = await getLayerView(p.data.layer, {
+			z: v.data.z,
+			bbox: v.data.bbox,
+			since: p.data.since,
+		});
 		res.json({
-			items,
-			total: items.length,
+			items: r.items,
+			total: r.items.length,
+			matched: r.matched,
+			limit: r.limit,
+			truncated: r.truncated,
 			serverTs: new Date().toISOString(),
 			versions: await getVersions(),
 		});
