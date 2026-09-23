@@ -85,9 +85,14 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
 - [ ] Remaining: explicit cross-layer rules (e.g. internet outage near a
       cable landing), and per-hour-of-week baselines once history exists.
 
-## P5 — Analyst workflow `[ ]`
+## P5 — Analyst workflow `[~]`
 
-- [ ] **Time replay**: scrub/play the last 24–72 h on the map.
+- [x] **Time replay**: scrub/play the last 24–72 h on the map.
+      *Shipped:* REPLAY in the dock (and the palette): 72 h slider in
+      15-min steps, trailing window 1/6/24 h, play at 1/3/6 h per second.
+      A local filter over each layer's last slice — no refetch while
+      scrubbing; static catalogs and daily layers stay as background;
+      LIVE restores the live picture.
 - [ ] **Area watches**: draw a circle/polygon; alert when anything enters.
 - [ ] **Since you last looked**: new / escalated / resolved digest.
 - [ ] **Country pages**: advisories, conflicts, hazards, outages,
@@ -95,7 +100,10 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
 - [ ] **Saved workspaces**: layers + camera + windows + filters, named and
       shareable by link.
 - [ ] **Map notes** → sitrep export with map snapshot / PDF.
-- [ ] **Command palette** (Ctrl+K) and `?` shortcut sheet.
+- [x] **Command palette** (Ctrl+K) and `?` shortcut sheet.
+      *Shipped:* every tab, layer (show/hide reflects live state), map
+      mode, mission, theater fly-to and panel action, fuzzy-ranked;
+      ↑/↓/Enter/Esc. `/` no longer steals the slash while typing.
 
 ## P6 — Thoth as a platform `[ ]`
 

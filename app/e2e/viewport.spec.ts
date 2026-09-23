@@ -88,3 +88,28 @@ test("cable routes are lines you can pick", async ({ page }) => {
 		{ timeout: 10000 },
 	);
 });
+
+test("time replay filters the map to the scrubbed window", async ({ page }) => {
+	test.setTimeout(180000);
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	// Fixture quakes were observed 1 h, 26 h and 50 h ago.
+	await expect.poll(() => count(page, "quakes"), { timeout: 120000 }).toBe(3);
+	await page.locator("#replay-btn").click();
+	const range = page.locator(".replay-range");
+	await expect(range).toBeVisible();
+	const max = Number(await range.getAttribute("max"));
+	// 49.5 h ago with the default 6 h window: only the 50 h-old quake.
+	await range.fill(
+		String(max - 49.5 * 3600e3 - ((max - 49.5 * 3600e3) % 900e3)),
+	);
+	await expect.poll(() => count(page, "quakes")).toBe(1);
+	await expect(page.locator("#replay-clock")).toHaveText(
+		/\d\d-\d\d \d\d:\d\dZ/,
+	);
+	// Back to live: the full picture returns.
+	await page.getByRole("button", { name: "leave replay" }).click();
+	await expect(page.locator("#replay")).toHaveCount(0);
+	await expect.poll(() => count(page, "quakes")).toBe(3);
+});
