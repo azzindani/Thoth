@@ -352,7 +352,7 @@ describe("weather yr-nowcast", () => {
 			["locationforecast", () => ok({ properties: {} }, 500)],
 			[
 				"nowcast/2.0/complete",
-				(u: string) =>
+				(_u: string) =>
 					ok({
 						properties: {
 							timeseries: [

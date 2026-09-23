@@ -2,8 +2,10 @@
 // Indicator snapshots for a curated country list, weekly poll. Country-level
 // rows (entities.country), ts = latest TimeDim year, NEVER_FROZEN in server.ts
 // (annual data, inherently old — fetch-failure is the only signal).
+
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // OData code → short label. Stable WHO indicator vocabulary.
@@ -339,7 +341,7 @@ export async function collect() {
 				},
 			});
 			n++;
-			await new Promise((r) => setTimeout(r, 400));
+			await sleep(400);
 		} catch (e: unknown) {
 			errors.push(`unesco-enrol/${iso}: ${errMsg(e)}`);
 		}

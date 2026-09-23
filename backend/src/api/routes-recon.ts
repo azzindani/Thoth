@@ -962,7 +962,12 @@ export function registerRecon(app: express.Express): void {
 			if (!r.ok) throw new Error(`HTTP ${r.status}`);
 			const j = (await r.json()) as {
 				count?: number;
-				releases?: { id?: string; title?: string; date?: string; status?: string }[];
+				releases?: {
+					id?: string;
+					title?: string;
+					date?: string;
+					status?: string;
+				}[];
 			};
 			res.json({
 				ok: true,
@@ -990,7 +995,9 @@ export function registerRecon(app: express.Express): void {
 			.trim()
 			.slice(0, 120);
 		if (q.length < 2) {
-			res.status(400).json({ ok: false, error: "query required (malware/IOC)" });
+			res
+				.status(400)
+				.json({ ok: false, error: "query required (malware/IOC)" });
 			return;
 		}
 		try {
@@ -1006,7 +1013,7 @@ export function registerRecon(app: express.Express): void {
 			};
 			res.json({
 				ok: true,
-				items: ((j.hits?.hits ?? []).slice(0, 5)).map((h) => {
+				items: (j.hits?.hits ?? []).slice(0, 5).map((h) => {
 					const x = h._source ?? {};
 					const bl = x.blacklist as { description?: string }[] | undefined;
 					return {

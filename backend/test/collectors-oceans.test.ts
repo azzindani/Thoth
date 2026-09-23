@@ -108,7 +108,7 @@ describe("oceans coops-temp", () => {
 			["om-flood", () => ok([], 500)],
 			[
 				"product=water_temperature",
-				(u: string) =>
+				(_u: string) =>
 					ok({
 						metadata: { lat: "40.7006", lon: "-74.0142" },
 						data: [{ t: "2026-09-16 11:24", v: "22.9", f: "0,0,0" }],

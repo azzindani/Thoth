@@ -307,7 +307,10 @@ describe("transit gbfs-blue + gbfs-toronto", () => {
 			["StopPoint/940GZZLUBST/Arrivals", () => ok([], 500)],
 			["StopPoint/940GZZLUKSX/Arrivals", () => ok([], 500)],
 			["StopPoint/940GZZLUEUS/Arrivals", () => ok([], 500)],
-			["victoria,central,jubilee,piccadilly,northern,bakerloo/Status", () => ok([], 500)],
+			[
+				"victoria,central,jubilee,piccadilly,northern,bakerloo/Status",
+				() => ok([], 500),
+			],
 			[
 				"gbfs.bluebikes.com",
 				() =>
