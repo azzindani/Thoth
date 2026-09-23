@@ -21,6 +21,12 @@ type MLMap = {
 	querySourceFeatures: (id: string) => unknown[];
 };
 
+// Panels slide, then flip visibility after the transition — which needs
+// animation frames. CI renders the globe in software GL, where a frame can
+// take 1–2 s under two workers, so panel visibility gets frame-time room.
+// (State is asserted separately, via the body.hide-* classes.)
+const SLIDE = { timeout: 15000 };
+
 async function boot(page: Page) {
 	await page.goto("/");
 	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
@@ -131,7 +137,7 @@ test.describe
 			expect((await pad()).right).toBeGreaterThan(300);
 			await page.keyboard.press("Backslash");
 			for (const id of ["#explorer", "#inspector", "#bottom"])
-				await expect(page.locator(id)).toBeHidden();
+				await expect(page.locator(id)).toBeHidden(SLIDE);
 			await expect(page.locator("#clear-btn")).toHaveClass(/mode-on/);
 			await expect.poll(async () => (await pad()).right).toBe(0);
 			expect((await pad()).left).toBe(0);
@@ -142,12 +148,12 @@ test.describe
 			await expect(tab).toHaveClass(/is-hidden/);
 			await expect(tab).toContainText("Layers");
 			await tab.click();
-			await expect(page.locator("#explorer")).toBeVisible();
-			await expect(page.locator("#inspector")).toBeHidden();
+			await expect(page.locator("#explorer")).toBeVisible(SLIDE);
+			await expect(page.locator("#inspector")).toBeHidden(SLIDE);
 
 			// "/" always reaches the command line: a hidden dock slides back.
 			await page.keyboard.press("/");
-			await expect(page.locator("#bottom")).toBeVisible();
+			await expect(page.locator("#bottom")).toBeVisible(SLIDE);
 			await expect(page.locator("#cmd")).toBeFocused();
 			await page.locator("#cmd").blur();
 			// \ is ignored while typing: make sure focus really left the input.
@@ -161,11 +167,11 @@ test.describe
 			await expect(body).toHaveClass(/hide-expl/);
 			await expect(body).toHaveClass(/hide-insp/);
 			await expect(body).toHaveClass(/hide-dock/);
-			await expect(page.locator("#explorer")).toBeHidden();
+			await expect(page.locator("#explorer")).toBeHidden(SLIDE);
 			await page.keyboard.press("Backslash");
 			await expect(body).not.toHaveClass(/hide-(expl|insp|dock)/);
 			for (const id of ["#explorer", "#inspector", "#bottom"])
-				await expect(page.locator(id)).toBeVisible();
+				await expect(page.locator(id)).toBeVisible(SLIDE);
 			await expect.poll(async () => (await pad()).right).toBeGreaterThan(300);
 		});
 
@@ -173,12 +179,12 @@ test.describe
 			await page.locator("#pt-insp").click();
 			// State first, then the panel: a recurrence names which one failed.
 			await expect(page.locator("body")).toHaveClass(/hide-insp/);
-			await expect(page.locator("#inspector")).toBeHidden();
+			await expect(page.locator("#inspector")).toBeHidden(SLIDE);
 			await boot(page);
 			await expect(page.locator("body")).toHaveClass(/hide-insp/);
-			await expect(page.locator("#inspector")).toBeHidden();
+			await expect(page.locator("#inspector")).toBeHidden(SLIDE);
 			await page.locator("#pt-insp").click();
-			await expect(page.locator("#inspector")).toBeVisible();
+			await expect(page.locator("#inspector")).toBeVisible(SLIDE);
 		});
 
 		test("pop-out windows: open, drag, minimise, restore, full view, close", async () => {
