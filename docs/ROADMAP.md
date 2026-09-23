@@ -105,10 +105,20 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
       new, escalated (watch → critical), resolved (gone while still in
       the window). A dismissible card lists them as a data table; rows
       fly the map. `/api/alerts?hours=` (1–168).
-- [ ] **Country pages**: advisories, conflicts, hazards, outages,
+- [x] **Country pages**: advisories, conflicts, hazards, outages,
       sanctions, markets, news per country.
-- [ ] **Saved workspaces**: layers + camera + windows + filters, named and
+      *Shipped:* Country tab / `country <name>` / palette: US + UK travel
+      advice and UNHCR displacement (anchored on the capital), per-layer
+      counts and critical/watch items within 250–2000 km of the capital
+      (7 d), and wire stories that name the country (3 d) — as tables.
+      `/api/country?q=&radius_km=`, `/api/country/list`. Not yet:
+      sanctions and markets per country (needs ISO codes per row).
+- [x] **Saved workspaces**: layers + camera + windows + filters, named and
       shareable by link.
+      *Shipped:* palette → save (named, this browser), open, delete, or
+      copy a link: `#ws=` carries hidden layers, camera, mission,
+      severity filter, map mode, tab and panel layout in the URL itself.
+      Pop-out windows are not part of a workspace yet.
 - [ ] **Map notes** → sitrep export with map snapshot / PDF.
 - [x] **Command palette** (Ctrl+K) and `?` shortcut sheet.
       *Shipped:* every tab, layer (show/hide reflects live state), map

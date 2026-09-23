@@ -337,6 +337,25 @@ export const api = {
 				geom?: { type: string; coordinates: unknown } | null;
 			}[];
 		}>("/api/watch"),
+	/** Country page (P5): anchored on the capital, events within radius. */
+	country: (q: string, radius_km = 500) =>
+		get<{
+			ok: boolean;
+			country: { name: string; lat: number; lon: number };
+			radius_km: number;
+			advisories: {
+				source: string;
+				title: string;
+				severity: string;
+				ts: string;
+				url: string | null;
+			}[];
+			displacement: { title: string; severity: string } | null;
+			counts: { layer: string; n: number; critical: number; watch: number }[];
+			items: LayerItem[];
+			mentions: LayerItem[];
+		}>(`/api/country?q=${encodeURIComponent(q)}&radius_km=${radius_km}`),
+	countryList: () => get<{ items: string[] }>("/api/country/list"),
 	/** Area watch (P5): a circle; anything live that lands inside matches. */
 	watchArea: (label: string, lat: number, lon: number, radius_km: number) =>
 		fetch(`${API}/api/watch`, {

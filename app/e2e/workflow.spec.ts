@@ -86,3 +86,72 @@ test("area watch: save the dossier circle and draw it on the map", async ({
 		);
 	}
 });
+
+test("country page from the command line", async ({ page }) => {
+	test.setTimeout(120000);
+	await page.goto("/");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	await page.locator("#cmd").fill("country Japan");
+	await page.locator("#cmd").press("Enter");
+	await expect(page.locator("#country-name")).toHaveText("Japan", {
+		timeout: 20000,
+	});
+	const body = page.locator("#insp-body");
+	await expect(body.locator("table").first()).toContainText("quakes");
+	await expect(body.locator(".country-row").first()).toBeVisible();
+});
+
+test("workspaces: save a view, change it, reopen it; open a shared link", async ({
+	page,
+}) => {
+	test.setTimeout(150000);
+	await page.goto("/");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	const quakes = page.locator(".lrow", { hasText: "quakes" }).first();
+	await expect(quakes).not.toHaveClass(/off/);
+	// Save through the palette (the name comes from a prompt).
+	page.once("dialog", (d) => d.accept("e2e desk"));
+	await page.locator("body").click({ position: { x: 5, y: 5 } });
+	await page.keyboard.press("Control+k");
+	await page.keyboard.type("save this view");
+	await page.keyboard.press("Enter");
+	await expect(
+		page.locator(".toast", { hasText: "Workspace saved" }),
+	).toBeVisible();
+	// Change the view, then reopen the workspace.
+	await quakes.click();
+	await expect(quakes).toHaveClass(/off/);
+	await page.keyboard.press("Control+k");
+	await page.keyboard.type("open e2e desk");
+	await page.keyboard.press("Enter");
+	await expect(quakes).not.toHaveClass(/off/);
+
+	// A shared link carries the whole view in the URL.
+	const ws = {
+		v: 1,
+		name: "shared",
+		hidden: ["quakes"],
+		camera: { c: [21.5, 57.2], z: 4 },
+		mission: "",
+		sev: "",
+		mode: "default",
+		globe: true,
+		tab: "incidents",
+		panels: { expl: false, insp: false, dock: false },
+	};
+	const token = Buffer.from(JSON.stringify(ws))
+		.toString("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=+$/, "");
+	await page.goto(`/#ws=${token}`);
+	await page.reload();
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	await expect(page.locator('#tabs button[data-tab="incidents"]')).toHaveClass(
+		/on/,
+		{ timeout: 20000 },
+	);
+	await expect(
+		page.locator(".lrow", { hasText: "quakes" }).first(),
+	).toHaveClass(/off/);
+});

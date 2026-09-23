@@ -369,3 +369,10 @@ export function nearestCountry(
 	}
 	return best ? best.replace(/\b[a-z]/g, (c) => c.toUpperCase()) : null;
 }
+
+/** Every country key the locator knows, title-cased for display. */
+export function countryNames(): string[] {
+	return Object.keys(CAPITALS)
+		.map((k) => k.replace(/\b[a-z]/g, (c) => c.toUpperCase()))
+		.sort();
+}
