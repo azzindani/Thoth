@@ -21,5 +21,5 @@ RUN addgroup -S thoth && adduser -S thoth -G thoth && chown -R thoth:thoth /app
 USER thoth
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD node -e "fetch('http://localhost:4000/api/health').then(r=>{if(!r.ok)process.exit(1)})"
+  CMD node -e "fetch('http://localhost:4000/api/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["node", "dist/api/server.js"]

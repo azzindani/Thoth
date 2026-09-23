@@ -1,58 +1,52 @@
-# Thoth CI: typecheck + lint + unit + e2e (backend + app). Postgres+PostGIS service.
+# Thoth CI. Fast static gates first; DB-backed suites run on a deterministic
+# dataset (vendored statics + fixture events) so they do not depend on ~300
+# third-party upstreams being up. Only the "alive" contract warms up real
+# collectors, and it asserts attempts (health rows), never upstream success.
 name: ci
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+  DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
+  TEST_DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth_test
+  PGPASSWORD: thoth
+
 jobs:
-  backend:
+  backend-static:
+    name: backend · typecheck, lint, unit, audit
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: timescale/timescaledb-ha:pg16
-        env:
-          POSTGRES_USER: thoth
-          POSTGRES_PASSWORD: thoth
-          POSTGRES_DB: thoth
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s --health-timeout 5s --health-retries 5
+    timeout-minutes: 10
+    defaults: { run: { working-directory: backend } }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
       - run: npm ci --no-audit --no-fund
-        working-directory: backend
       - run: npm run typecheck
-        working-directory: backend
       - run: npm run lint
-        working-directory: backend
-      - run: npm run db:migrate
-        working-directory: backend
-        env: { DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth }
-      - run: npm run dev:api &
-        working-directory: backend
-        env:
-          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
-          API_URL: http://localhost:4000
-          REQUESTS_PER_MIN: 2000
-      - run: sleep 5 && npm test
-        working-directory: backend
-        env:
-          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
-          API_URL: http://localhost:4000
-      - run: psql $DATABASE_URL -c 'CREATE DATABASE thoth_test;' && DATABASE_URL=postgres://thoth:thoth@localhost:5432/thoth_test npm run db:migrate && npm run test:collectors
-        working-directory: backend
-        env:
-          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
-          PGPASSWORD: thoth
-      - run: npx playwright install --with-deps chromium
-        working-directory: backend
-      - run: npx playwright test
-        working-directory: backend
-        env: { API_URL: http://localhost:4000 }
-  app:
+      - run: npm run test:unit
+      - run: npm audit --omit=dev --audit-level=high
+
+  backend-db:
+    name: backend · migrations, collectors, routes
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: backend-static
+    defaults: { run: { working-directory: backend } }
     services:
       postgres:
         image: timescale/timescaledb-ha:pg16
@@ -62,31 +56,118 @@ jobs:
           POSTGRES_DB: thoth
         ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s --health-timeout 5s --health-retries 5
+          --health-cmd "pg_isready -U thoth"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Collector contract tests (stubbed fetch)
+        run: |
+          psql "$DATABASE_URL" -c 'CREATE DATABASE thoth_test;'
+          DATABASE_URL=$TEST_DATABASE_URL npm run db:migrate
+          npm run test:collectors
+      - name: Migrate twice (tracked + idempotent)
+        run: npm run db:migrate && npm run db:migrate
+      - name: Seed statics + fixtures
+        run: npm run db:seed && npm run db:seed:fixtures
+      - name: Warm up collectors once (live contract, attempts only)
+        run: timeout 600 npm run worker:warmup
+      - name: Start API
+        run: |
+          REQUESTS_PER_MIN=5000 API_WRITE_KEY=ci-write-key nohup npm run dev:api > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:4000/api/readyz && break; sleep 1; done
+      - name: Route + alive tests
+        run: npm test
+        env:
+          API_URL: http://localhost:4000
+          API_WRITE_KEY: ci-write-key
+      - name: Legacy terminal e2e
+        run: npx playwright install --with-deps chromium && npx playwright test
+        env:
+          API_URL: http://localhost:4000
+      - if: failure()
+        run: tail -n 200 api.log
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-e2e
+          path: backend/test-results
+          retention-days: 7
+
+  app:
+    name: app · typecheck, lint, unit, build, e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: timescale/timescaledb-ha:pg16
+        env:
+          POSTGRES_USER: thoth
+          POSTGRES_PASSWORD: thoth
+          POSTGRES_DB: thoth
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U thoth"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            backend/package-lock.json
       - run: npm ci --no-audit --no-fund
         working-directory: app
       - run: npx tsc --noEmit
         working-directory: app
       - run: npx biome check .
         working-directory: app
-      - run: npx next build
-        working-directory: app
       - run: npm test
         working-directory: app
-      - run: npm ci --no-audit --no-fund && npm run db:migrate && (npm run dev:api &)
+      - run: npx next build
+        working-directory: app
+      - name: Backend on fixture data (write key on, like production)
         working-directory: backend
-        env:
-          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
-          REQUESTS_PER_MIN: 2000
-      - run: npx playwright install --with-deps chromium
+        run: |
+          npm ci --no-audit --no-fund
+          npm run db:migrate && npm run db:seed && npm run db:seed:fixtures
+          REQUESTS_PER_MIN=5000 API_WRITE_KEY=ci-write-key nohup npm run dev:api > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:4000/api/readyz && break; sleep 1; done
+      - name: App e2e (key injected server-side by src/proxy.ts)
         working-directory: app
-      - run: (npx next start -p 3000 &) && sleep 8 && npx playwright test -c playwright.config.ts
-        working-directory: app
-        env:
-          DATABASE_URL: postgres://thoth:thoth@localhost:5432/thoth
-          NEXT_PUBLIC_THOTH_API: http://localhost:4000
+        run: |
+          npx playwright install --with-deps chromium
+          API_WRITE_KEY=ci-write-key APP_TRUST_UPSTREAM_AUTH=1 nohup npx next start -p 3000 > app.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:3000/healthz && break; sleep 1; done
+          npx playwright test -c playwright.config.ts
+      - if: failure()
+        run: tail -n 200 backend/api.log app/app.log
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-e2e
+          path: |
+            app/test-results
+            app/playwright-report
+          retention-days: 7
+
+  docker:
+    name: docker · images build, compose valid
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: backend-static
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compose file is valid
+        run: POSTGRES_PASSWORD=x API_WRITE_KEY=x docker compose -f backend/docker-compose.yml config -q
+      - name: Build backend image
+        run: docker build -t thoth-backend:ci backend
+      - name: Build app image
+        run: docker build -t thoth-app:ci --build-arg THOTH_API_INTERNAL=http://api:4000 app
