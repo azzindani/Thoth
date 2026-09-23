@@ -35,6 +35,15 @@ const Env = z.object({
 	FINNHUB_KEY: z.string().default(""),
 	TELEGRAM_BOT_TOKEN: z.string().default(""),
 	TELEGRAM_CHAT_ID: z.string().default(""),
+	// Retention (worker prune job, hourly). Monitor history and the raw
+	// fetch log are operational and short-lived; events are intelligence,
+	// kept longer, and only pruned when neither observed nor re-seen within
+	// the window (static catalogs are never pruned). 0 = keep forever.
+	MONITOR_RETENTION_DAYS: z.coerce.number().int().min(1).default(14),
+	RAW_RETENTION_DAYS: z.coerce.number().int().min(0).default(14),
+	EVENTS_RETENTION_DAYS: z.coerce.number().int().min(0).default(180),
+	// Consecutive failed runs before a source raises an ops alert.
+	ALERT_FAIL_STREAK: z.coerce.number().int().min(1).default(3),
 });
 
 const parsed = Env.safeParse(process.env);

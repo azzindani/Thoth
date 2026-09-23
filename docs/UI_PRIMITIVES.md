@@ -118,6 +118,7 @@ Rules:
 | KV grid | `UI.kv([[k,v]…])` | dossier/object detail |
 | Item row | `UI.item(html, onClick)` | alerts/inspector lists |
 | Field | `UI.field(placeholder)` | cmdbar + inspector inputs |
+| Data table | `<DataTable rows cols rowKey …>` (`components/DataTable.tsx`) | any tabular view: sticky header, sortable columns (`aria-sort`), `num` columns right-aligned mono, `wide` columns only on a wide panel, optional expandable detail row; compact panels scroll sideways |
 
 Rules:
 - Glyphs: Lucide SVG paths from the `LAYERS` table only (ISC). No emoji, no new icon sets.

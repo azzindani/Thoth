@@ -11,6 +11,7 @@ import {
 } from "./middleware.js";
 import { registerCore } from "./routes-core.js";
 import { registerIntel } from "./routes-intel.js";
+import { registerMonitor } from "./routes-monitor.js";
 import { registerOsint } from "./routes-osint.js";
 import { registerRecon } from "./routes-recon.js";
 
@@ -47,6 +48,7 @@ export function createApp(): express.Express {
 	registerOsint(app);
 	registerRecon(app);
 	registerIntel(app);
+	registerMonitor(app);
 
 	app.use("/api", notFound);
 	app.use(errorHandler);

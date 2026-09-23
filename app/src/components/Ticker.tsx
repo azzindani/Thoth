@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api, monitor } from "../lib/api";
 import { Btn } from "../lib/ui";
 
 /** Market-tape sources: prices, rates, odds (not package downloads). */
@@ -43,6 +43,25 @@ export default function Ticker({
 	const [clock, setClock] = useState("--:--:--");
 	const [tape, setTape] = useState("booting…");
 	const [pill, setPill] = useState(<span>···</span>);
+	// Worker liveness (monitor P1): a dead worker otherwise only shows as
+	// feeds slowly going stale. Checked more often than the tape.
+	const [workerDown, setWorkerDown] = useState(false);
+	useEffect(() => {
+		let stop = false;
+		const check = () =>
+			monitor
+				.summary()
+				.then((s) => {
+					if (!stop) setWorkerDown(!s.worker.alive);
+				})
+				.catch(() => {});
+		check();
+		const t = setInterval(check, 30000);
+		return () => {
+			stop = true;
+			clearInterval(t);
+		};
+	}, []);
 
 	useEffect(() => {
 		const t = setInterval(
@@ -203,6 +222,11 @@ export default function Ticker({
 				>
 					{!sse || sse.ok ? "● " : "● RECONNECTING / "}
 				</span>
+				{workerDown && (
+					<span className="stale" id="worker-down">
+						WORKER DOWN <span className="sep">/</span>{" "}
+					</span>
+				)}
 				{pill}
 			</button>
 			{/* Basemap is one choice (segmented); projection and layout modes

@@ -1600,6 +1600,257 @@ body.focus .inspector.open {
 	}
 }
 
+/* ── server monitor v2 (MonitorTab.tsx) ───────────────────────────────── */
+.mon-kpis {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 2px 0 10px;
+}
+.mon-kpi {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 9px;
+	border-radius: var(--r-pill);
+	border: 1px solid var(--line2);
+	color: var(--txt2);
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+}
+.mon-kpi > i {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--txt2);
+}
+.mon-kpi.warn {
+	color: var(--amber);
+	border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+}
+.mon-kpi.bad {
+	color: var(--red);
+	border-color: color-mix(in srgb, var(--red) 45%, transparent);
+}
+.mon-kpi.bad > i {
+	background: var(--red);
+}
+.mon-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.mon-wide {
+	height: 26px;
+	padding: 0 10px;
+	font-size: 10.5px;
+	letter-spacing: 0.08em;
+}
+.mon-tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 10px;
+}
+.mon-tools input {
+	flex: 1 1 140px;
+	min-width: 0;
+}
+.mon-state {
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+}
+.mon-err {
+	color: var(--red);
+}
+.mon-strip {
+	display: inline-flex;
+	gap: 1px;
+	vertical-align: middle;
+}
+.mon-tick {
+	width: 2px;
+	height: 12px;
+	border-radius: 1px;
+	background: var(--faint);
+}
+.mon-tick.ok {
+	background: var(--txt2);
+	opacity: 0.55;
+}
+.mon-tick.bad {
+	background: var(--red);
+}
+.mon-run {
+	height: 24px;
+	padding: 0 9px;
+	font-size: 10.5px;
+	letter-spacing: 0.08em;
+}
+.mon-detail {
+	margin: 0 0 8px 10px;
+	padding: 6px 0 6px 12px;
+	border-left: 2px solid var(--line2);
+	font-size: 12px;
+}
+.mon-sub {
+	margin: 8px 0 3px;
+	color: var(--faint);
+	font-size: var(--fs-label);
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+.mon-dline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0 4px;
+	padding: 2px 0;
+	color: var(--txt2);
+	overflow-wrap: anywhere;
+}
+.mono {
+	font-family: var(--mono);
+}
+
+/* ── data table (DataTable.tsx) ─────────────────────────────────────────
+   Sticky header over the panel's scroll, numbers right-aligned in mono,
+   hairline rows, sortable header buttons. Columns marked .wide only show
+   when the panel is wide (desk monitor) — compact panels keep the core. */
+.dt-wrap {
+	margin: 0 -4px;
+}
+.dt {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	font-size: 12px;
+}
+.dt th {
+	position: sticky;
+	top: -16px;
+	z-index: 1;
+	padding: 0 8px;
+	height: 30px;
+	background: var(--panel2);
+	border-bottom: 1px solid var(--line2);
+	color: var(--dim);
+	font-weight: 500;
+	font-size: var(--fs-label);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	text-align: left;
+	white-space: nowrap;
+}
+.dt-sort {
+	all: unset;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	border-radius: var(--r-cell);
+}
+.dt-sort:hover,
+.dt-sort.on {
+	color: var(--txt);
+}
+.dt-sort:focus-visible {
+	outline: 2px solid var(--accent-line);
+	outline-offset: 2px;
+}
+.dt-arrow {
+	display: inline-block;
+	width: 8px;
+	color: var(--accent);
+}
+.dt td {
+	padding: 7px 8px;
+	border-bottom: 1px solid var(--line);
+	white-space: nowrap;
+	vertical-align: middle;
+	color: var(--txt2);
+}
+.dt-key {
+	color: var(--txt);
+	font-weight: 600;
+}
+.dt .num {
+	text-align: right;
+	font-family: var(--mono);
+	font-variant-numeric: tabular-nums;
+}
+.dt-sort.rev {
+	flex-direction: row-reverse;
+}
+.dt tr.click {
+	cursor: pointer;
+	transition: background var(--t-fast) var(--ease);
+}
+.dt tbody tr.click:hover,
+.dt tbody tr.open {
+	background: var(--hover);
+}
+.dt tr.click:focus-visible {
+	outline: 2px solid var(--accent-line);
+	outline-offset: -2px;
+}
+.dt tr.dt-detail td {
+	padding: 0 8px 10px;
+	white-space: normal;
+	background: var(--hover);
+}
+.dt-clip {
+	display: inline-block;
+	max-width: 320px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: bottom;
+}
+.dt-empty {
+	padding: 12px 4px;
+}
+body:not(.insp-wide) .dt .wide {
+	display: none;
+}
+/* Compact panels: the core columns can still outgrow the panel, so the
+   table scrolls sideways (the header then scrolls with it). */
+body:not(.insp-wide) .dt-wrap {
+	overflow-x: auto;
+}
+@media (max-width: 1199px) {
+	.dt .wide {
+		display: none;
+	}
+	.dt-wrap {
+		overflow-x: auto;
+	}
+}
+
+/* The monitor is a data grid: on desk the inspector widens while it is
+   open (body.insp-wide, set by MonitorTab). --rw is derived on :root, so
+   it is re-derived here; the hide-insp rules below still win. */
+@media (min-width: 1200px) {
+	body.insp-wide {
+		--insp: min(1180px, calc(100vw - var(--lw) - var(--inset) * 3 - 160px));
+		--rw: calc(var(--insp) + var(--inset));
+	}
+	/* The dock would be squeezed into the map gap: run it full width
+	   under the monitor, which stops above it instead. */
+	body.insp-wide .bottom {
+		right: var(--inset);
+	}
+	body.insp-wide .inspector {
+		bottom: calc(var(--dock-h) + var(--inset) * 2);
+	}
+	body.insp-wide.hide-dock .inspector {
+		bottom: var(--inset);
+	}
+}
+
 /* ── pop-out object windows (PopWindows.tsx) ──────────────────────────────
    Desk: free windows over the map with a leader line to their point.
    Tablet/phone: one swipeable stack above the dock. */
@@ -1933,6 +2184,7 @@ body.focus .inspector.open {
 		transition:
 			transform var(--t) var(--ease),
 			opacity var(--t) var(--ease),
+			width var(--t) var(--ease),
 			visibility 0s;
 	}
 	body.hide-insp {
