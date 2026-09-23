@@ -55,7 +55,7 @@ describe("solar", () => {
 		}) as typeof fetch;
 		const r = await solar();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('swpc-aurora','swpc-xray','swpc-f107')",
 		);
 		assert.equal(rows.length, 3);

@@ -76,7 +76,7 @@ describe("weather collect()", () => {
 		]);
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ severity: string }[]>(
+		const rows = await query<{ severity: string }>(
 			"SELECT severity FROM events WHERE layer='weather'",
 		);
 		assert.equal(rows[0]?.severity, "critical");
@@ -134,7 +134,7 @@ describe("metalerts CAP shape", () => {
 		}) as typeof fetch;
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='metalerts'",
 		);
 		assert.equal(rows.length, 1);
@@ -159,7 +159,7 @@ describe("metalarm colors", () => {
 		}) as typeof fetch;
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ severity: string }[]>(
+		const rows = await query<{ severity: string }>(
 			"SELECT severity FROM events WHERE source='metalarm'",
 		);
 		assert.ok(rows.length >= 1);
@@ -223,7 +223,7 @@ describe("weather depth", () => {
 		}) as typeof fetch;
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('metnow','nws-fx','hko')",
 		);
 		assert.equal(rows.length, 3);
@@ -274,7 +274,7 @@ describe("weather metocean/metsun", () => {
 		// by source alone. (Shared-table suites are hermetic per-source, not
 		// per-row — metsun's date-id is unique per day, metocean's time-id is
 		// scoped here because the oceanforecast host serves both metocean legs.)
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='metsun' OR (source='metocean' AND id LIKE '%2026-09-16T02:00%')",
 		);
 		assert.equal(rows.length, 2);
@@ -332,7 +332,7 @@ describe("weather depth26", () => {
 		}) as typeof fetch;
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('yr-forecast','nws-obs','fmi','dwd-warn')",
 		);
 		assert.ok(rows.length >= 4);
@@ -374,7 +374,7 @@ describe("weather yr-nowcast", () => {
 		]);
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='yr-nowcast' ORDER BY id",
 		);
 		assert.equal(rows.length, 3);
@@ -440,7 +440,7 @@ describe("weather metocean-ns", () => {
 		assert.equal(r.ok, true);
 		// Scoped to this tick's observation time (see metocean/metsun note
 		// above — the shared oceanforecast host serves both legs).
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='metocean-ns' AND id LIKE '%2026-09-16T11:00%' ORDER BY id",
 		);
 		assert.equal(rows.length, 1); // Norwegian Sea waveless → skipped
@@ -477,7 +477,7 @@ describe("weather sunsched berlin + istanbul", () => {
 		]);
 		const r = await weather();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='sunsched' ORDER BY id",
 		);
 		assert.equal(rows.length, 4);

@@ -49,7 +49,7 @@ describe("crypto", () => {
 		}) as typeof fetch;
 		const r = await crypto();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('binance','coinbase')",
 		);
 		assert.ok(rows.length >= 4, `crypto rows, got ${rows.length}`);
@@ -82,12 +82,12 @@ describe("crypto spot/llama", () => {
 		}) as typeof fetch;
 		const r = await crypto();
 		assert.equal(r.ok, true);
-		const spot = await query<{ id: string; title: string }[]>(
+		const spot = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='coinbase-spot'",
 		);
 		assert.equal(spot.length, 2);
 		assert.ok(spot.some((x) => x.id.startsWith("cbspot:BTCUSD:")));
-		const tvl = await query<{ id: string; title: string }[]>(
+		const tvl = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='llama-tvl'",
 		);
 		assert.equal(tvl.length, 2);
@@ -121,7 +121,7 @@ describe("crypto gateio/spamrep", () => {
 		}) as typeof fetch;
 		const r = await crypto();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('gateio','spamrep')",
 		);
 		assert.equal(rows.length, 4);

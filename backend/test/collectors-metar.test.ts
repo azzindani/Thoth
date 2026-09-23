@@ -56,7 +56,7 @@ describe("metar/taf", () => {
 		}) as typeof fetch;
 		const r = await metar();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE layer='metar'",
 		);
 		assert.equal(rows.length, 2);

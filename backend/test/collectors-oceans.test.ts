@@ -59,7 +59,7 @@ describe("oceans collect()", () => {
 		]);
 		const r = await oceans();
 		assert.equal(r.ok, true);
-		const rows = await query<{ severity: string }[]>(
+		const rows = await query<{ severity: string }>(
 			"SELECT severity FROM events WHERE layer='oceans'",
 		);
 		assert.equal(rows[0]?.severity, "watch");
@@ -93,7 +93,7 @@ describe("coops datum param", () => {
 		const r = await oceans();
 		assert.equal(r.ok, true);
 		assert.equal(sawDatum, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops' AND id='coops:8720218'",
 		);
 		assert.equal(rows.length, 1);
@@ -117,7 +117,7 @@ describe("oceans coops-temp", () => {
 		]);
 		const r = await oceans();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops-temp' ORDER BY id",
 		);
 		assert.equal(rows.length, 3);
@@ -149,7 +149,7 @@ describe("oceans coops-pred", () => {
 		]);
 		const r = await oceans();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops-pred' ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -199,12 +199,12 @@ describe("oceans coops-wind + coops-pressure", () => {
 		]);
 		const r = await oceans();
 		assert.equal(r.ok, true);
-		const wind = await query<{ id: string }[]>(
+		const wind = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops-wind' ORDER BY id",
 		);
 		assert.equal(wind.length, 15); // 8 surge + 7 batch58 ring (mock serves all)
 		assert.ok(wind.every((x) => x.id.startsWith("coopswind:")));
-		const pres = await query<{ id: string }[]>(
+		const pres = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops-pressure' ORDER BY id",
 		);
 		assert.equal(pres.length, 15);

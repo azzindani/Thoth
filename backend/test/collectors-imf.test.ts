@@ -38,7 +38,7 @@ describe("imf", () => {
 		}) as typeof fetch;
 		const r = await imf();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='imf'",
 		);
 		assert.ok(rows.length >= 3);
@@ -77,7 +77,7 @@ describe("imf", () => {
 		}) as typeof fetch;
 		const r = await imf();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='worldbank-src'",
 		);
 		assert.equal(rows.length, 4);
@@ -115,7 +115,7 @@ describe("imf", () => {
 		}) as typeof fetch;
 		const r = await imf();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='dbnomics-bea'",
 		);
 		assert.deepEqual(

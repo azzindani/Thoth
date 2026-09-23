@@ -55,7 +55,7 @@ describe("volcanoes collect()", () => {
 		]);
 		const r = await volcanoes();
 		assert.equal(r.ok, true);
-		const rows = await query<{ severity: string }[]>(
+		const rows = await query<{ severity: string }>(
 			"SELECT severity FROM events WHERE layer='volcanoes'",
 		);
 		assert.equal(rows[0]?.severity, "info");

@@ -56,7 +56,7 @@ describe("drones collect()", () => {
 		]);
 		const r = await drones();
 		assert.equal(r.ok, true);
-		const rows = await query<{ severity: string }[]>(
+		const rows = await query<{ severity: string }>(
 			"SELECT severity FROM events WHERE layer='drones'",
 		);
 		assert.equal(rows[0]?.severity, "critical");

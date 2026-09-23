@@ -51,7 +51,7 @@ describe("airquality bands", () => {
 		const r = await airquality();
 		assert.equal(r.ok, true);
 		assert.equal((r as { count?: number }).count, 29);
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE layer='airquality' AND id IN ('aq:london','aq:paris') ORDER BY id",
 		);
 		assert.deepEqual(
@@ -101,7 +101,7 @@ describe("airquality sg-psi", () => {
 		]);
 		const n = await collectSgPsi();
 		assert.equal(n, 2);
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='sg-psi' ORDER BY id",
 		);
 		assert.equal(rows.length, 2);

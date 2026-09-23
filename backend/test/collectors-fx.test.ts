@@ -33,7 +33,7 @@ describe("fx rates", () => {
 		const r = await fx();
 		assert.equal(r.ok, true);
 		assert.equal((r as { count?: number }).count, 2);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='frankfurter' ORDER BY id",
 		);
 		assert.deepEqual(
@@ -53,7 +53,7 @@ describe("fx rates", () => {
 		}) as typeof fetch;
 		const r = await fx();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='frankfurter-eur' ORDER BY id",
 		);
 		assert.deepEqual(

@@ -62,7 +62,7 @@ describe("forecast/marine", () => {
 		}) as typeof fetch;
 		const r = await forecast();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('openmeteo-fx','openmeteo-marine')",
 		);
 		assert.ok(rows.length >= 30, `forecast rows, got ${rows.length}`);
@@ -99,7 +99,7 @@ describe("forecast bom", () => {
 		}) as typeof fetch;
 		const r = await forecast();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='bom'",
 		);
 		assert.equal(rows.length, 4);
@@ -138,12 +138,12 @@ describe("forecast ipma + iss-now", () => {
 		}) as typeof fetch;
 		const r = await forecast();
 		assert.equal(r.ok, true);
-		const ipma = await query<{ id: string }[]>(
+		const ipma = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='ipma' ORDER BY id",
 		);
 		assert.equal(ipma.length, 3); // Lisbon + Porto + Faro, same mock shape
 		assert.equal(ipma[0].id, "ipma:faro:2026-09-16");
-		const iss = await query<{ id: string }[]>(
+		const iss = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='iss-now'",
 		);
 		assert.deepEqual(
