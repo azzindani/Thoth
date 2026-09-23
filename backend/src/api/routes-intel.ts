@@ -86,15 +86,35 @@ export function registerIntel(app: express.Express): void {
 	});
 
 	// Watchlists: keyword / layer / severity watches + match scanning.
-	const WatchParams = z.object({
-		kind: z.enum(["keyword", "layer", "severity"]),
-		value: z.string().trim().min(1).max(200),
-		note: z.string().trim().max(500).optional().default(""),
+	// Area watches (P5) carry a circle (lat/lon/radius_km) or a GeoJSON
+	// polygon; the other kinds are matched on text/layer/severity.
+	const Polygon = z.object({
+		type: z.enum(["Polygon", "MultiPolygon"]),
+		coordinates: z.array(z.unknown()).min(1),
 	});
+	const WatchParams = z.discriminatedUnion("kind", [
+		z.object({
+			kind: z.enum(["keyword", "layer", "severity"]),
+			value: z.string().trim().min(1).max(200),
+			note: z.string().trim().max(500).optional().default(""),
+		}),
+		z.object({
+			kind: z.literal("area"),
+			value: z.string().trim().min(1).max(200),
+			note: z.string().trim().max(500).optional().default(""),
+			lat: z.number().min(-90).max(90).optional(),
+			lon: z.number().min(-180).max(180).optional(),
+			radius_km: z.number().positive().max(2000).optional(),
+			geom: Polygon.optional(),
+		}),
+	]);
 	app.get("/api/watch", async (_req, res) => {
 		res.json({
 			ok: true,
-			items: await query("SELECT * FROM watchlists ORDER BY created_at"),
+			items: await query(
+				`SELECT id, kind, value, note, created_at,
+				        ST_AsGeoJSON(geom)::json AS geom FROM watchlists ORDER BY created_at`,
+			),
 		});
 	});
 	app.post("/api/watch", async (req, res) => {
@@ -102,15 +122,48 @@ export function registerIntel(app: express.Express): void {
 		if (!p.success) {
 			res.status(400).json({
 				ok: false,
-				error: "kind=keyword|layer|severity, value required",
+				error:
+					"kind=keyword|layer|severity with value, or kind=area with value + lat/lon/radius_km or a polygon geom",
 			});
 			return;
 		}
-		const id = `w:${p.data.kind}:${p.data.value.toLowerCase()}`;
+		const d = p.data;
+		if (d.kind === "area") {
+			const circle = d.lat != null && d.lon != null && d.radius_km != null;
+			if (!circle && !d.geom) {
+				res.status(400).json({
+					ok: false,
+					error: "area needs lat, lon and radius_km, or a polygon geom",
+				});
+				return;
+			}
+			const id = `w:area:${d.value.toLowerCase()}`;
+			await query(
+				`INSERT INTO watchlists(id, kind, value, note, geom)
+				 VALUES ($1, 'area', $2, $3,
+				   CASE WHEN $4::jsonb IS NOT NULL
+				        THEN ST_SetSRID(ST_GeomFromGeoJSON($4::jsonb), 4326)
+				        ELSE ST_Buffer(ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography,
+				                       $7 * 1000, 32)::geometry END)
+				 ON CONFLICT (id) DO UPDATE SET note=EXCLUDED.note, geom=EXCLUDED.geom`,
+				[
+					id,
+					d.value,
+					d.note,
+					d.geom ? JSON.stringify(d.geom) : null,
+					d.lat ?? null,
+					d.lon ?? null,
+					d.radius_km ?? null,
+				],
+			);
+			res.json({ ok: true, id });
+			return;
+		}
+		const id = `w:${d.kind}:${d.value.toLowerCase()}`;
 		await query(
 			`INSERT INTO watchlists(id, kind, value, note) VALUES ($1,$2,$3,$4)
      ON CONFLICT (id) DO UPDATE SET note=EXCLUDED.note`,
-			[id, p.data.kind, p.data.value, p.data.note],
+			[id, d.kind, d.value, d.note],
 		);
 		res.json({ ok: true, id });
 	});
@@ -123,8 +176,8 @@ export function registerIntel(app: express.Express): void {
 			Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
 			200,
 		);
-		const watches = await query<{ kind: string; value: string }>(
-			"SELECT kind, value FROM watchlists",
+		const watches = await query<{ id: string; kind: string; value: string }>(
+			"SELECT id, kind, value FROM watchlists",
 		);
 		if (!watches.length) {
 			res.json({ ok: true, count: 0, items: [] });
@@ -137,6 +190,13 @@ export function registerIntel(app: express.Express): void {
 				params.push(`%${w.value}%`);
 				ors.push(
 					`(title ILIKE $${params.length} OR body ILIKE $${params.length})`,
+				);
+			} else if (w.kind === "area") {
+				// Anything live inside the area; catalogs (airports…) never.
+				params.push(w.id);
+				ors.push(
+					`(source <> 'static' AND geom IS NOT NULL AND ST_Intersects(geom,
+					   (SELECT g.geom FROM watchlists g WHERE g.id = $${params.length})))`,
 				);
 			} else if (w.kind === "layer") {
 				params.push(w.value);

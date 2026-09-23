@@ -245,6 +245,50 @@ describe("new capability endpoints (search / watch / cert / asn)", () => {
 		});
 		assert.equal(del.status, 200);
 	});
+	it("area watch: a circle matches live events inside, never catalogs", async () => {
+		const put = await fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			// The fixture "Fixture Trench" quakes sit at 38.4, 142.4.
+			body: JSON.stringify({
+				kind: "area",
+				value: "e2e-probe-area",
+				lat: 38.4,
+				lon: 142.4,
+				radius_km: 120,
+			}),
+		});
+		assert.equal(put.status, 200);
+		try {
+			const list = await get<{
+				items: { id: string; geom: { type: string } | null }[];
+			}>("/api/watch");
+			const w = list.items.find((x) => x.id === "w:area:e2e-probe-area");
+			assert.equal(w?.geom?.type, "Polygon");
+			const m = await get<{ items: { layer: string; source: string }[] }>(
+				"/api/watch/matches?limit=200",
+			);
+			assert.ok(m.items.some((i) => i.layer === "quakes"));
+			assert.ok(m.items.every((i) => i.source !== "static"));
+		} finally {
+			await fetch(`${API}/api/watch/w:area:e2e-probe-area`, {
+				method: "DELETE",
+			});
+		}
+		const bad = await fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ kind: "area", value: "no-geometry" }),
+		});
+		assert.equal(bad.status, 400);
+	});
+	it("alerts widen with ?hours (since-you-looked window)", async () => {
+		const day = await get<{ total: number }>("/api/alerts?limit=500");
+		const week = await get<{ total: number }>(
+			"/api/alerts?limit=500&hours=168",
+		);
+		assert.ok(week.total >= day.total);
+	});
 	it("watch rejects bad kind", async () => {
 		const res = await fetch(`${API}/api/watch`, {
 			method: "POST",
