@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { COLLECTORS } from "../src/workers/registry.js";
+import { liveFetch as fetch } from "./helpers/live-fetch.js";
 
 const API = process.env.API_URL ?? "http://localhost:4000";
 async function get<T>(path: string): Promise<T> {
