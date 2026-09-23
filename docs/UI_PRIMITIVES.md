@@ -52,6 +52,13 @@ if they drift). The rules, in priority order:
 10. **Motion.** `--t-fast 120ms` (hover/press), `--t 200ms` (panels),
     `--t-sheet 260ms` (sheets), all on `--ease`. `prefers-reduced-motion`
     zeroes the tokens — never add a duration that bypasses them.
+11. **One card at a time.** Hover cards are previews; a click answers with
+    a pin (one hit) or the stack picker (several). After a click the
+    clicked features stay hover-silent until the pointer moves on or the
+    card closes; an open picker silences all hover; grabbing, zooming or
+    flying the camera, or leaving the canvas, drops hover cards (they are
+    anchored to the globe and would drift). All of it lives in
+    `map-popups.ts` (`muted`, `moving`, `pickerOpen`), never per layer.
 
 Testing rule: with panels floating over the map, a feature can be rendered
 yet covered by chrome. E2e specs pick map points with
