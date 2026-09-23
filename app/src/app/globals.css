@@ -1600,6 +1600,356 @@ body.focus .inspector.open {
 	}
 }
 
+/* ── pop-out object windows (PopWindows.tsx) ──────────────────────────────
+   Desk: free windows over the map with a leader line to their point.
+   Tablet/phone: one swipeable stack above the dock. */
+.popwin {
+	position: absolute;
+	width: 300px;
+	border-radius: var(--r-card);
+	background: var(--glass2);
+	-webkit-backdrop-filter: var(--blur);
+	backdrop-filter: var(--blur);
+	border: 1px solid var(--line2);
+	box-shadow: var(--hl), var(--shadow-card);
+	overflow: hidden;
+	animation: pop-in var(--t) var(--ease);
+}
+@keyframes pop-in {
+	from {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+}
+.popwin-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 36px;
+	padding: 0 4px 0 12px;
+	border-bottom: 1px solid var(--line);
+	cursor: grab;
+	user-select: none;
+	touch-action: none;
+}
+.popwin-head:active {
+	cursor: grabbing;
+}
+.popwin-sev {
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+	flex: none;
+}
+.popwin-t {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--fs-s);
+	font-weight: 600;
+	color: var(--txt);
+}
+.popwin-head button {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	border-radius: var(--r-cell);
+	background: none;
+	color: var(--dim);
+	cursor: pointer;
+	transition:
+		background var(--t-fast) var(--ease),
+		color var(--t-fast) var(--ease);
+}
+.popwin-head button:hover {
+	background: var(--hover);
+	color: var(--txt);
+}
+.popwin-head svg {
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+}
+.popwin-body {
+	padding: 10px 12px 12px;
+}
+.popwin-gone {
+	margin-top: 8px;
+	color: var(--dim);
+	font-size: var(--fs-s);
+	font-style: italic;
+}
+.pop-lines {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 24;
+	overflow: visible;
+}
+.pop-line {
+	stroke: var(--accent-line);
+	stroke-width: 1.25;
+	stroke-dasharray: 3 4;
+}
+.pop-dot {
+	fill: var(--bg);
+	stroke: var(--accent);
+	stroke-width: 1.5;
+}
+.pop-tray {
+	position: absolute;
+	top: calc(var(--top) + 2px);
+	left: calc((100% + var(--lw) - var(--rw)) / 2);
+	transform: translateX(-50%);
+	z-index: 22;
+	display: flex;
+	gap: 6px;
+	max-width: calc(100% - var(--lw) - var(--rw) - var(--inset) * 4);
+}
+.pop-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 30px;
+	max-width: 220px;
+	padding: 0 12px;
+	border-radius: var(--r-pill);
+	border: 1px solid var(--line2);
+	background: var(--glass2);
+	-webkit-backdrop-filter: var(--blur);
+	backdrop-filter: var(--blur);
+	box-shadow: var(--hl), var(--shadow-card);
+	color: var(--txt2);
+	font: inherit;
+	font-size: 11.5px;
+	cursor: pointer;
+	transition:
+		background var(--t-fast) var(--ease),
+		color var(--t-fast) var(--ease);
+}
+.pop-chip:hover {
+	background: var(--raise2);
+	color: var(--txt);
+}
+.pop-chip-t {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.pop-stack {
+	position: absolute;
+	left: calc(var(--inset) + var(--lw));
+	right: var(--inset);
+	bottom: calc(var(--dock-h) + var(--inset) * 2);
+	z-index: 22;
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	overscroll-behavior-x: contain;
+	padding-bottom: 2px;
+}
+.pop-stack .popwin {
+	position: relative;
+	flex: 0 0 min(300px, 84vw);
+	scroll-snap-align: start;
+}
+.pop-stack .popwin-head {
+	cursor: default;
+}
+
+/* ── collapsible chrome (desk + tablet) ───────────────────────────────────
+   Each persistent panel slides off to its edge (body.hide-*); the layout
+   vars that other chrome hangs off (--lw/--rw/--dock-h) collapse with it,
+   so the dock, minimap and toasts follow. Hidden panels also leave the
+   focus order (visibility flips after the slide, back before the return).
+   Phone has no persistent panels — sheets already get out of the way. */
+.ptoggle {
+	display: none;
+}
+@media (min-width: 768px) {
+	.explorer,
+	.bottom {
+		transition:
+			transform var(--t) var(--ease),
+			opacity var(--t) var(--ease),
+			left var(--t) var(--ease),
+			right var(--t) var(--ease),
+			visibility 0s;
+	}
+	body.hide-expl {
+		--lw: 0px;
+	}
+	body.hide-dock {
+		--dock-h: 0px;
+	}
+	body.hide-expl .explorer,
+	body.hide-dock .bottom {
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transition:
+			transform var(--t) var(--ease),
+			opacity var(--t) var(--ease),
+			left var(--t) var(--ease),
+			right var(--t) var(--ease),
+			visibility 0s linear var(--t);
+	}
+	body.hide-expl .explorer {
+		transform: translateX(calc(-100% - var(--inset) * 2));
+	}
+	body.hide-dock .bottom {
+		transform: translateY(calc(100% + var(--inset) * 2));
+	}
+
+	/* The handle: a slim grip on the panel's inner edge; hidden → a
+	   labelled tab on the screen edge. */
+	.ptoggle {
+		position: absolute;
+		z-index: 16;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		padding: 0;
+		color: var(--dim);
+		background: var(--glass2);
+		-webkit-backdrop-filter: var(--blur);
+		backdrop-filter: var(--blur);
+		border: 1px solid var(--line);
+		box-shadow: var(--hl);
+		font: 500 10.5px / 1 var(--sans);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		opacity: 0.6;
+		cursor: pointer;
+		transition:
+			opacity var(--t-fast) var(--ease),
+			color var(--t-fast) var(--ease),
+			background var(--t-fast) var(--ease),
+			left var(--t) var(--ease),
+			right var(--t) var(--ease),
+			bottom var(--t) var(--ease);
+	}
+	.ptoggle:hover,
+	.ptoggle:focus-visible,
+	.ptoggle.is-hidden {
+		opacity: 1;
+		color: var(--txt);
+	}
+	.ptoggle:hover {
+		background: var(--raise2);
+	}
+	.pt-chev {
+		width: 14px;
+		height: 14px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		/* orientation comes from the button: --rot per side and state */
+		transform: rotate(var(--rot, 0deg));
+		transition: transform var(--t) var(--ease);
+	}
+	.pt-label {
+		display: none;
+	}
+	.ptoggle.is-hidden .pt-label {
+		display: inline;
+	}
+
+	/* left: explorer */
+	.pt-expl {
+		top: 50%;
+		left: calc(var(--inset) + var(--expl) + 3px);
+		width: 16px;
+		height: 44px;
+		border-radius: 0 var(--r-cell) var(--r-cell) 0;
+		transform: translateY(-50%);
+	}
+	.pt-expl.is-hidden,
+	.pt-insp.is-hidden {
+		width: auto;
+		height: auto;
+		padding: 12px 7px;
+		writing-mode: vertical-rl;
+	}
+	.pt-expl.is-hidden {
+		left: 0;
+		--rot: 180deg;
+	}
+
+	/* right: inspector (desk only; tablet uses the overlay sheet) */
+	.pt-insp {
+		top: 50%;
+		right: calc(var(--inset) + var(--insp) + 3px);
+		width: 16px;
+		height: 44px;
+		border-radius: var(--r-cell) 0 0 var(--r-cell);
+		transform: translateY(-50%);
+		--rot: 180deg;
+	}
+	.pt-insp.is-hidden {
+		right: 0;
+		--rot: 0deg;
+	}
+
+	/* bottom: dock */
+	.pt-dock {
+		bottom: calc(var(--inset) + var(--dock-h) + 3px);
+		left: calc((100% + var(--lw) - var(--rw)) / 2);
+		width: 44px;
+		height: 16px;
+		border-radius: var(--r-cell) var(--r-cell) 0 0;
+		transform: translateX(-50%);
+		--rot: -90deg;
+	}
+	.pt-dock.is-hidden {
+		bottom: 0;
+		width: auto;
+		height: auto;
+		padding: 7px 14px;
+		--rot: 90deg;
+	}
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+	.pt-insp {
+		display: none;
+	}
+}
+@media (min-width: 1200px) {
+	.inspector {
+		transition:
+			transform var(--t) var(--ease),
+			opacity var(--t) var(--ease),
+			visibility 0s;
+	}
+	body.hide-insp {
+		--rw: 0px;
+	}
+	body.hide-insp .inspector {
+		transform: translateX(calc(100% + var(--inset) * 2));
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transition:
+			transform var(--t) var(--ease),
+			opacity var(--t) var(--ease),
+			visibility 0s linear var(--t);
+	}
+}
+
 /* ── accessibility fallbacks ──────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
 	/* every duration is a token: zero them, and stop the tape */
