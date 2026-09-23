@@ -2,12 +2,15 @@
 
 Everything a human needs to take Thoth from this sandbox to a real host.
 The tunnel (`trycloudflare`) is temporary by nature; this is the exit.
+Security model, full env reference and upgrade notes: `PRODUCTION.md`.
 
 ## 1. First boot (empty host)
 
 ```sh
 git clone <repo> thoth && cd thoth/backend
-export POSTGRES_PASSWORD=<strong>   # required by compose, nothing else is
+export POSTGRES_PASSWORD=$(openssl rand -hex 32)   # required
+export API_WRITE_KEY=$(openssl rand -hex 32)       # required (writes fail closed without it)
+export APP_BASIC_AUTH="ops:<strong>"               # strongly recommended behind a public tunnel
 docker compose up -d --build         # db → migrate → seed → api + worker + app
 sleep 60 && curl -s localhost:4000/api/stats | head -c 200
 ```
@@ -20,11 +23,15 @@ Expected: `{"serverTs":...}` with ~28 layers. Full freshness within ~6h
 | Var | Default | Set to |
 |---|---|---|
 | `POSTGRES_PASSWORD` | (required) | strong secret |
-| `REQUESTS_PER_MIN` | 120 | **2000** — else the app's own page loads (~35 req) + test suites 429 themselves (seen 2026-09-13) |
+| `API_WRITE_KEY` | (required) | strong secret; the app injects it server-side for vetted users |
+| `APP_BASIC_AUTH` | unset (open) | `user:pass` — gate for the whole terminal; or `APP_TRUST_UPSTREAM_AUTH=1` behind SSO |
+| `REQUESTS_PER_MIN` | 300 (compose) | per real client IP now; raise only for load tests from one IP |
 | `OTX_API_KEY` | unset (honest-disabled) | free-signup key enables pulse intel |
 | `TELEGRAM_CHANNELS` | osintdefender,war_monitor,aljazeeraenglish | adjust anytime, worker picks up on restart |
 | AIS/ACLED/Finnhub | not wired | keys alone don't ship these — collectors don't exist yet (OUTSTANDING.md A) |
-| `THOTH_API_PUBLIC` | http://localhost:4000 | public API origin when the app is served from another host |
+| `APP_BIND` / `APP_PORT` | 127.0.0.1 / 3000 | `0.0.0.0` only if the app itself (not a tunnel) listens publicly |
+
+Full reference (TRUST_PROXY, CORS_ORIGIN, pool/timeout knobs): `PRODUCTION.md` §2.
 
 ## 3. Cron (host owns scheduling, not the worker)
 
@@ -52,7 +59,7 @@ its own shell, launches dying with the shell). So:
 
 - app: `app/restart.sh` — builds, safe-stops (bracket patterns), starts
   detached, then curls `/` **and a real chunk URL**; exits non-zero otherwise.
-- backend: `backend/restart.sh` — restarts api (with `REQUESTS_PER_MIN=2000`)
+- backend: `backend/restart.sh` — restarts api (with `REQUESTS_PER_MIN=2000`, for the dev box running the live suites)
   + worker detached, then curls `/api/stats`.
 
 Diagnose a frozen UI via browser console (`_next/static/chunks/*.js → 500`).

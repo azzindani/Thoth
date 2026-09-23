@@ -114,6 +114,26 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
 - `docker compose up --build` never verified here (sandbox denies mounts) — first
   green build must happen on a real host.
 - Flights quota: OpenSky 100/day anon — 15-min cadence holds, but a key raises it.
+- [x] Production hardening pass (2026-09-23, see PRODUCTION.md): Express 5 (async
+  errors no longer hang requests), JSON 404/500 + request ids + access log,
+  security headers, CORS that honours CORS_ORIGIN, per-client rate limiting via
+  TRUST_PROXY (was one shared bucket behind the Next proxy), API_WRITE_KEY write
+  gate (fail closed in prod) + app-side injection behind APP_BASIC_AUTH,
+  livez/readyz, shared SSE poller + resume replay, graceful API/worker shutdown,
+  tracked transactional migrations, pool error handling + statement timeout,
+  per-batch layer_versions bumps, maplibre-gl 6 (critical XSS advisory).
+- [x] Deploy fixes (2026-09-23): compose DB volume pointed at the wrong PGDATA
+  (data lived in the container layer — dump before upgrading, PRODUCTION.md §5);
+  app image build failed on a missing public/ dir; browser bypassed the app to
+  hit :4000; API port no longer published on 0.0.0.0; log rotation.
+- [x] CI deterministic (2026-09-23): fixture dataset + statics seeded, jobs split
+  (static / db / app / docker image build), Node 22, dependabot. Upstream-bound
+  checks left: alive warm-up (attempts only), RIPEstat/NVD/crt.sh lookups.
+- CSP for the app — needs an audited allowlist (CARTO tiles, Esri imagery,
+  Google Fonts, video embeds). Owner: next hardening pass.
+- Multi-replica API: rate-limit + SSE client state are in-process; move to
+  Postgres/Redis before running >1 API container.
+- Per-user identity/audit for writes (single shared key today).
 
 ## E. Tests (89 → 128, 2026-09-09)
 
@@ -124,7 +144,11 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ThreatClock, EntityGraph, CmdBar routing). Gap closed, nothing remains.
 - [x] Perims/airwx mock suite — batch7 (polygon round-trip, severity maps).
 - Flake fixes: collector suites serial (`--test-concurrency=1`, TRUNCATE races),
-  CI/e2e `REQUESTS_PER_MIN=2000` (page loads cost ~35 req).
+  CI/e2e `REQUESTS_PER_MIN=2000` (page loads cost ~35 req — all from one IP
+  in tests; production limits are per client since 2026-09-23).
+- [x] Collector suite 9m → 27s (2026-09-23): pg pool `allowExitOnIdle` (each file
+  idled 10s) + `THOTH_DELAY_SCALE=0` for backoff sleeps; forecast/marine stub
+  ordering bug fixed (marine rows were never exercised).
 - [x] Coverage hermeticity (2026-09-10): `test:coverage` runs on thoth_test and
   excludes the HTTP liveness suite; batch TRUNCATEs wiped the dev DB twice
   before this (repaired via seed-statics + --once cycles). Satellites fallback
