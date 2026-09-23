@@ -7,7 +7,9 @@ import Explorer from "../components/Explorer";
 import Inspector, { CompleteView, type Tab } from "../components/Inspector";
 import MapView, {
 	loadAll,
+	MAP_NOTES_EVENT,
 	type ObjProps,
+	setMapNotes,
 	setVis,
 	setWatchAreas,
 	WATCH_AREAS_EVENT,
@@ -21,6 +23,7 @@ import {
 import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
 import Replay from "../components/Replay";
 import SinceDigest from "../components/SinceDigest";
+import Sitrep from "../components/Sitrep";
 import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
@@ -74,6 +77,7 @@ export default function Terminal() {
 	const [countryQ, setCountryQ] = useState<string | undefined>(undefined);
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 	const [keysOpen, setKeysOpen] = useState(false);
+	const [sitrepOn, setSitrepOn] = useState(false);
 	const [theaterList, setTheaterList] = useState<[string, string][]>([]);
 	const [osint, setOsint] = useState<{ kind: string; arg: string } | null>(
 		null,
@@ -630,6 +634,30 @@ export default function Terminal() {
 		return () => window.removeEventListener(WATCH_AREAS_EVENT, on);
 	}, [refreshWatchAreas]);
 
+	// Map notes (P5): notes pinned to a place, drawn on the map.
+	const refreshMapNotes = useCallback(async () => {
+		const m = mapRef.current;
+		if (!m) return;
+		try {
+			const j = await api.notes();
+			setMapNotes(
+				m,
+				j.items.flatMap((n) =>
+					n.lat != null && n.lon != null
+						? [{ id: n.id, title: n.title, lat: n.lat, lon: n.lon }]
+						: [],
+				),
+			);
+		} catch {
+			/* keep */
+		}
+	}, []);
+	useEffect(() => {
+		const on = () => void refreshMapNotes();
+		window.addEventListener(MAP_NOTES_EVENT, on);
+		return () => window.removeEventListener(MAP_NOTES_EVENT, on);
+	}, [refreshMapNotes]);
+
 	// Theater names for the palette (the explorer has its own copy).
 	useEffect(() => {
 		if (!palOpen || theaterList.length) return;
@@ -775,6 +803,12 @@ export default function Terminal() {
 				},
 			},
 			{
+				id: "sitrep",
+				group: "Report",
+				label: "Sitrep report of this view (print / PDF / Markdown)",
+				run: () => setSitrepOn(true),
+			},
+			{
 				id: "ws-save",
 				group: "Workspace",
 				label: "Save this view as a workspace…",
@@ -833,6 +867,9 @@ export default function Terminal() {
 			/>
 			<ShortcutSheet open={keysOpen} onClose={() => setKeysOpen(false)} />
 			<SinceDigest />
+			{sitrepOn && (
+				<Sitrep getMap={getMap} onClose={() => setSitrepOn(false)} />
+			)}
 			<Ticker
 				mode={mode}
 				setMode={(m) => setMode(m === "dark" ? "default" : m)}
@@ -889,6 +926,7 @@ export default function Terminal() {
 						mapRef.current = m;
 						syncPadding();
 						void refreshWatchAreas();
+						void refreshMapNotes();
 						// A shared workspace link (#ws=…) opens on that view.
 						const ws = workspaceFromHash();
 						if (ws) {
@@ -962,6 +1000,7 @@ export default function Terminal() {
 					onSdn={() => setTab("sdn")}
 					onAlerts={() => setTab("alerts")}
 					onTab={(t) => setTab(t as Tab)}
+					onSitrep={() => setSitrepOn(true)}
 					onCountry={(name) => {
 						setCountryQ(name);
 						setTab("country");

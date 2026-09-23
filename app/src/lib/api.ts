@@ -442,6 +442,9 @@ export const api = {
 				tickers: string;
 				sentiment: string;
 				favorite: boolean;
+				lat: number | null;
+				lon: number | null;
+				updated_at?: string;
 			}[];
 		}>(`/api/notes${q ? `?q=${encodeURIComponent(q)}` : ""}`),
 	noteAdd: (note: {
@@ -450,6 +453,9 @@ export const api = {
 		category?: string;
 		tickers?: string;
 		sentiment?: string;
+		/** Map note (P5): pinned to a place. */
+		lat?: number;
+		lon?: number;
 	}) =>
 		fetch(`${API}/api/notes`, {
 			method: "POST",

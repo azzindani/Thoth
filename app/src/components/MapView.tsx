@@ -156,6 +156,89 @@ export function setWatchAreas(
 	} as never);
 }
 
+// ── map notes (ROADMAP P5) ──────────────────────────────────────────────
+/** Event the page listens for to redraw map notes after a change. */
+export const MAP_NOTES_EVENT = "thoth:map-notes";
+
+/** Analyst notes pinned to a place: a small accent pin with its title. Not a
+ * data layer: never picked, never counted, not filtered by replay. */
+export function setMapNotes(
+	map: maplibregl.Map,
+	notes: { id: string; title: string; lat: number; lon: number }[],
+) {
+	const data = {
+		type: "FeatureCollection",
+		features: notes.map((n) => ({
+			type: "Feature",
+			geometry: { type: "Point", coordinates: [n.lon, n.lat] },
+			properties: { id: n.id, title: n.title.slice(0, 40) },
+		})),
+	};
+	const src = map.getSource("map-notes") as
+		| maplibregl.GeoJSONSource
+		| undefined;
+	if (src) {
+		src.setData(data as never);
+		raiseMapNotes(map);
+		return;
+	}
+	map.addSource("map-notes", { type: "geojson", data: data as never });
+	map.addLayer({
+		id: "map-notes",
+		type: "circle",
+		source: "map-notes",
+		paint: {
+			"circle-radius": 5,
+			"circle-color": PALETTE.accent,
+			"circle-stroke-color": PALETTE.txt,
+			"circle-stroke-width": 1.5,
+		},
+	} as never);
+	map.addLayer({
+		id: "map-notes-label",
+		type: "symbol",
+		source: "map-notes",
+		layout: {
+			"text-field": ["get", "title"],
+			"text-size": 11,
+			"text-offset": [0, 1.1],
+			"text-anchor": "top",
+			// The analyst's own words always show, over data labels.
+			"text-allow-overlap": true,
+			"text-ignore-placement": true,
+		},
+		paint: {
+			"text-color": PALETTE.txt,
+			"text-halo-color": PALETTE.bg,
+			"text-halo-width": 1.2,
+		},
+	} as never);
+}
+
+/** Notes stay above data layers added since (a layer shown late is
+ * created on top). */
+function raiseMapNotes(map: maplibregl.Map) {
+	for (const id of ["map-notes", "map-notes-label"])
+		if (map.getLayer(id)) map.moveLayer(id);
+}
+
+/** PNG of the map as drawn now. WebGL clears the buffer after each frame,
+ * so the capture happens inside the next render. */
+export function snapshotMap(map: maplibregl.Map): Promise<string | null> {
+	return new Promise((resolve) => {
+		const t = setTimeout(() => resolve(null), 5000);
+		map.once("render", () => {
+			clearTimeout(t);
+			try {
+				resolve(map.getCanvas().toDataURL("image/png"));
+			} catch {
+				resolve(null);
+			}
+		});
+		map.triggerRepaint();
+	});
+}
+
 // ── time replay (ROADMAP P5) ────────────────────────────────────────────
 // Every layer's last full slice is kept; during a replay each source shows
 // only features observed in the window ending at the replay clock. No
@@ -223,6 +306,7 @@ export async function loadAll(
 			}
 		}),
 	);
+	raiseMapNotes(map);
 }
 
 export function setVis(

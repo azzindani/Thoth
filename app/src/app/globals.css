@@ -2464,3 +2464,131 @@ body:not(.insp-wide) .dt-wrap {
 	font-family: var(--mono);
 	font-variant-numeric: tabular-nums;
 }
+
+/* ── sitrep report (Sitrep.tsx) ───────────────────────────────────────── */
+.sitrep {
+	position: fixed;
+	inset: 0;
+	z-index: 65;
+	display: flex;
+	flex-direction: column;
+	background: rgba(11, 11, 10, 0.72);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+	animation: fade var(--t) var(--ease);
+}
+.sitrep-bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px var(--inset);
+	background: var(--glass2);
+	border-bottom: 1px solid var(--line2);
+	font-size: var(--fs-s);
+	min-width: 0;
+}
+.sitrep-bar .ghost-btn {
+	flex: none;
+	white-space: nowrap;
+}
+.sitrep-bar > .dim {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+.sitrep-page {
+	flex: 1;
+	overflow: auto;
+	width: min(960px, 100%);
+	margin: 0 auto;
+	padding: 20px var(--inset) 40px;
+}
+.sitrep-page h1 {
+	margin: 0 0 4px;
+	font-size: 20px;
+	letter-spacing: 0.08em;
+}
+.sitrep-page h2 {
+	margin: 22px 0 8px;
+	font-size: var(--fs-title);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--txt2);
+}
+.sitrep-map {
+	display: block;
+	width: 100%;
+	max-height: 70vh;
+	object-fit: contain;
+	background: var(--bg);
+	margin-top: 14px;
+	border: 1px solid var(--line2);
+	border-radius: var(--r-card);
+}
+.sitrep-page .sitrep-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--fs-s);
+}
+.sitrep-page .sitrep-table tr th,
+.sitrep-page .sitrep-table tr td {
+	text-align: left;
+	vertical-align: top;
+	padding: 5px 8px;
+	border-bottom: 1px solid var(--line);
+	overflow-wrap: break-word;
+}
+.sitrep-page .sitrep-table tr td.mono,
+.sitrep-page .sitrep-table tr td[class^="sev-"] {
+	white-space: nowrap;
+}
+.sitrep-page .sitrep-table tr th {
+	color: var(--dim);
+	font-weight: 500;
+}
+@media print {
+	body.sitrep-open .app > :not(.sitrep),
+	body.sitrep-open .sitrep .no-print {
+		display: none;
+	}
+	body.sitrep-open,
+	body.sitrep-open .app {
+		background: #fff;
+		color: #000;
+		height: auto;
+		overflow: visible;
+	}
+	body.sitrep-open .sitrep {
+		position: static;
+		display: block;
+		background: none;
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+		animation: none;
+	}
+	body.sitrep-open .sitrep-page {
+		overflow: visible;
+		width: auto;
+		padding: 0;
+		color: #000;
+	}
+	body.sitrep-open .sitrep-page h2,
+	body.sitrep-open .sitrep-page .dim,
+	body.sitrep-open .sitrep-page .sitrep-table tr th {
+		color: #333;
+	}
+	body.sitrep-open .sitrep-page .sitrep-table tr th,
+	body.sitrep-open .sitrep-page .sitrep-table tr td {
+		border-bottom-color: #bbb;
+	}
+	body.sitrep-open .mon-kpi {
+		color: #000;
+		background: none;
+		border-color: #999;
+	}
+	body.sitrep-open .sitrep-table tr,
+	body.sitrep-open .sitrep-map {
+		break-inside: avoid;
+	}
+}
