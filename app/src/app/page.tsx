@@ -7,7 +7,13 @@ import Explorer from "../components/Explorer";
 import Inspector, { CompleteView, type Tab } from "../components/Inspector";
 import MapView, { loadAll, type ObjProps, setVis } from "../components/MapView";
 import MiniMap from "../components/MiniMap";
+import {
+	type Action,
+	CommandPalette,
+	ShortcutSheet,
+} from "../components/Palette";
 import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
+import Replay from "../components/Replay";
 import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
@@ -48,6 +54,10 @@ export default function Terminal() {
 	}, []);
 	const [counts, setCounts] = useState<Map<string, string>>(new Map());
 	const [mission, setMission] = useState("");
+	const [palOpen, setPalOpen] = useState(false);
+	const [replayOn, setReplayOn] = useState(false);
+	const [keysOpen, setKeysOpen] = useState(false);
+	const [theaterList, setTheaterList] = useState<[string, string][]>([]);
 	const [osint, setOsint] = useState<{ kind: string; arg: string } | null>(
 		null,
 	);
@@ -177,7 +187,15 @@ export default function Terminal() {
 		function onKey(e: KeyboardEvent) {
 			const tag = (document.activeElement?.tagName ?? "").toLowerCase();
 			const typing = tag === "input" || tag === "select" || tag === "textarea";
-			if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key === "k")) {
+			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+				e.preventDefault();
+				setKeysOpen(false);
+				setPalOpen((o) => !o);
+			} else if (!typing && e.key === "?") {
+				e.preventDefault();
+				setPalOpen(false);
+				setKeysOpen((o) => !o);
+			} else if (e.key === "/" && !typing) {
 				e.preventDefault();
 				// A hidden dock slides back first; focus once it is laid out.
 				setPanel("dock", false);
@@ -186,6 +204,8 @@ export default function Terminal() {
 				e.preventDefault();
 				toggleClear();
 			} else if (e.key === "Escape") {
+				setPalOpen(false);
+				setKeysOpen(false);
 				document.getElementById("inspector")?.classList.remove("open");
 				setOsint(null);
 				setFull(null);
@@ -517,8 +537,167 @@ export default function Terminal() {
 		}
 	}
 
+	// Theater names for the palette (the explorer has its own copy).
+	useEffect(() => {
+		if (!palOpen || theaterList.length) return;
+		api
+			.theaters()
+			.then((t) =>
+				setTheaterList(
+					Object.entries(t.theaters).map(([k, v]) => [
+						k,
+						(v as { label?: string }).label ?? k,
+					]),
+				),
+			)
+			.catch(() => {});
+	}, [palOpen, theaterList.length]);
+
+	// Built on render while the palette is open: it only reads current state.
+	function buildActions(): Action[] {
+		const tabs: Tab[] = [
+			"object",
+			"area",
+			"sdn",
+			"alerts",
+			"incidents",
+			"news",
+			"markets",
+			"cyber",
+			"pulse",
+			"portfolio",
+			"screen",
+			"monitor",
+			"notes",
+			"video",
+		];
+		const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
+		return [
+			...tabs.map((t) => ({
+				id: `tab-${t}`,
+				group: "Open",
+				label: `${cap(t)} tab`,
+				run: () => {
+					setTab(t);
+					setPanel("insp", false);
+					document.getElementById("inspector")?.classList.add("open");
+				},
+			})),
+			...LAYER_NAMES.map((l) => ({
+				id: `layer-${l}`,
+				group: "Layer",
+				label: `${visible[l] ? "Hide" : "Show"} ${l}`,
+				run: () => toggleLayer(l),
+			})),
+			...(
+				[
+					["default", "Dark map"],
+					["sat", "Satellite imagery"],
+					["nvg", "Night vision"],
+					["cinema", "Cinema (auto-rotate)"],
+				] as const
+			).map(([m, label]) => ({
+				id: `mode-${m}`,
+				group: "Mode",
+				label,
+				hint: m === "default" ? "s" : undefined,
+				run: () => setMode(m),
+			})),
+			{
+				id: "mode-globe",
+				group: "Mode",
+				label: globe ? "Flat map" : "Globe",
+				hint: "g",
+				run: () => setGlobe((g) => !g),
+			},
+			...Object.keys(MISSIONS).map((m) => ({
+				id: `mission-${m}`,
+				group: "Mission",
+				label: cap(m),
+				run: () => applyMission(m),
+			})),
+			{
+				id: "mission-all",
+				group: "Mission",
+				label: "All layers",
+				run: () => applyMission(""),
+			},
+			...theaterList.map(([k, label]) => ({
+				id: `theater-${k}`,
+				group: "Fly to",
+				label,
+				run: () => void flyTheater(k),
+			})),
+			{
+				id: "view-clear",
+				group: "View",
+				label: clear ? "Show all panels" : "Clear view (hide all panels)",
+				hint: "\\",
+				run: toggleClear,
+			},
+			{
+				id: "view-insp",
+				group: "View",
+				label: hidden.insp ? "Show inspector" : "Hide inspector",
+				hint: "i",
+				run: () => togglePanel("insp"),
+			},
+			{
+				id: "view-expl",
+				group: "View",
+				label: hidden.expl ? "Show layers panel" : "Hide layers panel",
+				run: () => togglePanel("expl"),
+			},
+			{
+				id: "view-focus",
+				group: "View",
+				label: "Focus mode",
+				hint: "f",
+				run: () => setFocus((f) => !f),
+			},
+			{
+				id: "view-replay",
+				group: "View",
+				label: replayOn
+					? "Leave time replay (live)"
+					: "Time replay — last 72 h",
+				run: () => setReplayOn((r) => !r),
+			},
+			{
+				id: "view-graph",
+				group: "View",
+				label: "Entity graph",
+				hint: "e",
+				run: () => setGraph((g) => !g),
+			},
+			{
+				id: "cmd-line",
+				group: "Go",
+				label: "Command line",
+				hint: "/",
+				run: () => {
+					setPanel("dock", false);
+					requestAnimationFrame(() => document.getElementById("cmd")?.focus());
+				},
+			},
+			{
+				id: "keys",
+				group: "Help",
+				label: "Keyboard shortcuts",
+				hint: "?",
+				run: () => setKeysOpen(true),
+			},
+		];
+	}
+
 	return (
 		<main className="app">
+			<CommandPalette
+				open={palOpen}
+				onClose={() => setPalOpen(false)}
+				actions={palOpen ? buildActions() : []}
+			/>
+			<ShortcutSheet open={keysOpen} onClose={() => setKeysOpen(false)} />
 			<Ticker
 				mode={mode}
 				setMode={(m) => setMode(m === "dark" ? "default" : m)}
@@ -603,8 +782,27 @@ export default function Terminal() {
 				<div className="tl-row">
 					<ThreatClock />
 					<div style={{ flex: 1, minWidth: 0 }}>
-						<Timeline since={since} setSince={setSince} />
+						{replayOn ? (
+							<Replay getMap={getMap} />
+						) : (
+							<Timeline since={since} setSince={setSince} />
+						)}
 					</div>
+					<button
+						type="button"
+						id="replay-btn"
+						className={`ghost-btn${replayOn ? " on" : ""}`}
+						title={
+							replayOn
+								? "back to the live picture"
+								: "time replay: scrub or play the last 72 hours"
+						}
+						aria-label={replayOn ? "leave replay" : "time replay"}
+						onClick={() => setReplayOn((r) => !r)}
+						style={{ alignSelf: "center" }}
+					>
+						{replayOn ? "LIVE" : "REPLAY"}
+					</button>
 					<button
 						className={`ghost-btn${graph ? " on" : ""}`}
 						title="entity graph (e)"

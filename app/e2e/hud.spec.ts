@@ -743,6 +743,38 @@ test.describe
 			expect(rowTips).toBeGreaterThan(20);
 		});
 
+		test("command palette (Ctrl+K) and shortcut sheet (?)", async () => {
+			await page.locator("body").click({ position: { x: 5, y: 5 } });
+			await page.keyboard.press("Control+k");
+			const pal = page.locator("#palette");
+			await expect(pal).toBeVisible();
+			await page.keyboard.type("incidents tab");
+			await expect(pal.locator(".pal-item.on")).toContainText("Incidents tab");
+			await page.keyboard.press("Enter");
+			await expect(pal).toHaveCount(0);
+			await expect(
+				page.locator('#tabs button[data-tab="incidents"]'),
+			).toHaveClass(/on/);
+			// Layer toggles read and flip live state.
+			await page.keyboard.press("Control+k");
+			await page.keyboard.type("hide quakes");
+			await page.keyboard.press("Enter");
+			await expect(
+				page.locator(".lrow", { hasText: "quakes" }).first(),
+			).toHaveClass(/off/);
+			await page.keyboard.press("Control+k");
+			await page.keyboard.type("show quakes");
+			await page.keyboard.press("Enter");
+			await expect(
+				page.locator(".lrow", { hasText: "quakes" }).first(),
+			).not.toHaveClass(/off/);
+			// ? opens the sheet, Esc closes it.
+			await page.keyboard.press("?");
+			await expect(page.locator("#shortcuts")).toContainText("Command palette");
+			await page.keyboard.press("Escape");
+			await expect(page.locator("#shortcuts")).toHaveCount(0);
+		});
+
 		test("incidents tab: corroborated incidents + anomalies as tables", async () => {
 			await page.locator('#tabs button[data-tab="incidents"]').click();
 			const body = page.locator("#insp-body");

@@ -111,6 +111,48 @@ export function refreshForCamera(map: maplibregl.Map, opts: LoadOpts) {
 	if (due.length) return loadAll(map, due, opts);
 }
 
+// ── time replay (ROADMAP P5) ────────────────────────────────────────────
+// Every layer's last full slice is kept; during a replay each source shows
+// only features observed in the window ending at the replay clock. No
+// refetch per step: scrubbing is a local filter. Static catalogs and slow
+// layers (daily or rarer) are background and always shown.
+type FC = ReturnType<typeof toGeoJSON>;
+const fullData: Record<string, FC> = {};
+let replay: { t: number; windowMs: number } | null = null;
+
+function replayView(name: string): FC {
+	const fc = fullData[name];
+	if (!replay || !fc || (LAYERS[name]?.intervalSec ?? 0) >= 86400) return fc;
+	const hi = replay.t;
+	const lo = hi - replay.windowMs;
+	return {
+		...fc,
+		features: fc.features.filter((f) => {
+			if (f.properties.source === "static") return true;
+			const t = Date.parse(f.properties.ts);
+			return Number.isFinite(t) && t <= hi && t > lo;
+		}),
+	};
+}
+
+/** Enter/advance a replay (clock `t`, trailing `windowMs`), or leave it
+ * with null. Returns how many features are on the map. */
+export function setReplay(
+	map: maplibregl.Map,
+	r: { t: number; windowMs: number } | null,
+): number {
+	replay = r;
+	let shown = 0;
+	for (const name of Object.keys(fullData)) {
+		const v = replayView(name);
+		shown += v.features.length;
+		(map.getSource(name) as maplibregl.GeoJSONSource | undefined)?.setData(
+			v as never,
+		);
+	}
+	return shown;
+}
+
 /** Popups (hover/pin/picker) live in map-popups.ts — outside React.
  * This file owns layers: sources, paint, icons, overlays. */
 
@@ -172,7 +214,8 @@ export async function loadLayer(
 	const view = cameraView(map);
 	const j = await api.layer(name, opts.since ?? undefined, view);
 	sliceState[name] = { truncated: !!j.truncated, key: viewKey(view) };
-	const data = toGeoJSON(j.items, opts.sev);
+	fullData[name] = toGeoJSON(j.items, opts.sev);
+	const data = replayView(name);
 	const src = map.getSource(name) as maplibregl.GeoJSONSource | undefined;
 	if (src) {
 		src.setData(data as never);
