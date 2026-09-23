@@ -1,9 +1,7 @@
 node_modules
-dist
+.next
 test-results
 playwright-report
-test/e2e/shots
+e2e/shots
 *.log
 .env*
-.git
-.vscode
