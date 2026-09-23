@@ -77,7 +77,7 @@ export default function Replay({
 	}, [playing, speed, end]);
 
 	return (
-		<div className="replay" id="replay" role="group" aria-label="time replay">
+		<fieldset className="replay" id="replay" aria-label="time replay">
 			<button
 				type="button"
 				className="ghost-btn replay-play"
@@ -130,6 +130,6 @@ export default function Replay({
 					</option>
 				))}
 			</select>
-		</div>
+		</fieldset>
 	);
 }
