@@ -276,6 +276,25 @@ const ALIASES: Record<string, string> = {
 	"sao tome": "sao tome and principe",
 	"brunei darussalam": "brunei",
 	falklands: "falkland islands",
+	// UNHCR abbreviations ("Syrian Arab Rep.", "Dem. Rep. of the Congo").
+	"syrian arab rep": "syria",
+	"dem rep of the congo": "democratic republic of the congo",
+	"central african rep": "central african republic",
+	"dominican rep": "dominican republic",
+	"rep of moldova": "moldova",
+	"rep of korea": "south korea",
+	"united rep of tanzania": "tanzania",
+	"lao peoples dem rep": "laos",
+	"dem peoples rep of korea": "north korea",
+	"state of palestine": "west bank",
+	palestinian: "west bank",
+	// GeoIP names ("Korea, Republic of", "Moldova, Republic of").
+	"korea republic of": "south korea",
+	"korea democratic peoples republic of": "north korea",
+	"iran islamic republic of": "iran",
+	"moldova republic of": "moldova",
+	"tanzania united republic of": "tanzania",
+	"lao peoples democratic republic": "laos",
 };
 
 export function normalizeCountry(s: string): string {

@@ -21,6 +21,8 @@ type Fx = {
 	lat: number;
 	lon: number;
 	polygon?: boolean;
+	/** a route (LineString) instead of a point, e.g. submarine cables */
+	line?: boolean;
 	meta?: Record<string, unknown>;
 };
 
@@ -247,6 +249,31 @@ const FIXTURES: Fx[] = [
 		lon: 69.17,
 		meta: { level: 4 },
 	},
+	{
+		layer: "vessels",
+		source: "digitraffic-ais",
+		title: "FIXTURE STAR · cargo · 12.3 kn · → TALLINN (fixture)",
+		lat: 59.9,
+		lon: 24.9,
+		meta: { kind: "cargo", track: 180 },
+	},
+	{
+		layer: "displacement",
+		source: "unhcr",
+		title: "2.1M displaced from Fixtureland (fixture)",
+		lat: 15.5,
+		lon: 32.5,
+		meta: { total: 2_100_000 },
+	},
+	{
+		layer: "cables",
+		source: "submarine-cables",
+		title: "Submarine cable · Fixture Express (fixture)",
+		lat: 36.0,
+		lon: 14.0,
+		line: true,
+		meta: { kind: "cable" },
+	},
 ];
 
 const SEVERITIES = ["critical", "watch", "info"] as const;
@@ -333,7 +360,18 @@ async function seed() {
 				confidence: 0.9,
 				lat,
 				lon,
-				geomJson: f.polygon ? square(lat, lon) : undefined,
+				geomJson: f.polygon
+					? square(lat, lon)
+					: f.line
+						? {
+								type: "LineString",
+								coordinates: [
+									[lon - 6, lat - 1],
+									[lon, lat],
+									[lon + 6, lat + 1],
+								],
+							}
+						: undefined,
 				meta: { fixture: true, ...f.meta },
 			});
 			n++;

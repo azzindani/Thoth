@@ -429,8 +429,11 @@ function pickBase(layerId: string): string | null {
 	if (!layerId || layerId === "routes" || layerId === "terminator") return null;
 	if (layerId === "sat" || layerId.endsWith("-n") || layerId.endsWith("-c"))
 		return null;
-	const base =
-		layerId.endsWith("-o") || layerId.endsWith("-p")
+	// Severity outlines (-o-crit/-o-watch/-o-info) carry line features
+	// (submarine cables, tracklines) that have no fill to pick.
+	const base = /-o-(crit|watch|info)$/.test(layerId)
+		? layerId.replace(/-o-(crit|watch|info)$/, "")
+		: layerId.endsWith("-o") || layerId.endsWith("-p") || layerId.endsWith("-h")
 			? layerId.slice(0, -2)
 			: layerId;
 	return LAYERS[base] ? base : null;
