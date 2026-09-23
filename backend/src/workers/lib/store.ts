@@ -135,4 +135,11 @@ export async function markHealth(source: string, ok: boolean, error?: string) {
        first_ok_at=COALESCE(feed_health.first_ok_at, CASE WHEN $2 THEN now() END)`,
 		[source, ok, error ?? null, content[0]?.m ?? null],
 	);
+	// History for the monitor (success rate, streaks, run strip): one row
+	// per outcome. Pruned by the worker on MONITOR_RETENTION_DAYS.
+	await query(`INSERT INTO source_runs(source, ok, error) VALUES ($1,$2,$3)`, [
+		source,
+		ok,
+		error ? error.slice(0, 500) : null,
+	]);
 }

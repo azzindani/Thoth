@@ -47,7 +47,11 @@ Backend (`backend/src/config.ts`, validated with zod at boot — bad values exit
 | `SSE_MAX_CLIENTS` | 500 | `/api/stream` answers 503 + Retry-After beyond it |
 | `LOG_LEVEL` | info | `debug` adds a line per successful request |
 | `POLL_JITTER_PCT` | 10 | worker schedule jitter |
-| `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_*` | — | optional depth; disabled-honest when unset |
+| `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_*` | — | optional depth; disabled-honest when unset. A Telegram bot token also receives feed alerts |
+| `MONITOR_RETENTION_DAYS` | 14 | run log, source outcomes, upstream call log |
+| `RAW_RETENTION_DAYS` | 14 | `raw_events` fetch log |
+| `EVENTS_RETENTION_DAYS` | 180 | events neither observed nor re-seen in this window are pruned (statics and `ops` alerts never); `0` keeps everything |
+| `ALERT_FAIL_STREAK` | 3 | consecutive failed runs before a feed raises an `ops` alert (×3 → critical) |
 
 App (`app/src/proxy.ts`, `app/next.config.ts`):
 
@@ -92,6 +96,26 @@ Keep the three secrets in the host's secret store, not in shell history.
   `-- migrate:no-transaction` opts a file out of the transaction.
 - **One-off collector runs:** `node dist/workers/run.js --once <name>`, or
   `--all-once [width]` for a full pass (backfill after downtime).
+- **Monitoring (Monitor tab, `/api/monitor/*`):** the worker records every
+  collector run (`collector_runs`), every source outcome (`source_runs`)
+  and every upstream HTTP call (`endpoint_calls`: host, path without query
+  string, status, latency, bytes — secrets in paths are masked). It beats a
+  heartbeat every 15 s; the UI shows **WORKER DOWN** after 60 s of silence.
+  `POST /api/monitor/run/<collector>` (write key; the app injects it) queues
+  a run the worker picks up within ~5 s.
+- **Alerts:** every 60 s the worker raises/clears `ops` events (layer `ops`,
+  source `thoth-monitor`): `ops:failing:<source>` after `ALERT_FAIL_STREAK`
+  failed runs, `ops:frozen:<source>` when a succeeding feed's data stops
+  advancing, and one `ops:mass` critical when ≥ 25 % of feeds (min 10) fail
+  at once — during a mass failure the per-feed pushes are suppressed, so an
+  outbound network outage sends one Telegram message, not hundreds.
+- **Metrics:** `GET /metrics` (and `/api/metrics`), Prometheus text format:
+  `thoth_worker_up`, `thoth_db_size_bytes`, `thoth_ops_alerts`, per-source
+  `thoth_source_up` / `_fail_streak` / `_success_ratio_24h` /
+  `_last_success_timestamp_seconds`, per-collector p95 and next-due, per-host
+  call/error counts and p95 latency. Expose it only to your scraper.
+- **Retention:** pruning runs 2 min after worker start, then hourly, in
+  batches of 5 000 rows (see the `*_RETENTION_DAYS` vars).
 - **Demo / CI data:** `npm run db:seed:fixtures` (refuses in production;
   `-- --clean` removes every `fixture:` row).
 

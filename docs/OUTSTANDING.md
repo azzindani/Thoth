@@ -114,6 +114,10 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
 - `docker compose up --build` never verified here (sandbox denies mounts) — first
   green build must happen on a real host.
 - Flights quota: OpenSky 100/day anon — 15-min cadence holds, but a key raises it.
+- [x] Monitoring (ROADMAP P1, 2026-09-23): run/source/upstream-call history,
+  worker heartbeat + schedule, feed alerts (failing / frozen / mass) with
+  Telegram push, run-now queue, `/metrics`, batched retention, Monitor v2
+  data tables. Alert delivery to a real Telegram chat unverified here.
 - [x] Production hardening pass (2026-09-23, see PRODUCTION.md): Express 5 (async
   errors no longer hang requests), JSON 404/500 + request ids + access log,
   security headers, CORS that honours CORS_ORIGIN, per-client rate limiting via

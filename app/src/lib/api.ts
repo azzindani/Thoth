@@ -20,6 +20,104 @@ export interface LayerItem {
 	geom?: { type: string; coordinates?: number[] } | null;
 }
 
+// ── monitor (ROADMAP P1) ──────────────────────────────────────────────────
+export type SourceState = "ok" | "failing" | "frozen" | "stale" | "warming";
+export interface MonSummary {
+	worker: {
+		alive: boolean;
+		beat_at: string | null;
+		started_at: string | null;
+		collectors: number | null;
+	};
+	sources: Record<"total" | SourceState, number>;
+	collectors: number;
+	alerts: Record<string, number>;
+	db: { size_bytes: number; events_est: number; raw_events_est: number };
+	retention: { monitor_days: number; raw_days: number; events_days: number };
+	alert_fail_streak: number;
+}
+export interface MonSource {
+	source: string;
+	collector: string | null;
+	interval_sec: number | null;
+	state: SourceState;
+	last_ok: string | null;
+	last_attempt: string | null;
+	content_ts: string | null;
+	first_ok_at: string | null;
+	error: string | null;
+	runs24: number;
+	ok24: number;
+	runs7: number;
+	ok7: number;
+	fail_streak: number;
+	strip: string;
+	next_due: string | null;
+	running: boolean;
+}
+export interface MonCollector {
+	collector: string;
+	interval_sec: number;
+	sources: string[];
+	next_due: string | null;
+	running: boolean;
+	runs24: number;
+	ok24: number;
+	p50_ms: number | null;
+	p95_ms: number | null;
+	last_run_at: string | null;
+	last_ok: boolean | null;
+	last_ms: number | null;
+	last_count: number | null;
+	last_error: string | null;
+	queued: boolean;
+}
+export interface MonEndpoint {
+	host: string;
+	calls: number;
+	errors: number;
+	p50_ms: number | null;
+	p95_ms: number | null;
+	last_ts: string;
+	last_status: number | null;
+	last_error: string | null;
+	collectors: string[] | null;
+}
+export interface MonSourceDetail {
+	source: string;
+	row: MonSource | null;
+	collector: { collector: string; intervalSec: number } | null;
+	runs: { ts: string; ok: boolean; error: string | null }[];
+	errors: { error: string; n: number; last: string }[];
+	events: { id: string; ts: string; layer: string; title: string | null }[];
+	hosts: {
+		host: string;
+		path: string;
+		calls: number;
+		errors: number;
+		p95_ms: number | null;
+		last_status: number | null;
+	}[];
+}
+
+export const monitor = {
+	summary: () => get<MonSummary>("/api/monitor/summary"),
+	sources: () => get<{ items: MonSource[] }>("/api/monitor/sources"),
+	source: (s: string) =>
+		get<MonSourceDetail>(`/api/monitor/sources/${encodeURIComponent(s)}`),
+	collectors: () => get<{ items: MonCollector[] }>("/api/monitor/collectors"),
+	endpoints: () => get<{ items: MonEndpoint[] }>("/api/monitor/endpoints"),
+	/** Queue a run (write key is injected server-side by the app proxy). */
+	runNow: async (collector: string) => {
+		const r = await fetch(
+			`${API}/api/monitor/run/${encodeURIComponent(collector)}`,
+			{ method: "POST" },
+		);
+		if (!r.ok && r.status !== 202) throw new Error(`HTTP ${r.status}`);
+		return (await r.json()) as { queued: boolean; pending: boolean };
+	},
+};
+
 export const api = {
 	stats: () => get<{ items: { layer: string; count: string }[] }>("/api/stats"),
 	health: () =>

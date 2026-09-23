@@ -743,6 +743,31 @@ test.describe
 			expect(rowTips).toBeGreaterThan(20);
 		});
 
+		test("monitor v2: summary, views, source detail, run now", async () => {
+			await page.locator('button[data-tab="monitor"]').first().click();
+			const body = page.locator("#insp-body");
+			await expect(body.locator("#mon-kpis")).toContainText("worker", {
+				timeout: 15000,
+			});
+			await expect(body.locator("#mon-kpis")).toContainText("failing");
+			// Source rows carry a run strip and open a detail on click.
+			const row = body.locator(".mon-row").first();
+			await expect(row.locator(".mon-strip")).toHaveCount(1);
+			await row.click();
+			await expect(row).toHaveAttribute("aria-expanded", "true");
+			await expect(body.locator(".mon-detail").first()).toBeVisible();
+			// Collectors view: every collector, run-now queues.
+			await body.getByRole("button", { name: "COLLECTORS" }).click();
+			await expect(body.locator(".mon-crow")).not.toHaveCount(0);
+			const volc = body.locator(".mon-crow", { hasText: "volcanoes" });
+			await volc.getByRole("button", { name: "RUN NOW" }).click();
+			await expect(volc.getByRole("button", { name: "QUEUED" })).toBeVisible();
+			// Endpoints view renders (rows or the honest empty state).
+			await body.getByRole("button", { name: "ENDPOINTS" }).click();
+			await expect(body).toContainText(/calls|No upstream calls/);
+			await body.getByRole("button", { name: "SOURCES" }).click();
+		});
+
 		test("cmdbar depth commands", async () => {
 			await page.fill("#cmd", "mitre phishing");
 			await page.keyboard.press("Enter");
