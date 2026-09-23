@@ -108,6 +108,7 @@ export function setVis(
 		`${n}-o-crit`,
 		`${n}-o-watch`,
 		`${n}-o-info`,
+		`${n}-p`,
 	])
 		if (map.getLayer(id))
 			map.setLayoutProperty(id, "visibility", visible[n] ? "visible" : "none");
@@ -207,6 +208,28 @@ export async function loadLayer(
 				},
 			} as never);
 		}
+		// Mixed-geometry layers (navwarn: a mine sighting is a position, not
+		// an area) — points render as severity-ringed dots, never dropped.
+		map.addLayer({
+			id: `${name}-p`,
+			type: "circle",
+			source: name,
+			filter: ["==", ["geometry-type"], "Point"],
+			paint: {
+				"circle-radius": 5,
+				"circle-color": PALETTE.raise,
+				"circle-stroke-width": 1.5,
+				"circle-stroke-color": [
+					"match",
+					["get", "severity"],
+					"critical",
+					PALETTE.critical,
+					"watch",
+					PALETTE.watch,
+					tone,
+				],
+			},
+		} as never);
 		setPickSinks(opts.onSelect, opts.onFull);
 		ensurePickHandler(map);
 		const phov = new maplibregl.Popup({
@@ -219,16 +242,18 @@ export async function loadLayer(
 			phov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
 			armThumb(phov, p);
 		});
-		map.on("mousemove", name, (e) => {
-			const f = e.features?.[0];
-			if (!f) return;
-			map.getCanvas().style.cursor = "pointer";
-			phovCtl.move(f.properties as unknown as ObjProps, name, e.lngLat);
-		});
-		map.on("mouseleave", name, () => {
-			phovCtl.leave();
-			map.getCanvas().style.cursor = "";
-		});
+		for (const hoverId of [name, `${name}-p`]) {
+			map.on("mousemove", hoverId, (e) => {
+				const f = e.features?.[0];
+				if (!f) return;
+				map.getCanvas().style.cursor = "pointer";
+				phovCtl.move(f.properties as unknown as ObjProps, name, e.lngLat);
+			});
+			map.on("mouseleave", hoverId, () => {
+				phovCtl.leave();
+				map.getCanvas().style.cursor = "";
+			});
+		}
 	} else {
 		map.addSource(name, {
 			type: "geojson",

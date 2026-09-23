@@ -97,6 +97,26 @@ export async function storeNormalized(e: NormalizedEvent) {
 	dirtyLayers.add(e.layer);
 }
 
+/** The database clock (ingested_at is written with now()). */
+export async function dbClock(): Promise<string> {
+	const r = await query<{ t: string }>(`SELECT clock_timestamp()::text AS t`);
+	return r[0].t;
+}
+
+/** For sources that publish a *current picture* (active warnings, live
+ * interference cells): drop this source's rows that the latest successful
+ * poll did not re-store, so ended items leave the map. Only call after a
+ * poll that succeeded — a failed fetch must never empty the layer.
+ * `runStart` comes from dbClock() so app/DB clock skew can't bite. */
+export async function pruneStale(source: string, runStart: string) {
+	const rows = await query<{ layer: string }>(
+		`DELETE FROM events WHERE source=$1 AND ingested_at < $2::timestamptz RETURNING layer`,
+		[source, runStart],
+	);
+	for (const r of rows) dirtyLayers.add(r.layer);
+	return rows.length;
+}
+
 export async function markHealth(source: string, ok: boolean, error?: string) {
 	await flushVersions();
 	// Content-age contract: freshness = newest observation date stored for this

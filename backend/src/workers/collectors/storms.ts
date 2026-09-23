@@ -36,10 +36,136 @@ export function parseStormLatLon(
 	return { lat, lon };
 }
 
+// JTWC (US Navy/USAF, keyless RSS): West Pacific, North Indian Ocean and
+// Southern Hemisphere cyclones — the basins NHC does not cover. The RSS
+// lists each active system with a link to its warning text; the position
+// ("NEAR 12.3N 128.7E") and max winds come from that text.
+const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
+
+export type JtwcSystem = {
+	kind: string;
+	id: string;
+	name: string;
+	txt: string;
+};
+
+const SYS =
+	/(Super Typhoon|Typhoon|Tropical Storm|Tropical Depression|Tropical Cyclone|Subtropical Storm)\s+(\d{2}[A-Z])(?:\s*\(([^)]+)\))?/gi;
+
+function unesc(s: string): string {
+	return s
+		.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&amp;/g, "&");
+}
+
+/** JTWC RSS → active systems, each with its warning-text URL (if linked). */
+export function parseJtwcRss(xml: string): JtwcSystem[] {
+	const html = unesc(xml);
+	const hits = [...html.matchAll(SYS)];
+	const out: JtwcSystem[] = [];
+	const seen = new Set<string>();
+	hits.forEach((m, i) => {
+		const id = m[2].toUpperCase();
+		if (seen.has(id)) return;
+		seen.add(id);
+		// The system's own chunk: up to the next system header.
+		const chunk = html.slice(m.index, hits[i + 1]?.index ?? html.length);
+		const txt =
+			chunk.match(/href="([^"]+?web\.txt)"/i)?.[1] ??
+			chunk.match(/href="([^"]+?\.txt)"/i)?.[1] ??
+			"";
+		out.push({ kind: m[1], id, name: (m[3] ?? "").trim(), txt });
+	});
+	return out;
+}
+
+/** Warning text → first fix position + max sustained winds (kt). */
+export function parseJtwcWarning(text: string): {
+	lat: number;
+	lon: number;
+	windKt: number | null;
+} | null {
+	const m = text.match(/NEAR\s+(\d+(?:\.\d+)?)([NS])\s+(\d+(?:\.\d+)?)([EW])/i);
+	if (!m) return null;
+	const lat = Number(m[1]) * (m[2].toUpperCase() === "S" ? -1 : 1);
+	const lon = Number(m[3]) * (m[4].toUpperCase() === "W" ? -1 : 1);
+	const w = text.match(/MAX SUSTAINED WINDS\s*-\s*(\d+)\s*KT/i);
+	return { lat, lon, windKt: w ? Number(w[1]) : null };
+}
+
+async function collectJtwc(layer: string): Promise<number> {
+	assertSafeUrl(JTWC_RSS);
+	const res = await stealthFetch(JTWC_RSS);
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	const xml = await res.text();
+	const systems = parseJtwcRss(xml);
+	await storeRaw("jtwc", layer, res.status, { n: systems.length });
+	const now = new Date().toISOString();
+	if (!systems.length) {
+		await storeNormalized({
+			id: `jtwc:quiet:${now.slice(0, 10)}`,
+			ts: now,
+			source: "jtwc",
+			layer,
+			title: "JTWC: no current tropical cyclone warnings",
+			severity: "info",
+			confidence: 0.9,
+			meta: { quiet: true },
+		});
+		return 1;
+	}
+	let n = 0;
+	for (const s of systems) {
+		let fix: ReturnType<typeof parseJtwcWarning> = null;
+		if (s.txt) {
+			try {
+				assertSafeUrl(s.txt);
+				const t = await stealthFetch(s.txt);
+				if (t.ok) fix = parseJtwcWarning(await t.text());
+			} catch {
+				/* position is best-effort; the headline still stands */
+			}
+		}
+		const hurricaneForce = (fix?.windKt ?? 0) >= 64;
+		const label = `${s.kind} ${s.id}${s.name ? ` (${s.name})` : ""}`;
+		await storeNormalized({
+			id: `jtwc:${s.id.toLowerCase()}`,
+			ts: now,
+			source: "jtwc",
+			layer,
+			title: `JTWC · ${label}${fix?.windKt ? ` · ${fix.windKt} kt` : ""}`.slice(
+				0,
+				280,
+			),
+			url: s.txt || "https://www.metoc.navy.mil/jtwc/jtwc.html",
+			severity: hurricaneForce ? "critical" : stormSeverity(s.kind),
+			confidence: 0.9,
+			lat: fix?.lat,
+			lon: fix?.lon,
+			entities: { basin: "jtwc" },
+			meta: { storm: label, windKt: fix?.windKt ?? null },
+		});
+		n++;
+	}
+	return n;
+}
+
 export async function collect() {
 	const layer = "disasters";
 	let n = 0;
 	const errors: string[] = [];
+	try {
+		const j = await collectJtwc(layer);
+		n += j;
+		await markHealth("jtwc", true);
+	} catch (e: unknown) {
+		errors.push(`jtwc: ${errMsg(e)}`);
+		await markHealth("jtwc", false, errMsg(e));
+	}
+	const jtwcCount = n;
 
 	for (const [basin, url] of WALLETS) {
 		try {
@@ -100,8 +226,10 @@ export async function collect() {
 		}
 	}
 
-	await storeRaw("nhc", layer, n > 0 ? 200 : 500, { wallets: n });
-	await markHealth("nhc", n > 0, n > 0 ? undefined : errors.join("; "));
+	const nhc = n - jtwcCount;
+	const nhcErrors = errors.filter((e) => !e.startsWith("jtwc:"));
+	await storeRaw("nhc", layer, nhc > 0 ? 200 : 500, { wallets: nhc });
+	await markHealth("nhc", nhc > 0, nhc > 0 ? undefined : nhcErrors.join("; "));
 	if (n === 0) return { ok: false, error: errors.join("; ") };
-	return { ok: true, count: n };
+	return { ok: true, count: n, nhc, jtwc: jtwcCount };
 }

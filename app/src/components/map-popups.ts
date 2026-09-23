@@ -318,7 +318,10 @@ function pickBase(layerId: string): string | null {
 	if (!layerId || layerId === "routes" || layerId === "terminator") return null;
 	if (layerId === "sat" || layerId.endsWith("-n") || layerId.endsWith("-c"))
 		return null;
-	const base = layerId.endsWith("-o") ? layerId.slice(0, -2) : layerId;
+	const base =
+		layerId.endsWith("-o") || layerId.endsWith("-p")
+			? layerId.slice(0, -2)
+			: layerId;
 	return LAYERS[base] ? base : null;
 }
 

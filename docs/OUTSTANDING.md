@@ -143,6 +143,22 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   (globe centres in the free area), measured `--dock-h`. E2e point pickers
   now require the map canvas to be the hit target. vitest 37/37, e2e 28/29
   locally (ASN lookup needs network; green in CI).
+- [x] Sources batch31 (2026-09-23): navwarn (NGA MSI), gpsjam (ADS-B NACp,
+  derived), advisories (US State Dept), SPC storm reports, NTWC/PTWC
+  tsunami bulletins, JTWC cyclones. New `pruneStale()` store helper for
+  current-picture sources (only after a complete, non-empty poll). Map:
+  polygon layers now render point geometries too (`<layer>-p`, pickable).
+  Contract tests 212/212 collectors (+21 new), fixtures for the 3 new
+  layers, e2e 28/29 locally (ASN needs network).
+- Batch31 live verification: the sandbox that built these has no egress,
+  so field names follow the published formats (NGA `broadcast-warn`,
+  readsb `nac_p`/`gpsOkBefore`, SPC 3-section CSV, tsunami.gov Atom
+  `geo:lat`, JTWC RSS + `web.txt`, State Dept `Title` "X - Level N").
+  Run `npm run dev:worker -- --once <name>` for navwarn, gpsjam, spc,
+  tsunami, storms, advisories on a networked host and check /api/health.
+  The gpsjam NACp<8 threshold may need tuning against gpsjam.org once live.
+  UK FCDO advisories deferred: no level in the index, needs ~226
+  per-country fetches. Owner: next data pass.
 - Basemap recolour: CARTO dark-matter stays as served (cool neutral). A
   warm-tuned style (own style JSON over the same tiles) would finish the
   palette; needs visual verification against live tiles. Owner: next UI pass.

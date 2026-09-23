@@ -221,6 +221,32 @@ const FIXTURES: Fx[] = [
 		lon: 100.0,
 		polygon: true,
 	},
+	{
+		layer: "navwarn",
+		source: "nga-msi",
+		title:
+			"HYDROLANT 1001/26 · EASTERN MEDITERRANEAN — HAZARDOUS OPERATIONS, LIVE FIRING (fixture)",
+		lat: 34.4,
+		lon: 32.4,
+		polygon: true,
+	},
+	{
+		layer: "gpsjam",
+		source: "gpsjam",
+		title: "GNSS interference 34% · 12/35 aircraft degraded (fixture)",
+		lat: 56.5,
+		lon: 21.5,
+		polygon: true,
+		meta: { bad: 12, total: 35 },
+	},
+	{
+		layer: "advisories",
+		source: "state-travel",
+		title: "US travel advisory L4 · Afghanistan: Do Not Travel (fixture)",
+		lat: 34.53,
+		lon: 69.17,
+		meta: { level: 4 },
+	},
 ];
 
 const SEVERITIES = ["critical", "watch", "info"] as const;
