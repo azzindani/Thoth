@@ -59,6 +59,25 @@ if they drift). The rules, in priority order:
     flying the camera, or leaving the canvas, drops hover cards (they are
     anchored to the globe and would drift). All of it lives in
     `map-popups.ts` (`muted`, `moving`, `pickerOpen`), never per layer.
+    Cards also anchor inside the free map area (`fitAnchor`: the camera
+    padding *is* the free area), so a card near a panel opens beside it,
+    never on top of it.
+12. **Collapsible chrome, fixed homes.** Explorer, inspector and dock keep
+    their positions but each can slide off to its edge (`body.hide-expl
+    / hide-insp / hide-dock`, edge handles `#pt-*`); `\` or CLEAR hides
+    all three, `/` always brings the dock back for the command line. The
+    layout vars (`--lw/--rw/--dock-h`) collapse with the panel, so the
+    minimap, toasts and dock follow, and the camera eases into the space
+    given back. Hidden panels leave the focus order. State is per browser
+    (`localStorage thoth.hidden`). Desk + tablet only; phone uses sheets.
+13. **Free-floating is for objects, not chrome.** A pinned card's "Pop out"
+    turns it into a window (`PopWindows.tsx`, max 4, oldest evicted):
+    drag by the header, click to raise, double-click (or –) to minimise to
+    the tray under the status bar, a dashed accent leader line back to its
+    map point (hidden when the point is behind the globe or under chrome).
+    Windows re-read their layer on SSE ticks; the arrangement is remembered
+    (`thoth.pop`). Below desk they become one swipeable stack above the
+    dock — no free windows where there is no room for them.
 
 Testing rule: with panels floating over the map, a feature can be rendered
 yet covered by chrome. E2e specs pick map points with

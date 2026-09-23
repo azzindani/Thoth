@@ -24,6 +24,18 @@ export interface ObjProps {
 
 export type SelectFn = (p: ObjProps, ll: unknown) => void;
 
+/** Pinned card → floating window hand-off (popups live outside React). */
+export const POPOUT_EVENT = "thoth:popout";
+export type PopoutDetail = {
+	p: ObjProps;
+	layer: string;
+	/** screen box of the card being popped, so the window opens in place */
+	x: number | null;
+	y: number | null;
+	/** where the card pointed on the map (polygons have no single point) */
+	anchor: [number, number] | null;
+};
+
 /** Escape feed-supplied text before injecting into popup HTML. */
 export function esc(s: unknown): string {
 	return String(s ?? "")
@@ -68,7 +80,8 @@ export function hoverCard(
 		(geo ? `<div class="hov-shot"><img data-hovimg alt="" /></div>` : "") +
 		(pinId != null
 			? `<div class="hov-act"><button class="primary" data-act="full:${pinId}">Full view</button>` +
-				`<button class="ghost" data-act="zoom:${pinId}">Zoom</button></div>`
+				`<button class="ghost" data-act="zoom:${pinId}">Zoom</button>` +
+				`<button class="ghost" data-act="pop:${pinId}" title="Keep this card open as a movable window">Pop out</button></div>`
 			: `<div class="hov-h">Click to pin preview</div>`) +
 		`</div>`
 	);
@@ -174,6 +187,25 @@ if (typeof document !== "undefined") {
 			pinStore.delete(Number(id));
 			rec.pop.remove();
 			rec.full(rec.p, null);
+		} else if (act === "pop") {
+			// Hand the record to the window manager (PopWindows, React side)
+			// with the card's screen box, so the window opens where the card
+			// was — then the pin stands down.
+			const box = rec.pop.getElement()?.getBoundingClientRect();
+			const ll = rec.pop.getLngLat();
+			window.dispatchEvent(
+				new CustomEvent<PopoutDetail>(POPOUT_EVENT, {
+					detail: {
+						p: rec.p,
+						layer: rec.p.layer || rec.key.split(":")[0],
+						x: box?.left ?? null,
+						y: box?.top ?? null,
+						anchor: ll ? [ll.lng, ll.lat] : null,
+					},
+				}),
+			);
+			pinStore.delete(Number(id));
+			rec.pop.remove();
 		} else if (act === "zoom") {
 			const lat = Number(rec.p.lat);
 			const lon = Number(rec.p.lon);
@@ -229,6 +261,7 @@ export function showPinned(
 		.setLngLat(lngLat as never)
 		.setHTML(hoverCard(p as ObjProps & { ts?: string }, layer, id))
 		.addTo(map);
+	fitAnchor(map, pop);
 	armThumb(pop, p);
 }
 
@@ -270,6 +303,45 @@ let muted = new Set<string>();
 let moving = false;
 const hoverKey = (layer: string, p: ObjProps) =>
 	`${layer}:${String(p.id ?? p.title ?? "")}`;
+/** Keep a card inside the free map area. MapLibre's auto-anchor only knows
+ * the container edges, and the container is the whole screen under the
+ * floating panels — so near a panel a card used to open on top of it. The
+ * camera padding (page.tsx syncPadding) is exactly the free area; pick the
+ * anchor from it: above the point unless there's no room, then below;
+ * shift sideways when the card would cross the left/right panel. */
+export function fitAnchor(map: maplibregl.Map, pop: maplibregl.Popup): void {
+	const el = pop.getElement();
+	const ll = pop.getLngLat();
+	if (!el || !ll) return;
+	const p = map.getPadding();
+	const pad = {
+		top: p.top ?? 0,
+		bottom: p.bottom ?? 0,
+		left: p.left ?? 0,
+		right: p.right ?? 0,
+	};
+	const box = map.getContainer();
+	const W = box.clientWidth;
+	const H = box.clientHeight;
+	const pt = map.project(ll);
+	const w = el.offsetWidth;
+	const h = el.offsetHeight;
+	const off = 16;
+	const roomAbove = pt.y - pad.top;
+	const roomBelow = H - pad.bottom - pt.y;
+	const v = roomAbove >= h + off || roomAbove >= roomBelow ? "bottom" : "top";
+	const hz =
+		pt.x - w / 2 < pad.left
+			? "-left"
+			: pt.x + w / 2 > W - pad.right
+				? "-right"
+				: "";
+	const anchor = `${v}${hz}` as maplibregl.PositionAnchor;
+	if (pop.options.anchor === anchor) return;
+	pop.options.anchor = anchor;
+	pop.setLngLat(ll); // re-layout with the new anchor
+}
+
 /** An open stacked-items picker owns the pointer: no hover over it. */
 function pickerOpen(): boolean {
 	for (const r of pickStore.values()) if (r.pop.isOpen()) return true;
@@ -291,7 +363,7 @@ export function steadyHover(
 	let key = "";
 	let raf = 0;
 	let q: { p: ObjProps; layer: string; ll: unknown } | null = null;
-	const flush = () => {
+	const step = () => {
 		raf = 0;
 		const cur = q;
 		q = null;
@@ -327,6 +399,11 @@ export function steadyHover(
 		if (!pop.isOpen()) pop.addTo(map);
 		render(cur.p, cur.layer);
 		openHovers.add(pop);
+	};
+	// Every frame the card is shown, keep it in the free area.
+	const flush = () => {
+		step();
+		if (pop.isOpen()) fitAnchor(map, pop);
 	};
 	return {
 		move(p: ObjProps, layer: string, ll: unknown) {
@@ -473,4 +550,5 @@ function showPickCard(
 			`<div class="hov pick"><div class="hov-t">${total} stacked — pick one</div>${rows}${more}</div>`,
 		)
 		.addTo(map);
+	fitAnchor(map, pop);
 }

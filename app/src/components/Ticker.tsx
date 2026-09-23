@@ -24,6 +24,8 @@ export default function Ticker({
 	onMonitor,
 	focus,
 	setFocus,
+	clear,
+	onClear,
 	sse,
 }: {
 	mode: string;
@@ -33,6 +35,9 @@ export default function Ticker({
 	onMonitor: () => void;
 	focus: boolean;
 	setFocus: (f: boolean) => void;
+	/** every panel hidden (clear view) */
+	clear: boolean;
+	onClear: () => void;
 	sse?: { ok: boolean; last: number; n: number };
 }) {
 	const [clock, setClock] = useState("--:--:--");
@@ -222,6 +227,14 @@ export default function Ticker({
 				</Btn>
 				<Btn on={focus} onClick={() => setFocus(!focus)}>
 					FOCUS
+				</Btn>
+				<Btn
+					on={clear}
+					onClick={onClear}
+					id="clear-btn"
+					title="clear view: hide every panel (\)"
+				>
+					CLEAR
 				</Btn>
 			</fieldset>
 		</div>

@@ -150,6 +150,13 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   polygon layers now render point geometries too (`<layer>-p`, pickable).
   Contract tests 212/212 collectors (+21 new), fixtures for the 3 new
   layers, e2e 28/29 locally (ASN needs network).
+- [x] Floating UI (2026-09-23): collapsible panels with edge handles and
+  clear view (`\` / CLEAR; `/` restores the dock), camera eases into the
+  freed space, state remembered; pop-out object windows from pinned cards
+  (drag, raise, minimise tray, leader lines, live refresh on SSE, layout
+  remembered; tablet/phone = swipeable stack); hover/pin/picker cards
+  anchor inside the free area (`fitAnchor`). e2e: new floating.spec.ts
+  (5 tests), full suite 33/34 locally (ASN needs network).
 - Batch31 live verification: the sandbox that built these has no egress,
   so field names follow the published formats (NGA `broadcast-warn`,
   readsb `nac_p`/`gpsOkBefore`, SPC 3-section CSV, tsunami.gov Atom

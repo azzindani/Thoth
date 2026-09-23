@@ -7,11 +7,21 @@ import Explorer from "../components/Explorer";
 import Inspector, { CompleteView, type Tab } from "../components/Inspector";
 import MapView, { loadAll, type ObjProps, setVis } from "../components/MapView";
 import MiniMap from "../components/MiniMap";
+import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
 import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
 import { API, api } from "../lib/api";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
+
+type Hidden = { expl: boolean; insp: boolean; dock: boolean };
+const NO_HIDDEN: Hidden = { expl: false, insp: false, dock: false };
+const HIDDEN_KEY = "thoth.hidden";
+const PANEL_LABEL: Record<keyof Hidden, string> = {
+	expl: "Layers",
+	insp: "Inspector",
+	dock: "Command",
+};
 
 export default function Terminal() {
 	const [visible, setVisible] = useState<Record<string, boolean>>(() =>
@@ -45,7 +55,22 @@ export default function Terminal() {
 	const [sse, setSse] = useState({ ok: false, last: 0, n: 0 });
 	const [changelog, setChangelog] = useState(false);
 	const [focus, setFocus] = useState(false);
+	// Collapsible chrome: each persistent panel can slide off-screen to an
+	// edge tab; "clear view" (\) hides all three. Remembered per browser.
+	const [hidden, setHidden] = useState<Hidden>(NO_HIDDEN);
+	// true until the first user toggle: load/restore jumps the camera.
+	const restoring = useRef(true);
+	const clear = hidden.expl && hidden.insp && hidden.dock;
+	const toggleClear = useCallback(() => {
+		restoring.current = false;
+		setHidden((h) => {
+			const all = h.expl && h.insp && h.dock;
+			return { expl: !all, insp: !all, dock: !all };
+		});
+	}, []);
 	const [graph, setGraph] = useState(false);
+	// syncPadding is defined below; effects above it reach it through this.
+	const syncPaddingRef = useRef<(animate?: boolean) => void>(() => {});
 	const seenCrit = useRef<Set<string>>(new Set());
 	const mapRef = useRef<maplibregl.Map | null>(null);
 	const getMap = useCallback(() => mapRef.current, []);
@@ -71,6 +96,35 @@ export default function Terminal() {
 		document.body.classList.toggle("focus", focus);
 	}, [focus]);
 
+	// Restore the remembered panel state once, after hydration (storage can
+	// be absent or throw in private windows — then everything stays shown).
+	useEffect(() => {
+		try {
+			const raw = localStorage.getItem(HIDDEN_KEY);
+			if (raw) setHidden({ ...NO_HIDDEN, ...(JSON.parse(raw) as Hidden) });
+		} catch {
+			/* keep defaults */
+		}
+	}, []);
+	useEffect(() => {
+		const b = document.body.classList;
+		b.toggle("hide-expl", hidden.expl);
+		b.toggle("hide-insp", hidden.insp);
+		b.toggle("hide-dock", hidden.dock);
+		try {
+			localStorage.setItem(HIDDEN_KEY, JSON.stringify(hidden));
+		} catch {
+			/* not persisted */
+		}
+		// The camera re-centres into the space the panels give back; the
+		// initial/restored state jumps instead of animating.
+		syncPaddingRef.current(!restoring.current);
+	}, [hidden]);
+	const setPanel = useCallback((k: keyof Hidden, v: boolean) => {
+		restoring.current = false;
+		setHidden((h) => (h[k] === v ? h : { ...h, [k]: v }));
+	}, []);
+
 	// Reveal the inspector for explicit content only (osint lookups, other
 	// tabs, the full view) — a bare map-tap preview must never yank a panel
 	// open. On small screens an open full view IS the card: the inspector
@@ -79,8 +133,10 @@ export default function Terminal() {
 		const insp = document.getElementById("inspector");
 		if (!insp) return;
 		const small = document.body.dataset.bp !== "desk";
-		if (osint || tab !== "object") insp.classList.add("open");
-		else if (full && small) insp.classList.remove("open");
+		if (osint || tab !== "object") {
+			insp.classList.add("open");
+			setHidden((h) => (h.insp ? { ...h, insp: false } : h));
+		} else if (full && small) insp.classList.remove("open");
 	}, [tab, osint, full]);
 
 	const applyMission = useCallback(
@@ -99,7 +155,7 @@ export default function Terminal() {
 		},
 		[refreshStats],
 	);
-	// keyboard shortcuts: / focus-cmd · g globe · s mode · m mission · f focus · e graph · i inspector · esc close
+	// keyboard shortcuts: / focus-cmd · \ clear view · g globe · s mode · m mission · f focus · e graph · i inspector · esc close
 	useEffect(() => {
 		const modes = ["default", "sat", "nvg"];
 		const missions = [
@@ -116,7 +172,12 @@ export default function Terminal() {
 			const typing = tag === "input" || tag === "select" || tag === "textarea";
 			if (e.key === "/" || ((e.ctrlKey || e.metaKey) && e.key === "k")) {
 				e.preventDefault();
-				document.getElementById("cmd")?.focus();
+				// A hidden dock slides back first; focus once it is laid out.
+				setPanel("dock", false);
+				requestAnimationFrame(() => document.getElementById("cmd")?.focus());
+			} else if (!typing && e.key === "\\") {
+				e.preventDefault();
+				toggleClear();
 			} else if (e.key === "Escape") {
 				document.getElementById("inspector")?.classList.remove("open");
 				setOsint(null);
@@ -134,12 +195,17 @@ export default function Terminal() {
 			} else if (!typing && e.key === "e") {
 				setGraph((g) => !g);
 			} else if (!typing && e.key === "i") {
-				document.getElementById("inspector")?.classList.toggle("open");
+				// Desk: show/hide the floating panel (FOCUS keeps its old job of
+				// expanding the rail). Tablet/phone: open/close the sheet.
+				const b = document.body;
+				if (b.dataset.bp === "desk" && !b.classList.contains("focus"))
+					setPanel("insp", !document.body.classList.contains("hide-insp"));
+				else document.getElementById("inspector")?.classList.toggle("open");
 			}
 		}
 		document.addEventListener("keydown", onKey);
 		return () => document.removeEventListener("keydown", onKey);
-	}, [mission, applyMission]);
+	}, [mission, applyMission, setPanel, toggleClear]);
 
 	// breakpoint mirror (responsive contract)
 	useEffect(() => {
@@ -158,50 +224,64 @@ export default function Terminal() {
 	// flyTo then centre in the free area, not behind a panel. Overlay sheets
 	// (tablet inspector, phone sheets) are excluded on purpose: opening one
 	// must never shift the map.
-	const syncPadding = useCallback(() => {
-		const rect = (id: string) =>
-			document.getElementById(id)?.getBoundingClientRect() ?? null;
+	// Layout boxes (offset*), not getBoundingClientRect: panels slide with
+	// transforms, and the camera must target where they come to rest.
+	// Hidden panels give their side back entirely.
+	const syncPadding = useCallback((animate = false) => {
+		const el = (id: string) => document.getElementById(id);
+		const hid = (c: string) => document.body.classList.contains(c);
 		// The dock's height is content-driven; publish the measured value so
 		// the chrome stacked above it (minimap, toasts, full view) clears it.
-		const dock = rect("bottom");
-		if (dock?.height)
+		const dock = el("bottom");
+		if (dock?.offsetHeight)
 			document.documentElement.style.setProperty(
 				"--dock-h",
-				`${Math.round(dock.height)}px`,
+				`${dock.offsetHeight}px`,
 			);
 		const map = mapRef.current;
 		if (!map) return;
 		const bp = document.body.dataset.bp;
 		const GAP = 8;
-		const top = rect("ticker")?.bottom ?? 0;
-		const bottom = dock ? window.innerHeight - dock.top : 0;
-		const left = bp === "phone" ? 0 : (rect("explorer")?.right ?? 0);
-		const insp = rect("inspector");
+		const W = window.innerWidth;
+		const H = window.innerHeight;
+		const tk = el("ticker");
+		const top = tk ? tk.offsetTop + tk.offsetHeight : 0;
+		const bottom = dock && !hid("hide-dock") ? H - dock.offsetTop : 0;
+		const ex = el("explorer");
+		const left =
+			bp === "phone" || !ex || hid("hide-expl")
+				? 0
+				: ex.offsetLeft + ex.offsetWidth;
+		const insp = el("inspector");
 		const right =
-			bp === "desk" && insp && insp.width > 0
-				? window.innerWidth - insp.left
+			bp === "desk" && insp && insp.offsetWidth > 0 && !hid("hide-insp")
+				? W - insp.offsetLeft
 				: 0;
+		const padding = {
+			top: top + GAP,
+			bottom: bottom ? bottom + GAP : GAP,
+			left: left ? left + GAP : 0,
+			right: right ? right + GAP : 0,
+		};
 		try {
-			map.setPadding({
-				top: top + GAP,
-				bottom: bottom + GAP,
-				left: left ? left + GAP : 0,
-				right: right ? right + GAP : 0,
-			});
+			if (animate) map.easeTo({ padding, duration: 260 });
+			else map.setPadding(padding);
 		} catch {
 			/* map not ready */
 		}
 	}, []);
+	syncPaddingRef.current = syncPadding;
 	useEffect(() => {
 		const ro = new ResizeObserver(() => syncPadding());
 		for (const id of ["ticker", "explorer", "inspector", "bottom"]) {
 			const el = document.getElementById(id);
 			if (el) ro.observe(el);
 		}
-		window.addEventListener("resize", syncPadding);
+		const onResize = () => syncPadding();
+		window.addEventListener("resize", onResize);
 		return () => {
 			ro.disconnect();
-			window.removeEventListener("resize", syncPadding);
+			window.removeEventListener("resize", onResize);
 		};
 	}, [syncPadding]);
 
@@ -321,6 +401,10 @@ export default function Terminal() {
 					};
 					if (d.versions)
 						for (const r of d.versions) known[r.layer] = r.version;
+					// Popped-out windows re-read their layer (cheap, unthrottled).
+					window.dispatchEvent(
+						new CustomEvent(LAYERS_EVENT, { detail: d.layers }),
+					);
 					const map = mapRef.current;
 					const st = stRef.current;
 					const now = Date.now();
@@ -425,6 +509,8 @@ export default function Terminal() {
 				onMonitor={() => setTab("monitor")}
 				focus={focus}
 				setFocus={setFocus}
+				clear={clear}
+				onClear={toggleClear}
 			/>
 			<div className="main" id="main">
 				<Explorer
@@ -524,6 +610,26 @@ export default function Terminal() {
 					onFocus={() => setFocus((f) => !f)}
 				/>
 			</div>
+			<PopWindows getMap={getMap} onFull={selectFull} />
+			{/* Edge handles: a slim grip on each panel's inner edge; when the
+			panel is hidden it becomes a labelled tab on the screen edge. */}
+			{(["expl", "insp", "dock"] as const).map((k) => (
+				<button
+					key={k}
+					type="button"
+					id={`pt-${k}`}
+					className={`ptoggle pt-${k}${hidden[k] ? " is-hidden" : ""}`}
+					aria-expanded={!hidden[k]}
+					aria-label={`${hidden[k] ? "Show" : "Hide"} ${PANEL_LABEL[k].toLowerCase()} panel`}
+					title={`${hidden[k] ? "Show" : "Hide"} ${PANEL_LABEL[k].toLowerCase()} (\\ hides all)`}
+					onClick={() => setPanel(k, !hidden[k])}
+				>
+					<svg className="pt-chev" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="m15 18-6-6 6-6" />
+					</svg>
+					<span className="pt-label">{PANEL_LABEL[k]}</span>
+				</button>
+			))}
 			{toasts.length > 0 && (
 				<div className="toasts">
 					{toasts.map((t) => (
