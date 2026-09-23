@@ -1,5 +1,5 @@
 // Thoth app smoke: boots, counts, tabs, OSINT command. Needs backend on :4000 + app on :3000.
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 
 test("terminal boots with counts + globe", async ({ page }) => {
 	await page.goto("/");

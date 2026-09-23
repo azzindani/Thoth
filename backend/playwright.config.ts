@@ -7,7 +7,7 @@ export default defineConfig({
 	use: {
 		baseURL: process.env.E2E_URL ?? "http://localhost:4000",
 		viewport: { width: 1600, height: 900 },
-		trace: "retain-on-failure",
+		trace: "on-first-retry",
 		launchOptions: process.env.PW_CHROMIUM_PATH
 			? { executablePath: process.env.PW_CHROMIUM_PATH }
 			: {},

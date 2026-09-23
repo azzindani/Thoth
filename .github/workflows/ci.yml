@@ -130,7 +130,7 @@ jobs:
         working-directory: app
       - run: npm test
         working-directory: app
-      - run: npx next build
+      - run: npm run build   # prebuild copies the maplibre worker into public/
         working-directory: app
       - name: Backend on fixture data (write key on, like production)
         working-directory: backend
@@ -143,9 +143,16 @@ jobs:
         working-directory: app
         run: |
           npx playwright install --with-deps chromium
-          API_WRITE_KEY=ci-write-key APP_TRUST_UPSTREAM_AUTH=1 nohup npx next start -p 3000 > app.log 2>&1 &
+          # Run the production artifact (standalone server + static + public,
+          # exactly what the Docker image ships), not `next start`.
+          cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/
+          API_WRITE_KEY=ci-write-key APP_TRUST_UPSTREAM_AUTH=1 PORT=3000 nohup node .next/standalone/server.js > app.log 2>&1 &
           for i in $(seq 1 30); do curl -sf localhost:3000/healthz && break; sleep 1; done
+          curl -sf -o /dev/null localhost:3000/maplibre/maplibre-gl-worker.mjs
           npx playwright test -c playwright.config.ts
+        env:
+          # Blank local basemap: specs test our layers, not CARTO's CDN.
+          E2E_STUB_BASEMAP: "1"
       - if: failure()
         run: tail -n 200 backend/api.log app/app.log
       - if: failure()

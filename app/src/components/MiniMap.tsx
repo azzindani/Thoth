@@ -17,7 +17,7 @@ export default function MiniMap({
 		let mini: maplibregl.Map | null = null;
 		let timer: ReturnType<typeof setInterval>;
 		(async () => {
-			const ml = await import("maplibre-gl");
+			const { default: ml } = await import("../lib/maplibre");
 			if (stop || !divRef.current) return;
 			const m = new ml.Map({
 				container: divRef.current,

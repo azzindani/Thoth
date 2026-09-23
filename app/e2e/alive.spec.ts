@@ -1,7 +1,7 @@
 // Thoth alive e2e — every breakpoint boots with zero page errors,
 // zero failed API responses, and no horizontal overflow.
 // Needs backend on :4000 (REQUESTS_PER_MIN=2000) + app on :3000.
-import { expect, test } from "playwright/test";
+import { expect, test } from "./fixtures";
 
 const BPS = [
 	{ name: "desk", w: 1600, h: 900 },

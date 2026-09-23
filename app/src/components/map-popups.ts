@@ -3,6 +3,7 @@
 // popup HTML, actions dispatched through one delegated document listener
 // against stored records (no per-button closures).
 import * as maplibregl from "maplibre-gl";
+import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { api } from "../lib/api";
 import { LAYERS } from "../lib/layer-catalog";
 import { ageStr } from "../lib/ui";

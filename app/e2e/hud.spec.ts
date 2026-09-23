@@ -5,8 +5,9 @@
 // Overlapping layers each fire their own hover card, so card assertions
 // match as sets (filtered .first()), never a bare multi-match locator.
 // Pointer tests re-query fresh coords + retry: tiles re-resolve async.
-import { expect, type Page, test } from "playwright/test";
+
 import { LAYER_NAMES } from "../src/lib/layer-catalog";
+import { expect, type Page, test } from "./fixtures";
 
 test.describe
 	.serial("hud desk", () => {
@@ -64,6 +65,7 @@ test.describe
 			) => {
 				geometry: { type: string; coordinates: number[] };
 				properties: Record<string, string | number>;
+				layer: { id: string };
 			}[];
 			project: (c: number[]) => { x: number; y: number };
 			getContainer: () => HTMLElement;
@@ -377,7 +379,10 @@ test.describe
 				const m = (window as unknown as { __thothMap?: Record<string, never> })
 					.__thothMap as unknown as MLMap;
 				const found: { n: number; c: number[] }[] = [];
-				for (const l of ["datacenters-c", "cctv-c", "flights-c", "news-c"]) {
+				// Discover via the count labels (-n): a whole-viewport query of the
+				// circle layers returns nothing on the globe in maplibre 6; the
+				// hit filter below still requires the circle (-c) under the pixel.
+				for (const l of ["datacenters-n", "cctv-n", "flights-n", "news-n"]) {
 					for (const x of m.queryRenderedFeatures({ layers: [l] })) {
 						const n = Number(x.properties.point_count ?? 0);
 						if (x.geometry?.type === "Point" && n > 5)
@@ -386,10 +391,22 @@ test.describe
 				}
 				found.sort((a, b) => b.n - a.n);
 				const r = m.getContainer().getBoundingClientRect();
-				return found.slice(0, 4).map((b) => {
-					const s = m.project(b.c);
-					return { x: s.x + r.left, y: s.y + r.top, z: m.getZoom(), n: b.n };
-				});
+				// Only clusters the pointer can actually reach: on the globe a
+				// cluster near the horizon is "rendered" but not hit-testable.
+				return found
+					.map((b) => ({ b, s: m.project(b.c) }))
+					.filter(({ s }) =>
+						m
+							.queryRenderedFeatures([s.x, s.y])
+							.some((f) => f.layer.id.endsWith("-c")),
+					)
+					.slice(0, 4)
+					.map(({ b, s }) => ({
+						x: s.x + r.left,
+						y: s.y + r.top,
+						z: m.getZoom(),
+						n: b.n,
+					}));
 			});
 			if (!cands.length) throw new Error("no cluster renders");
 			let c = cands[0];

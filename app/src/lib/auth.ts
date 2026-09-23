@@ -33,6 +33,9 @@ export function isPublicPath(pathname: string): boolean {
 	return (
 		pathname === "/healthz" ||
 		pathname.startsWith("/_next/static/") ||
+		// Vendored maplibre worker (public library code; the map breaks
+		// without it, and worker fetches must not depend on auth caching).
+		pathname.startsWith("/maplibre/") ||
 		pathname === "/favicon.ico"
 	);
 }
