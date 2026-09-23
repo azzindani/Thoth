@@ -150,11 +150,20 @@ test.describe
 			await expect(page.locator("#bottom")).toBeVisible();
 			await expect(page.locator("#cmd")).toBeFocused();
 			await page.locator("#cmd").blur();
+			// \ is ignored while typing: make sure focus really left the input.
+			await expect
+				.poll(() => page.evaluate(() => document.activeElement?.tagName))
+				.toBe("BODY");
 
 			// Not everything hidden → \ hides all; again → shows all.
+			const body = page.locator("body");
 			await page.keyboard.press("Backslash");
+			await expect(body).toHaveClass(/hide-expl/);
+			await expect(body).toHaveClass(/hide-insp/);
+			await expect(body).toHaveClass(/hide-dock/);
 			await expect(page.locator("#explorer")).toBeHidden();
 			await page.keyboard.press("Backslash");
+			await expect(body).not.toHaveClass(/hide-(expl|insp|dock)/);
 			for (const id of ["#explorer", "#inspector", "#bottom"])
 				await expect(page.locator(id)).toBeVisible();
 			await expect.poll(async () => (await pad()).right).toBeGreaterThan(300);
