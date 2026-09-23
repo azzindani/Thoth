@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
 import { ageStr, Glyph, ItemRow, KV } from "../lib/ui";
+import { IncidentsTab } from "./IncidentsTab";
 import {
 	AreaTab,
 	BriefBlock,
@@ -21,6 +22,7 @@ export type Tab =
 	| "area"
 	| "sdn"
 	| "alerts"
+	| "incidents"
 	| "video"
 	| "news"
 	| "markets"
@@ -134,6 +136,7 @@ export default function Inspector({
 							"area",
 							"sdn",
 							"alerts",
+							"incidents",
 							"news",
 							"markets",
 							"cyber",
@@ -254,6 +257,7 @@ export default function Inspector({
 				{tab === "pulse" && <PulseTab />}
 				{tab === "portfolio" && <PortfolioTab />}
 				{tab === "screen" && <ScreenerTab />}
+				{tab === "incidents" && <IncidentsTab />}
 				{tab === "monitor" && <MonitorTab />}
 				{tab === "notes" && <NotesTab />}
 			</div>

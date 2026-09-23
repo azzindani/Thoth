@@ -64,13 +64,26 @@ Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
 - [ ] Following batches: largest remaining keyless feeds per uncovered
       theme (see ENDPOINTS.md "NOT free" list for what stays out).
 
-## P4 — Intelligence layer (no LLM) `[ ]`
+## P4 — Intelligence layer (no LLM) `[x]`
 
-- [ ] **Incidents**: space-time clustering across layers into one incident
+- [x] **Incidents**: space-time clustering across layers into one incident
       card with a timeline; cross-source duplicate merge (USGS/EMSC).
-- [ ] **Anomalies**: per-region/per-layer baselines; flags for sudden drops
-      or spikes (airspace emptying, jamming spike, outage + cable, news
-      volume surge).
+      *Shipped:* the worker's intel pass (every 5 min) marks duplicate
+      quakes (same quake within 2 min / 100 km / 0.5 M across agencies,
+      USGS > EMSC > GFZ > INGV… as primary; readers hide the rest) and
+      clusters critical/watch events of the last 48 h (PostGIS DBSCAN,
+      ~110 km) that are corroborated by ≥ 2 layers or sources into the
+      `incidents` layer (timeline, reports incl. duplicates, spread).
+- [x] **Anomalies**: per-region/per-layer baselines; flags for sudden drops
+      or spikes (airspace emptying, jamming spike, news volume surge).
+      *Shipped:* hourly rolling counts per layer and 5° cell
+      (`layer_samples`), robust median/MAD over 7 days (≥ 24 samples);
+      drops for flights/vessels (skipped when the whole layer is down — a
+      dead feed is not an empty sky), spikes for jamming, news, quakes,
+      fires, conflicts, cyber → the `anomalies` layer. Incidents tab lists
+      both as data tables; rows fly the map.
+- [ ] Remaining: explicit cross-layer rules (e.g. internet outage near a
+      cable landing), and per-hour-of-week baselines once history exists.
 
 ## P5 — Analyst workflow `[ ]`
 

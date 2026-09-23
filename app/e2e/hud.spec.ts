@@ -743,6 +743,25 @@ test.describe
 			expect(rowTips).toBeGreaterThan(20);
 		});
 
+		test("incidents tab: corroborated incidents + anomalies as tables", async () => {
+			await page.locator('#tabs button[data-tab="incidents"]').click();
+			const body = page.locator("#insp-body");
+			await expect(body.locator("#inc-kpis")).toContainText("critical", {
+				timeout: 15000,
+			});
+			const row = body.locator(".inc-row").first();
+			await expect(row).toContainText("Fixture Trench");
+			await row.click();
+			await expect(row).toHaveAttribute("aria-expanded", "true");
+			await expect(body.locator(".inc-timeline")).toContainText(
+				"duplicate report",
+			);
+			await body.getByRole("button", { name: "ANOMALIES" }).click();
+			await expect(body.locator(".ano-row").first()).toContainText(
+				"Air traffic drop",
+			);
+		});
+
 		test("monitor v2: summary, views, source detail, run now", async () => {
 			await page.locator('button[data-tab="monitor"]').first().click();
 			const body = page.locator("#insp-body");

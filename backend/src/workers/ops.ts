@@ -267,6 +267,7 @@ export async function prune(): Promise<Record<string, number>> {
 		["endpoint_calls", "ts"],
 		["collector_runs", "started_at"],
 		["collector_requests", "requested_at"],
+		["layer_samples", "ts"],
 	] as const) {
 		out[table] = await deleteBatched(
 			`DELETE FROM ${table} WHERE ctid IN (SELECT ctid FROM ${table}

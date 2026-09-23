@@ -274,6 +274,52 @@ const FIXTURES: Fx[] = [
 		line: true,
 		meta: { kind: "cable" },
 	},
+	{
+		layer: "incidents",
+		source: "thoth-incidents",
+		title:
+			"M6.2 Fixture Trench — 4 reports · quakes, gdacs · near Japan (fixture)",
+		lat: 38.4,
+		lon: 142.4,
+		meta: {
+			reports: 4,
+			events: 3,
+			layers: ["quakes", "gdacs"],
+			sources: ["usgs", "ntwc", "gdacs"],
+			radius_km: 48,
+			started: new Date(Date.now() - 40 * 60e3).toISOString(),
+			timeline: [
+				{
+					id: "fixture:quakes:0",
+					ts: new Date(Date.now() - 40 * 60e3).toISOString(),
+					layer: "quakes",
+					source: "usgs",
+					severity: "critical",
+					title: "M6.2 Fixture Trench (fixture)",
+					dups: 1,
+				},
+				{
+					id: "fixture:gdacs:0",
+					ts: new Date(Date.now() - 20 * 60e3).toISOString(),
+					layer: "gdacs",
+					source: "gdacs",
+					severity: "watch",
+					title: "Orange earthquake alert (fixture)",
+					dups: 0,
+				},
+			],
+		},
+	},
+	{
+		layer: "anomalies",
+		source: "thoth-anomaly",
+		title:
+			"Air traffic drop near Fixtureland: 3 in the last hour vs usual 41 (−93%) (fixture)",
+		lat: 47.5,
+		lon: 32.5,
+		polygon: true,
+		meta: { layer: "flights", dir: "drop", n: 3, median: 41, z: -9.3 },
+	},
 ];
 
 const SEVERITIES = ["critical", "watch", "info"] as const;

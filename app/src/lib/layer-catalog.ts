@@ -228,6 +228,19 @@ export const LAYERS: Record<string, LayerDef> = {
 		intervalSec: 86400,
 		polygon: true,
 	},
+	// Derived (P4): corroborated incidents across layers/sources…
+	incidents: {
+		color: "#fda4af",
+		svg: '<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+		intervalSec: 300,
+	},
+	// …and cells whose activity left their 7-day baseline.
+	anomalies: {
+		color: "#fcd34d",
+		svg: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+		intervalSec: 300,
+		polygon: true,
+	},
 };
 
 export const LAYER_NAMES = Object.keys(LAYERS);
@@ -236,6 +249,7 @@ export const LAYER_NAMES = Object.keys(LAYERS);
  * the list a scannable shape. Every layer belongs to exactly one group
  * (test/catalog.test.ts); anything unlisted falls into "Other". */
 export const LAYER_GROUPS: [string, string[]][] = [
+	["Intelligence", ["incidents", "anomalies"]],
 	[
 		"Hazards",
 		[

@@ -114,6 +114,12 @@ Keep the three secrets in the host's secret store, not in shell history.
   `thoth_source_up` / `_fail_streak` / `_success_ratio_24h` /
   `_last_success_timestamp_seconds`, per-collector p95 and next-due, per-host
   call/error counts and p95 latency. Expose it only to your scraper.
+- **Intelligence (P4):** every 5 min the worker marks duplicate quake
+  reports (`event_dups`; slices, views and alerts hide them), rebuilds the
+  `incidents` layer (corroborated clusters, source `thoth-incidents`) and
+  samples per-cell activity into `layer_samples` for the `anomalies` layer
+  (source `thoth-anomaly`). Anomaly baselines need a day of samples before
+  anything is flagged; samples follow `MONITOR_RETENTION_DAYS`.
 - **Retention:** pruning runs 2 min after worker start, then hourly, in
   batches of 5 000 rows (see the `*_RETENTION_DAYS` vars).
 - **Demo / CI data:** `npm run db:seed:fixtures` (refuses in production;
