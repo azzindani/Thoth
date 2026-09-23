@@ -171,6 +171,8 @@ test.describe
 
 		test("panel state is remembered across reloads", async () => {
 			await page.locator("#pt-insp").click();
+			// State first, then the panel: a recurrence names which one failed.
+			await expect(page.locator("body")).toHaveClass(/hide-insp/);
 			await expect(page.locator("#inspector")).toBeHidden();
 			await boot(page);
 			await expect(page.locator("body")).toHaveClass(/hide-insp/);
