@@ -136,6 +136,13 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   brief, collapsible feed gaps, phone map-first layout, tablet sheet anchored
   under the status bar. Fixed on the way: timeline never drew (read b.n,
   API serves count), phone sheet inherited tablet rail cells.
+- [x] Modern UI pass (2026-09-23): full-bleed map with floating glass panels
+  (desk/tab/phone), radius + motion token scales, raised segmented cells,
+  hover/press/focus-visible states, sheet slide motion, reduced-motion and
+  reduced-transparency fallbacks, map camera padding from panel rects
+  (globe centres in the free area), measured `--dock-h`. E2e point pickers
+  now require the map canvas to be the hit target. vitest 37/37, e2e 28/29
+  locally (ASN lookup needs network; green in CI).
 - Basemap recolour: CARTO dark-matter stays as served (cool neutral). A
   warm-tuned style (own style JSON over the same tiles) would finish the
   palette; needs visual verification against live tiles. Owner: next UI pass.

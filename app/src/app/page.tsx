@@ -153,6 +153,58 @@ export default function Terminal() {
 		return () => window.removeEventListener("resize", bp);
 	}, []);
 
+	// Floating chrome: the map is full-bleed, so tell the camera which part
+	// of the viewport the persistent panels cover — the globe and every
+	// flyTo then centre in the free area, not behind a panel. Overlay sheets
+	// (tablet inspector, phone sheets) are excluded on purpose: opening one
+	// must never shift the map.
+	const syncPadding = useCallback(() => {
+		const rect = (id: string) =>
+			document.getElementById(id)?.getBoundingClientRect() ?? null;
+		// The dock's height is content-driven; publish the measured value so
+		// the chrome stacked above it (minimap, toasts, full view) clears it.
+		const dock = rect("bottom");
+		if (dock?.height)
+			document.documentElement.style.setProperty(
+				"--dock-h",
+				`${Math.round(dock.height)}px`,
+			);
+		const map = mapRef.current;
+		if (!map) return;
+		const bp = document.body.dataset.bp;
+		const GAP = 8;
+		const top = rect("ticker")?.bottom ?? 0;
+		const bottom = dock ? window.innerHeight - dock.top : 0;
+		const left = bp === "phone" ? 0 : (rect("explorer")?.right ?? 0);
+		const insp = rect("inspector");
+		const right =
+			bp === "desk" && insp && insp.width > 0
+				? window.innerWidth - insp.left
+				: 0;
+		try {
+			map.setPadding({
+				top: top + GAP,
+				bottom: bottom + GAP,
+				left: left ? left + GAP : 0,
+				right: right ? right + GAP : 0,
+			});
+		} catch {
+			/* map not ready */
+		}
+	}, []);
+	useEffect(() => {
+		const ro = new ResizeObserver(() => syncPadding());
+		for (const id of ["ticker", "explorer", "inspector", "bottom"]) {
+			const el = document.getElementById(id);
+			if (el) ro.observe(el);
+		}
+		window.addEventListener("resize", syncPadding);
+		return () => {
+			ro.disconnect();
+			window.removeEventListener("resize", syncPadding);
+		};
+	}, [syncPadding]);
+
 	// SSE with resume
 	useEffect(() => {
 		// watch matches seed silently on first run, toast only new arrivals
@@ -416,6 +468,7 @@ export default function Terminal() {
 					}
 					mapCb={(m) => {
 						mapRef.current = m;
+						syncPadding();
 						// shareable URL state: #c=lng,lat,z (world-dashboard urlstate pattern)
 						m.on("moveend", () => {
 							try {

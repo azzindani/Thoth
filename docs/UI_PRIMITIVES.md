@@ -21,15 +21,43 @@ if they drift). The rules, in priority order:
    `-watch`, `-crit`). Cluster discs are neutral; the ring shows the worst
    severity inside. `LAYERS[].color` is kept in the catalog for back-compat
    but is not rendered.
-5. **Square hairline controls.** Segmented controls (`.seg`, `.chips`) with
-   an accent underline for the active cell; ghost buttons (`.ghost-btn`)
-   for secondary actions. No pills, gradients, glows or rounded candy.
+5. **Quiet controls.** Segmented controls (`.seg`, `.chips`) sit in a
+   recessed track with the active cell raised (`--raise2` + top highlight);
+   inspector tabs mark the active tab with an accent underline; ghost
+   buttons (`.ghost-btn`) for secondary actions. Hover lifts luminance
+   (`--hover`), press darkens (`--press`), focus is a 2px accent ring
+   (`:focus-visible` only). No gradients, glows or candy colours.
 6. **Type.** IBM Plex Sans for chrome, IBM Plex Mono (tabular) for every
    number, clock, code and coordinate. Section labels are 10.5px uppercase
    tracked (`h3`, `.lgroup`, `.tc-label`); body 12–13px. Four sizes, no
    half-pixel one-offs.
 7. **Severity rows** (`.sev-row[data-sev]`) carry severity on a 2px left
    edge with a mono layer label — not coloured bullets.
+8. **Floating panels over a full-bleed map** (modern pass, 2026-09-23).
+   The map fills the viewport; status bar, explorer, inspector and dock are
+   glass panels (`--glass` + `--blur`, hairline border, `--hl` top
+   highlight, `--shadow-panel`) inset by `--inset` from the edges and each
+   other. Geometry tokens: `--bar`, `--expl`, `--insp`, `--rail`,
+   `--dock-h` (measured and published by `page.tsx`; the CSS value is only
+   the first-paint fallback), derived `--top`/`--lw`/`--rw`. Radius scale:
+   `--r-panel 14` · `--r-card 12` · `--r-ctl 8` · `--r-cell 6` ·
+   `--r-sheet 18` — pick from the scale, never a one-off. Without
+   `backdrop-filter` or under `prefers-reduced-transparency` panels fall
+   back to opaque `--glass2`.
+9. **The camera knows about the panels.** `syncPadding()` in `page.tsx`
+   sets `map.setPadding()` from the persistent panels' rects (ResizeObserver),
+   so the globe and every `flyTo` centre in the free area. Overlay sheets
+   (tablet inspector, phone sheets) are excluded: opening one never moves
+   the map.
+10. **Motion.** `--t-fast 120ms` (hover/press), `--t 200ms` (panels),
+    `--t-sheet 260ms` (sheets), all on `--ease`. `prefers-reduced-motion`
+    zeroes the tokens — never add a duration that bypasses them.
+
+Testing rule: with panels floating over the map, a feature can be rendered
+yet covered by chrome. E2e specs pick map points with
+`document.elementFromPoint` and only click ones whose hit target is the map
+canvas (see `firstPoint` in `breakpoints.spec.ts`, `pointOn` in
+`hud.spec.ts`); never hard-code "free area" bounds.
 
 Binding rule: the terminal MUST be usable on any screen width — phone, tablet,
 laptop, ultrawide. New UI work starts from primitives, never from one-off markup.
@@ -40,9 +68,9 @@ composed from the catalog below.
 
 | Class | Width | Layout |
 |---|---|---|
-| `desk` | ≥1200px | 3-column: explorer 232px · map fluid · inspector 330px. Reference look. |
-| `tab` | 768–1199px | Explorer collapses to a 56px rail: glyph over its count (names/groups hidden; the row title carries the name). Inspector is an overlay sheet anchored below the status bar, hidden until a tab/selection opens it. |
-| `phone` | <768px | Map-first. Status bar: LAYERS button + mark + health (clock and mode controls hidden). Explorer and inspector share one bottom-sheet form (grabber, 60vh cap). The bottom strip collapses to the command line alone (timeline and threat readout are desk/tab tools); inputs are 16px so iOS never zooms. |
+| `desk` | ≥1200px | Full-bleed map; floating status bar across the top, explorer (`--expl` 264px) left, inspector (`--insp` 372px) right, dock (threat · timeline · command line) between them at the bottom. Reference look. |
+| `tab` | 768–1199px | Explorer collapses to a floating 56px rail: glyph over its count (names/groups hidden; the row title carries the name). Inspector is an overlay panel below the status bar that slides in from the right, hidden until a tab/selection opens it; the dock spans rail → right edge. |
+| `phone` | <768px | Map-first. Floating status bar: LAYERS button + mark + health (clock and mode controls hidden). The dock shrinks to a floating command pill. Explorer and inspector share one bottom-sheet form (`--r-sheet` top corners, grabber, 60vh cap, slides up). Inputs are 16px so iOS never zooms; safe-area insets respected. |
 
 Rules:
 - No fixed pixel widths outside the token + breakpoint system. Panels size in `px` tokens only at `desk`; everywhere else they are overlays/sheets.

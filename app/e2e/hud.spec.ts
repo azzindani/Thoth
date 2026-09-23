@@ -123,14 +123,21 @@ test.describe
 					const feats = mm
 						.queryRenderedFeatures({ layers: [layer] })
 						.filter((f) => f.geometry?.type === "Point");
-					const pts = feats.map((f) => {
-						const s = mm.project(f.geometry.coordinates);
-						return {
-							x: s.x + rr.left,
-							y: s.y + rr.top,
-							title: String(f.properties.title ?? ""),
-						};
-					});
+					// Reachable only: floating panels cover part of the full-bleed
+					// map, and a point behind chrome cannot be hovered or clicked.
+					const pts = feats
+						.map((f) => {
+							const s = mm.project(f.geometry.coordinates);
+							return {
+								x: s.x + rr.left,
+								y: s.y + rr.top,
+								title: String(f.properties.title ?? ""),
+							};
+						})
+						.filter((p) => {
+							const hit = document.elementFromPoint(p.x, p.y);
+							return hit?.tagName === "CANVAS" && !!hit.closest("#map");
+						});
 					if (!overlap) return pts[0] ?? null;
 					for (let i = 0; i < pts.length; i++)
 						for (let j = i + 1; j < pts.length; j++) {
@@ -323,6 +330,11 @@ test.describe
 								.slice(0, 80);
 							for (const f of feats) {
 								const s = mm.project(f.geometry.coordinates);
+								const el = document.elementFromPoint(
+									s.x + rr.left,
+									s.y + rr.top,
+								);
+								if (el?.tagName !== "CANVAS" || !el.closest("#map")) continue;
 								const hit = mm
 									.queryRenderedFeatures([s.x, s.y], {})
 									.filter((h) =>
@@ -395,11 +407,16 @@ test.describe
 				// cluster near the horizon is "rendered" but not hit-testable.
 				return found
 					.map((b) => ({ b, s: m.project(b.c) }))
-					.filter(({ s }) =>
-						m
-							.queryRenderedFeatures([s.x, s.y])
-							.some((f) => f.layer.id.endsWith("-c")),
-					)
+					.filter(({ s }) => {
+						const hit = document.elementFromPoint(s.x + r.left, s.y + r.top);
+						return (
+							hit?.tagName === "CANVAS" &&
+							!!hit.closest("#map") &&
+							m
+								.queryRenderedFeatures([s.x, s.y])
+								.some((f) => f.layer.id.endsWith("-c"))
+						);
+					})
 					.slice(0, 4)
 					.map(({ b, s }) => ({
 						x: s.x + r.left,
@@ -485,17 +502,23 @@ test.describe
 				// Prefer screen center: a SIGMET covering it is the common case.
 				const cx = r.left + r.width / 2;
 				const cy = r.top + r.height / 2;
+				// Reachable = the map canvas is what a pointer hits there (the
+				// map is full-bleed under floating panels).
+				const reach = (x: number, y: number) => {
+					const el = document.elementFromPoint(x, y);
+					return el?.tagName === "CANVAS" && !!el.closest("#map");
+				};
 				const atCenter = m.queryRenderedFeatures([cx - r.left, cy - r.top], {
 					layers: ["airwx"],
 				});
-				if (atCenter.length > 0) return { x: cx, y: cy };
+				if (atCenter.length > 0 && reach(cx, cy)) return { x: cx, y: cy };
 				for (const f of m.queryRenderedFeatures({ layers: ["airwx"] })) {
 					const ring = f.geometry?.coordinates?.[0] ?? [];
 					for (let i = 0; i < ring.length; i += 3) {
 						const s = m.project(ring[i]);
 						const vx = s.x + r.left;
 						const vy = s.y + r.top;
-						if (vx > 250 && vx < W - 350 && vy > 60 && vy < H - 160)
+						if (vx > 0 && vx < W && vy > 0 && vy < H && reach(vx, vy))
 							return { x: vx, y: vy };
 					}
 				}
