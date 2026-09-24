@@ -11,7 +11,7 @@ import { parseSeen } from "../src/workers/collectors/gdelt.js";
 import { parseRSS } from "../src/workers/collectors/news.js";
 import { parseLatestObs } from "../src/workers/collectors/oceans.js";
 import { parseCSV } from "../src/workers/collectors/sanctions.js";
-import { centroid } from "../src/workers/collectors/weather.js";
+import { centroid } from "../src/workers/lib/geo.js";
 
 describe("sanctions parseCSV", () => {
 	it("handles quoted commas and escaped quotes", () => {

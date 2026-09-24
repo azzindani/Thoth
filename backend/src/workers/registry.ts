@@ -221,6 +221,17 @@ export const COLLECTORS = {
 		ttlSec: 7200,
 	},
 	fcdo: { module: "./collectors/fcdo.js", intervalSec: 21600, ttlSec: 86400 },
+	// Batch 34 (keyless loop-9): agency incident + warning feeds.
+	wildfires: {
+		module: "./collectors/wildfires.js",
+		intervalSec: 900,
+		ttlSec: 1800,
+	},
+	warnings: {
+		module: "./collectors/warnings.js",
+		intervalSec: 900,
+		ttlSec: 1800,
+	},
 	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
 } as const;
 

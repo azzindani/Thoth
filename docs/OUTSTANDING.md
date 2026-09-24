@@ -130,6 +130,16 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   (data lived in the container layer — dump before upgrading, PRODUCTION.md §5);
   app image build failed on a missing public/ dir; browser bypassed the app to
   hit :4000; API port no longer published on 0.0.0.0; log rotation.
+- [x] Keyless loop-9 / batch34 (2026-09-24): 6 agency feeds, all probed live on the
+  production host before shipping — CAL FIRE, NSW RFS, VIC EMV → `fires`; ECCC
+  alerts → `weather`; EA floods, MoWaS → `disasters`. Loop recipe + candidate
+  queue: ADDING_ENDPOINTS.md.
+- [ ] Batch 31/32 feeds shipped "contract-tested, not probed live" are now live on
+  the production host; failing there (2026-09-24 snapshot, 44/328 sources):
+  enisa-euvd 403, copernicus-ems RSS 404, nga-msi 503, tor-onionoo fetch-failed,
+  plus older ones (energy-charts 429/404 per country, fiscaldata/govtrack/hans/
+  eonet/firms "fetch failed" — likely egress from this VPS, to confirm). Owner:
+  keyless loop, fix-or-drop pass. Due 2026-10-08.
 - [x] Access gate (2026-09-24, PRODUCTION.md §1): Folio's token model replaces
   APP_BASIC_AUTH — ?token= swapped for a 30-day sliding HS256 session cookie,
   Bearer for scripts, named revocable keys. Compose project named `thoth`, app

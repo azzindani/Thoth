@@ -5,7 +5,7 @@
 // Digests (article dates lag legitimately): wide budget. Catalogs: fetch-failure
 // is the only signal — event dates are inherently old, never frozen.
 const NEVER_FROZEN =
-	/^(cisa-kev|smithsonian|opensanctions|static|gdacs|swpc-alerts|fema|ioda|ooni|usgs-blast|fng|who-gho|hdx-idmc|fda-food|fda-device|fda-faers|fda-510k|fda-ndc|who-news|state-travel|uk-fcdo|unhcr|submarine-cables|copernicus-ems)$/;
+	/^(cisa-kev|smithsonian|opensanctions|static|gdacs|swpc-alerts|fema|ioda|ooni|usgs-blast|fng|who-gho|hdx-idmc|fda-food|fda-device|fda-faers|fda-510k|fda-ndc|who-news|state-travel|uk-fcdo|unhcr|submarine-cables|copernicus-ems|calfire|nsw-rfs|vic-emv|ea-floods|mowas|eccc-alerts)$/;
 const BUDGET: [RegExp, number][] = [
 	[
 		/^(usgs|emsc|ingv|jma|jma-forecast|bmkg|turkey-kandilli|turkey-afad|opensky|opensky-bosporus|opensky-tokyo|opensky-sydney|opensky-mexico|adsb|telegram|neptun|celestrak|tle-mirror|iss-live|ndbc|coops|coops-temp|coops-pred|coops-wind|coops-pressure|urlhaus|swpc-kp|om-flood)$/,

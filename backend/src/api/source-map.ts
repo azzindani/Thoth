@@ -340,4 +340,11 @@ export const SOURCE_MAP: Record<
 	"enisa-euvd": { collector: "euvd", intervalSec: 3600 },
 	"tor-onionoo": { collector: "torexits", intervalSec: 3600 },
 	"uk-fcdo": { collector: "fcdo", intervalSec: 21600 },
+	// Batch 34 (keyless loop-9).
+	calfire: { collector: "wildfires", intervalSec: 900 },
+	"nsw-rfs": { collector: "wildfires", intervalSec: 900 },
+	"vic-emv": { collector: "wildfires", intervalSec: 900 },
+	"eccc-alerts": { collector: "warnings", intervalSec: 900 },
+	"ea-floods": { collector: "warnings", intervalSec: 900 },
+	mowas: { collector: "warnings", intervalSec: 900 },
 };
