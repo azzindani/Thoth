@@ -4,7 +4,14 @@
 // above carry basin + winds; Central-Pacific summers do fire while the
 // Atlantic rests (Norbert live at write time).
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
-import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
+import {
+	dbClock,
+	errMsg,
+	markHealth,
+	pruneStale,
+	storeNormalized,
+	storeRaw,
+} from "../lib/store.js";
 import { parseRSS } from "./news.js";
 
 const WALLETS = [
@@ -37,9 +44,12 @@ export function parseStormLatLon(
 }
 
 // JTWC (US Navy/USAF, keyless RSS): West Pacific, North Indian Ocean and
-// Southern Hemisphere cyclones — the basins NHC does not cover. The RSS
-// lists each active system with a link to its warning text; the position
-// ("NEAR 12.3N 128.7E") and max winds come from that text.
+// Southern Hemisphere cyclones — the basins NHC does not cover (JTWC also
+// lists East/Central Pacific systems; NHC carries those, so they are
+// skipped here rather than drawn twice). The RSS lists each active system
+// with a link to its warning text; the position ("NEAR 12.3N 128.7E") and
+// max winds come from that text. Current picture: a system that leaves the
+// feed is pruned.
 const JTWC_RSS = "https://www.metoc.navy.mil/jtwc/rss/jtwc.rss";
 
 export type JtwcSystem = {
@@ -47,10 +57,17 @@ export type JtwcSystem = {
 	id: string;
 	name: string;
 	txt: string;
+	/** "Final Warning": the system is dissipating or leaving JTWC's area. */
+	final: boolean;
 };
 
 const SYS =
-	/(Super Typhoon|Typhoon|Tropical Storm|Tropical Depression|Tropical Cyclone|Subtropical Storm)\s+(\d{2}[A-Z])(?:\s*\(([^)]+)\))?/gi;
+	/(Super Typhoon|Typhoon|Hurricane|Tropical Storm|Tropical Depression|Tropical Cyclone|Subtropical Storm)\s+(\d{2}[A-Z])(?:\s*\(([^)]+)\))?/gi;
+/** System ids NHC already carries: 17E, 03C. */
+const NHC_BASIN = /[EC]$/;
+/** A system's own warning text (wp2526web.txt, io0126web.txt, …) — never
+ * the ABPW/ABIO advisories, which also end in web.txt. Either quote. */
+const WARNING_TXT = /href=['"]([^'"]*\/(?:wp|io|sh|ep|cp)\d{4}web\.txt)['"]/i;
 
 function unesc(s: string): string {
 	return s
@@ -61,25 +78,41 @@ function unesc(s: string): string {
 		.replace(/&amp;/g, "&");
 }
 
-/** JTWC RSS → active systems, each with its warning-text URL (if linked). */
+/** JTWC RSS → active systems, each with its warning-text URL (if linked).
+ * Each <item> is one basin group; a system's chunk runs to the next system
+ * header inside the same item, so a link from the next item can never be
+ * taken for its warning. */
 export function parseJtwcRss(xml: string): JtwcSystem[] {
-	const html = unesc(xml);
-	const hits = [...html.matchAll(SYS)];
 	const out: JtwcSystem[] = [];
 	const seen = new Set<string>();
-	hits.forEach((m, i) => {
-		const id = m[2].toUpperCase();
-		if (seen.has(id)) return;
-		seen.add(id);
-		// The system's own chunk: up to the next system header.
-		const chunk = html.slice(m.index, hits[i + 1]?.index ?? html.length);
-		const txt =
-			chunk.match(/href="([^"]+?web\.txt)"/i)?.[1] ??
-			chunk.match(/href="([^"]+?\.txt)"/i)?.[1] ??
-			"";
-		out.push({ kind: m[1], id, name: (m[3] ?? "").trim(), txt });
-	});
+	for (const item of xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)) {
+		const html = unesc(item[0]);
+		const hits = [...html.matchAll(SYS)];
+		hits.forEach((m, i) => {
+			const id = m[2].toUpperCase();
+			if (seen.has(id)) return;
+			seen.add(id);
+			const chunk = html.slice(m.index, hits[i + 1]?.index ?? html.length);
+			out.push({
+				kind: m[1],
+				id,
+				name: (m[3] ?? "").trim(),
+				txt: chunk.match(WARNING_TXT)?.[1] ?? "",
+				final: /final warning/i.test(chunk),
+			});
+		});
+	}
 	return out;
+}
+
+export function jtwcSeverity(
+	kind: string,
+	windKt: number | null,
+	final: boolean,
+): "critical" | "watch" | "info" {
+	if (final) return "info";
+	if ((windKt ?? 0) >= 64 || /typhoon|hurricane/i.test(kind)) return "critical";
+	return "watch";
 }
 
 /** Warning text → first fix position + max sustained winds (kt). */
@@ -97,11 +130,14 @@ export function parseJtwcWarning(text: string): {
 }
 
 async function collectJtwc(layer: string): Promise<number> {
+	const runStart = await dbClock();
 	assertSafeUrl(JTWC_RSS);
 	const res = await stealthFetch(JTWC_RSS);
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 	const xml = await res.text();
-	const systems = parseJtwcRss(xml);
+	// Not the feed (a maintenance page): keep the picture, fail the run.
+	if (!/<item[\s>]/.test(xml)) throw new Error("no RSS items");
+	const systems = parseJtwcRss(xml).filter((s) => !NHC_BASIN.test(s.id));
 	await storeRaw("jtwc", layer, res.status, { n: systems.length });
 	const now = new Date().toISOString();
 	if (!systems.length) {
@@ -115,6 +151,7 @@ async function collectJtwc(layer: string): Promise<number> {
 			confidence: 0.9,
 			meta: { quiet: true },
 		});
+		await pruneStale("jtwc", runStart);
 		return 1;
 	}
 	let n = 0;
@@ -129,27 +166,28 @@ async function collectJtwc(layer: string): Promise<number> {
 				/* position is best-effort; the headline still stands */
 			}
 		}
-		const hurricaneForce = (fix?.windKt ?? 0) >= 64;
 		const label = `${s.kind} ${s.id}${s.name ? ` (${s.name})` : ""}`;
 		await storeNormalized({
 			id: `jtwc:${s.id.toLowerCase()}`,
 			ts: now,
 			source: "jtwc",
 			layer,
-			title: `JTWC · ${label}${fix?.windKt ? ` · ${fix.windKt} kt` : ""}`.slice(
-				0,
-				280,
-			),
+			title:
+				`JTWC · ${label}${fix?.windKt ? ` · ${fix.windKt} kt` : ""}${s.final ? " · final warning" : ""}`.slice(
+					0,
+					280,
+				),
 			url: s.txt || "https://www.metoc.navy.mil/jtwc/jtwc.html",
-			severity: hurricaneForce ? "critical" : stormSeverity(s.kind),
+			severity: jtwcSeverity(s.kind, fix?.windKt ?? null, s.final),
 			confidence: 0.9,
 			lat: fix?.lat,
 			lon: fix?.lon,
 			entities: { basin: "jtwc" },
-			meta: { storm: label, windKt: fix?.windKt ?? null },
+			meta: { storm: label, windKt: fix?.windKt ?? null, final: s.final },
 		});
 		n++;
 	}
+	await pruneStale("jtwc", runStart);
 	return n;
 }
 
