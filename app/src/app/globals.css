@@ -220,6 +220,9 @@ main.app {
 	z-index: 15;
 	border-radius: var(--r-panel);
 	overflow: auto;
+	/* scroll stays in the panel: a list's end never drags the map or
+	   bounces the page (every panel scroller below does the same) */
+	overscroll-behavior: contain;
 	padding: 16px 12px 12px;
 }
 .inspector {
@@ -579,6 +582,7 @@ select:focus,
 .ibody {
 	flex: 1;
 	overflow: auto;
+	overscroll-behavior: contain;
 	padding: 16px var(--pad);
 	font-size: var(--fs-s);
 }
@@ -1136,6 +1140,7 @@ details.gaps[open] summary::before {
 	width: min(440px, 94vw);
 	max-height: 100%;
 	overflow: auto;
+	overscroll-behavior: contain;
 	background: var(--glass2);
 	-webkit-backdrop-filter: var(--blur);
 	backdrop-filter: var(--blur);
@@ -2233,6 +2238,7 @@ body:not(.insp-wide) .dt-wrap {
 }
 .since-body {
 	overflow: auto;
+	overscroll-behavior: contain;
 	min-height: 0;
 	margin-top: 8px;
 }
@@ -2334,6 +2340,7 @@ body:not(.insp-wide) .dt-wrap {
 }
 .pal-list {
 	overflow: auto;
+	overscroll-behavior: contain;
 	padding: 6px;
 }
 .pal-item {
@@ -2438,6 +2445,26 @@ body:not(.insp-wide) .dt-wrap {
 	}
 }
 
+/* ── touch devices: frame budget over glass ──────────────────────────────
+   Every glass panel floats over the WebGL map, which redraws each frame
+   while it pans, so a backdrop blur is re-sampled per panel per frame (and
+   the ticker tape moves inside a blurred panel, so that blur never rests).
+   Desktop GPUs absorb it; phone GPUs drop frames. On touch, glass turns
+   near-opaque instead — same look at a glance, no per-frame blur. */
+@media (pointer: coarse) {
+	:root {
+		--blur: none;
+		--glass: rgba(17, 17, 16, 0.94);
+		--glass2: rgba(28, 27, 25, 0.98);
+	}
+	.modal-veil,
+	.sitrep {
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+		background: rgba(11, 11, 10, 0.82);
+	}
+}
+
 /* alive-fix 2026-09-09: flex children must be allowed to shrink */
 .hpill,
 .clock,
@@ -2500,6 +2527,7 @@ body:not(.insp-wide) .dt-wrap {
 .sitrep-page {
 	flex: 1;
 	overflow: auto;
+	overscroll-behavior: contain;
 	width: min(960px, 100%);
 	margin: 0 auto;
 	padding: 20px var(--inset) 40px;

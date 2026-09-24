@@ -86,7 +86,13 @@ export default function Terminal() {
 	const [toasts, setToasts] = useState<
 		{ id: string; title: string; kind?: "critical" | "watch" | "notice" }[]
 	>([]);
-	const [sse, setSse] = useState({ ok: false, last: 0, n: 0 });
+	// Link state only (up/down, reconnects). The last-message time changes
+	// on every 5 s heartbeat, so it lives in a ref: a heartbeat must not
+	// re-render the whole page.
+	const [sse, setSse] = useState({ ok: false, n: 0 });
+	const sseLast = useRef(0);
+	// Phone breakpoint as state, for chrome that should not mount there.
+	const [phone, setPhone] = useState(false);
 	const [changelog, setChangelog] = useState(false);
 	const [focus, setFocus] = useState(false);
 	// Collapsible chrome: each persistent panel can slide off-screen to an
@@ -117,7 +123,15 @@ export default function Terminal() {
 			// Feed health lives in the MONITOR tab now (own fetch); the page
 			// only needs layer counts — one call, not two.
 			const s = await api.stats();
-			setCounts(new Map(s.items.map((i) => [i.layer, i.count])));
+			const next = new Map(s.items.map((i) => [i.layer, i.count]));
+			// Every layer change asks again (~5 s); an unchanged answer keeps
+			// the same Map, so the page does not re-render for nothing.
+			setCounts((prev) =>
+				prev.size === next.size &&
+				[...next].every(([k, v]) => prev.get(k) === v)
+					? prev
+					: next,
+			);
 		} catch {
 			/* keep */
 		}
@@ -264,6 +278,7 @@ export default function Terminal() {
 			const w = window.innerWidth;
 			document.body.dataset.bp =
 				w >= 1200 ? "desk" : w >= 768 ? "tab" : "phone";
+			setPhone(w < 768);
 		}
 		bp();
 		window.addEventListener("resize", bp);
@@ -426,7 +441,8 @@ export default function Terminal() {
 		let timer: ReturnType<typeof setTimeout>;
 		let wasDown = false;
 		function markMsg() {
-			setSse((s) => ({ ...s, ok: true, last: Date.now() }));
+			sseLast.current = Date.now();
+			setSse((s) => (s.ok ? s : { ...s, ok: true }));
 		}
 		function connect() {
 			if (stop) return;
@@ -437,7 +453,8 @@ export default function Terminal() {
 			es.onopen = () => {
 				if (wasDown) {
 					wasDown = false;
-					setSse((s) => ({ ok: true, last: Date.now(), n: s.n + 1 }));
+					sseLast.current = Date.now();
+					setSse((s) => ({ ok: true, n: s.n + 1 }));
 					refreshStats();
 				} else {
 					markMsg();
@@ -876,6 +893,7 @@ export default function Terminal() {
 				globe={globe}
 				setGlobe={setGlobe}
 				sse={sse}
+				sseLast={sseLast}
 				onMonitor={() => setTab("monitor")}
 				focus={focus}
 				setFocus={setFocus}
@@ -909,7 +927,9 @@ export default function Terminal() {
 					onArea={() => setTab("area")}
 					overlay={
 						<>
-							<MiniMap getMap={getMap} />
+							{/* Hidden on phones: a second WebGL map there would still
+						    load tiles and redraw for nothing. */}
+							{!phone && <MiniMap getMap={getMap} />}
 							{graph && (
 								<EntityGraph
 									getMap={getMap}

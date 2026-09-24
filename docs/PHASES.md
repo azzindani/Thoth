@@ -213,6 +213,7 @@ New collectors (`src/workers/collectors/*.ts`, registry + tests each):
 | OSINT endpoints | 25 (+epss FIRST, +osv affected/fix, +circl failover, +doh-google, +ipwhois) + /api/search + /api/watch + /api/sitrep + /api/notify (disabled-honest) + /api/imagery + layer export | — |
 | Sitrep archive | daily markdown snapshots in `sitreps` table — history clock for market HUD | growing |
 | App widgets | ThreatClock + MiniMap + EntityGraph (all e2e-covered) | — |
+| Mobile frame budget (2026-09-24) | touch devices: no backdrop blur (re-sampled per panel per map frame), map canvas capped at 2× device pixels + no MSAA, live setData waits for the camera to stop; no whole-page re-render on SSE heartbeats / unchanged counts, clock in its own leaf, PopWindows off `move` when no windows, minimap not mounted on phones, panel scrollers contain overscroll. Emulated phone (390×844@3×): canvas 1170×2532 → 780×1688, pan fps ×2.4 (software GL); map idle = 0 repaints; desktop unchanged. App unit 54/54; e2e vs an unmodified build on live data: same data-dependent failures, no regression | done |
 | UI refine (2026-09-10) | status strip ZULU·DEFCON·LIVE·ENT·Kp (desk) + tab rail cleanup + dark compact attribution; 10/10 app e2e | done |
 | App lint | biome.json config, `biome check` zero diagnostics | keep clean |
 | API same-origin (2026-09-09) | `/api/:path*` rewrite → backend; client default `""`, SSE/export via `API` const; fixes tunnel zeros + mixed-content | done |

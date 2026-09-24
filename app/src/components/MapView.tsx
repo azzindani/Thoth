@@ -329,6 +329,23 @@ export function setVis(
 			map.setLayoutProperty(id, "visibility", visible[n] ? "visible" : "none");
 }
 
+/** Resolves once the camera is still (or after `maxMs`, for the cinema
+ * spin that barely rests). setData re-tiles and re-clusters a source in
+ * the worker and re-uploads its buffers; done mid-gesture it costs frames,
+ * so live refreshes land between gestures instead. */
+function cameraIdle(map: maplibregl.Map, maxMs = 5000): Promise<void> {
+	if (!map.isMoving()) return Promise.resolve();
+	return new Promise((resolve) => {
+		const done = () => {
+			clearTimeout(t);
+			map.off("moveend", done);
+			resolve();
+		};
+		const t = setTimeout(done, maxMs);
+		map.on("moveend", done);
+	});
+}
+
 export async function loadLayer(
 	map: maplibregl.Map,
 	name: string,
@@ -344,6 +361,7 @@ export async function loadLayer(
 	const j = await api.layer(name, opts.since ?? undefined, view);
 	sliceState[name] = { truncated: !!j.truncated, key: viewKey(view) };
 	fullData[name] = toGeoJSON(j.items, opts.sev);
+	await cameraIdle(map);
 	const data = replayView(name);
 	const src = map.getSource(name) as maplibregl.GeoJSONSource | undefined;
 	if (src) {
@@ -861,12 +879,21 @@ export default function MapView(props: Props) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: map init must run exactly once; initialView/mapCb are mount-time inputs
 	useEffect(() => {
 		const init = initialView();
+		// Phones render at 3× device pixels: 9× the fragments of a 1× screen,
+		// plus MSAA on top. Past 2× the difference is invisible on a phone,
+		// and at 2× the aliasing MSAA smooths is sub-pixel — so touch devices
+		// get a 2× cap and no MSAA, and the GPU holds the display's refresh
+		// rate while panning. Desktop keeps full resolution and MSAA.
+		const touch = window.matchMedia("(pointer: coarse)").matches;
 		const map = new maplibregl.Map({
 			container: divRef.current as HTMLDivElement,
 			style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
 			center: init.center,
 			zoom: init.zoom,
-			canvasContextAttributes: { antialias: true },
+			pixelRatio: touch
+				? Math.min(window.devicePixelRatio || 1, 2)
+				: window.devicePixelRatio,
+			canvasContextAttributes: { antialias: !touch },
 			attributionControl: { compact: true },
 		});
 		mapRef.current = map;

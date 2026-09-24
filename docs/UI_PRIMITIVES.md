@@ -43,7 +43,9 @@ if they drift). The rules, in priority order:
    `--r-panel 14` · `--r-card 12` · `--r-ctl 8` · `--r-cell 6` ·
    `--r-sheet 18` — pick from the scale, never a one-off. Without
    `backdrop-filter` or under `prefers-reduced-transparency` panels fall
-   back to opaque `--glass2`.
+   back to opaque `--glass2`. On touch devices (`pointer: coarse`) glass
+   is near-opaque with no blur: a blur over the WebGL map is re-sampled
+   every frame the map moves, which phone GPUs cannot afford.
 9. **The camera knows about the panels.** `syncPadding()` in `page.tsx`
    sets `map.setPadding()` from the persistent panels' rects (ResizeObserver),
    so the globe and every `flyTo` centre in the free area. Overlay sheets
@@ -103,6 +105,14 @@ Rules:
 - Touch targets ≥44px on `tab`/`phone` (rails, chips, tab buttons).
 - The map is never unmounted on breakpoint change — only panels reflow. Resize must not drop sources/layers.
 - Ticker text scrolls on all classes; never wraps.
+- Frame budget on touch (keep panning at the display's refresh rate): the
+  map canvas caps at 2× device pixels with no MSAA; live-data `setData`
+  waits for the camera to stop; nothing re-renders the page on a timer or
+  a heartbeat (clock and stream age live in their own leaf / a ref); no
+  React state updates on map `move` unless something on screen follows the
+  camera; chrome hidden at a breakpoint is not mounted (a second WebGL
+  map costs even at `display: none`); panel scrollers use
+  `overscroll-behavior: contain`.
 - `body[data-bp]` mirrors the active class for JS (`desk|tab|phone`), set by `UI.breakpoint()` on resize.
 
 ## 2. Primitive catalog (use these, nothing else)

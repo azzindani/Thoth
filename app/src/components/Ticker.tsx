@@ -16,6 +16,34 @@ interface Feed {
 	warming?: boolean;
 }
 
+/** Link state renders with the pill (it changes rarely); the age of the
+ * last message is added on hover/focus only, so heartbeats never render. */
+function healthTitle(
+	sse: { ok: boolean; n: number } | undefined,
+	last?: number,
+) {
+	if (!sse) return "open server monitor";
+	const ago =
+		last === undefined
+			? ""
+			: ` · last message ${last ? `${Math.max(0, Math.round((Date.now() - last) / 1000))}s ago` : "never"}`;
+	return `open server monitor · SSE ${sse.ok ? "connected" : "RECONNECTING"}${ago} · ${sse.n} reconnects`;
+}
+
+/** The UTC clock re-renders itself once a second — only this text, not the
+ * whole ticker (hidden on phones by CSS). */
+function Clock() {
+	const [clock, setClock] = useState("--:--:--");
+	useEffect(() => {
+		const t = setInterval(
+			() => setClock(`${new Date().toISOString().slice(11, 19)}Z`),
+			1000,
+		);
+		return () => clearInterval(t);
+	}, []);
+	return <span className="clock">{clock}</span>;
+}
+
 export default function Ticker({
 	mode,
 	setMode,
@@ -27,6 +55,7 @@ export default function Ticker({
 	clear,
 	onClear,
 	sse,
+	sseLast,
 }: {
 	mode: string;
 	setMode: (m: string) => void;
@@ -38,9 +67,10 @@ export default function Ticker({
 	/** every panel hidden (clear view) */
 	clear: boolean;
 	onClear: () => void;
-	sse?: { ok: boolean; last: number; n: number };
+	sse?: { ok: boolean; n: number };
+	/** Time of the last stream message (a ref: heartbeats never re-render). */
+	sseLast?: { current: number };
 }) {
-	const [clock, setClock] = useState("--:--:--");
 	const [tape, setTape] = useState("booting…");
 	const [pill, setPill] = useState(<span>···</span>);
 	// Worker liveness (monitor P1): a dead worker otherwise only shows as
@@ -61,14 +91,6 @@ export default function Ticker({
 			stop = true;
 			clearInterval(t);
 		};
-	}, []);
-
-	useEffect(() => {
-		const t = setInterval(
-			() => setClock(`${new Date().toISOString().slice(11, 19)}Z`),
-			1000,
-		);
-		return () => clearInterval(t);
 	}, []);
 
 	useEffect(() => {
@@ -194,7 +216,7 @@ export default function Ticker({
 				LAYERS
 			</button>
 			<span className="logo">THOTH</span>
-			<span className="clock">{clock}</span>
+			<Clock />
 			<div className="tape">
 				<span id="tape-txt">{tape}</span>
 			</div>
@@ -204,11 +226,15 @@ export default function Ticker({
 				className="hpill"
 				id="health-pill"
 				onClick={onMonitor}
-				title={
-					sse
-						? `open server monitor · SSE ${sse.ok ? "connected" : "RECONNECTING"} · last message ${sse.last ? `${Math.max(0, Math.round((Date.now() - sse.last) / 1000))}s ago` : "never"} · ${sse.n} reconnects`
-						: "open server monitor"
-				}
+				// Written when the pointer or focus arrives, so "last message"
+				// is current without re-rendering on every heartbeat.
+				onPointerEnter={(e) => {
+					e.currentTarget.title = healthTitle(sse, sseLast?.current ?? 0);
+				}}
+				onFocus={(e) => {
+					e.currentTarget.title = healthTitle(sse, sseLast?.current ?? 0);
+				}}
+				title={healthTitle(sse)}
 				style={{
 					background: "none",
 					border: "none",

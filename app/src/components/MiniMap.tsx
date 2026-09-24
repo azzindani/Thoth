@@ -53,13 +53,21 @@ export default function MiniMap({
 					paint: { "circle-color": PALETTE.accent, "circle-radius": 2.5 },
 				});
 			});
+			// Last view drawn: an unmoved camera costs no setData or redraw.
+			let drawn = "";
 			timer = setInterval(() => {
 				const main = getMap();
 				if (!main || !m.isStyleLoaded()) return;
 				try {
 					const c = main.getCenter();
-					m.setCenter([c.lng, c.lat]);
 					const b = main.getBounds();
+					const key = `${c.lng.toFixed(4)},${c.lat.toFixed(4)},${b
+						.toArray()
+						.flat()
+						.map((v) => v.toFixed(4))}`;
+					if (key === drawn) return;
+					drawn = key;
+					m.setCenter([c.lng, c.lat]);
 					const ring = [
 						[b.getWest(), b.getSouth()],
 						[b.getEast(), b.getSouth()],
