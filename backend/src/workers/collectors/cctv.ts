@@ -3,13 +3,13 @@ import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
 import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
-// CCTV federation: SG LTA + TfL JamCams + Ontario 511 (all keyless, verified).
-// Dead/keyed (checked 2026-09-09, do NOT retry blind): Caltrans ArcGIS (empty),
-// 511 Alberta (Invalid Key), RWS NL (empty), WSDOT (access code required).
+// CCTV federation: SG LTA + TfL JamCams (keyless, verified).
+// Dead/keyed (do NOT retry blind): Caltrans ArcGIS (empty), 511 Alberta
+// (Invalid Key), RWS NL (empty), WSDOT (access code required) — checked
+// 2026-09-09; Ontario 511 (Invalid Key, dropped 2026-09-24).
 // Japan river cams are bare image URLs with no coord API — needs manual registry.
 const SG_URL = "https://api.data.gov.sg/v1/transport/traffic-images";
 const TFL_URL = "https://api.tfl.gov.uk/Place/Type/JamCam";
-const ON511_URL = "https://511on.ca/api/v2/get/cameras";
 
 const SgCam = z.object({
 	camera_id: z.string(),
@@ -125,45 +125,6 @@ export async function collect() {
 	} catch (e: unknown) {
 		errors.push(`tfl: ${errMsg(e)}`);
 		await markHealth("tfl-jamcam", false, errors[errors.length - 1]);
-	}
-
-	try {
-		assertSafeUrl(ON511_URL);
-		const res = await stealthFetch(ON511_URL);
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		const raw = (await res.json()) as unknown;
-		const cams = z
-			.array(
-				z.object({
-					Id: z.union([z.string(), z.number()]),
-					Location: z.string().nullable().optional(),
-					Roadway: z.string().nullable().optional(),
-					Latitude: z.number(),
-					Longitude: z.number(),
-				}),
-			)
-			.parse(Array.isArray(raw) ? raw : []);
-		await storeRaw("on511", layer, res.status, { n: cams.length });
-		for (const c of cams.slice(0, 400)) {
-			await storeNormalized({
-				id: `cctv:on511:${String(c.Id)}`,
-				ts: new Date().toISOString(),
-				source: "on511",
-				layer,
-				title: `${c.Location ?? "Ontario cam"} (${c.Roadway ?? "?"})`,
-				severity: "info",
-				confidence: 0.85,
-				lon: c.Longitude,
-				lat: c.Latitude,
-				entities: {},
-				meta: { roadway: c.Roadway },
-			});
-			n++;
-		}
-		await markHealth("on511", true);
-	} catch (e: unknown) {
-		errors.push(`on511: ${errMsg(e)}`);
-		await markHealth("on511", false, errors[errors.length - 1]);
 	}
 
 	probeOffset++;

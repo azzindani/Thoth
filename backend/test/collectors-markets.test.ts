@@ -137,7 +137,7 @@ describe("kalshi", () => {
 });
 
 describe("markets depth22", () => {
-	it("cg-global + blockchair + goldapi + nyfed + fiscal store rows", async () => {
+	it("cg-global + blockchair + nyfed + fiscal store rows", async () => {
 		globalThis.fetch = (async (url: unknown) => {
 			const u = String(url);
 			if (u.includes("polymarket")) return ok([], 500);
@@ -163,7 +163,6 @@ describe("markets depth22", () => {
 						transactions_24h: 797159,
 					},
 				});
-			if (u.includes("gold-api.com")) return ok({ price: 4287.9 });
 			if (u.includes("newyorkfed.org"))
 				return ok({
 					refRates: [
@@ -184,9 +183,9 @@ describe("markets depth22", () => {
 		const r = await markets();
 		assert.equal(r.ok, true);
 		const rows = await query<{ id: string }>(
-			"SELECT id FROM events WHERE source IN ('cg-global','blockchair','goldapi','nyfed','fiscaldata')",
+			"SELECT id FROM events WHERE source IN ('cg-global','blockchair','nyfed','fiscaldata')",
 		);
-		assert.equal(rows.length, 5);
+		assert.equal(rows.length, 4);
 	});
 });
 
@@ -203,7 +202,6 @@ describe("markets moex", () => {
 			if (u.includes("kalshi")) return ok({ markets: [] }, 500);
 			if (u.includes("coingecko.com/api/v3/global")) return ok({}, 500);
 			if (u.includes("blockchair.com")) return ok({}, 500);
-			if (u.includes("gold-api.com")) return ok({}, 500);
 			if (u.includes("newyorkfed.org")) return ok({ refRates: [] }, 500);
 			if (u.includes("avg_interest_rates")) return ok({ data: [] }, 500);
 			if (u.includes("fiscaldata.treasury.gov")) return ok({ data: [] }, 500);
@@ -242,7 +240,6 @@ describe("markets npm/crates (batch29, 2 rows)", () => {
 			if (u.includes("kalshi")) return ok({ markets: [] }, 500);
 			if (u.includes("coingecko.com/api/v3/global")) return ok({}, 500);
 			if (u.includes("blockchair.com")) return ok({}, 500);
-			if (u.includes("gold-api.com")) return ok({}, 500);
 			if (u.includes("newyorkfed.org")) return ok({ refRates: [] }, 500);
 			if (u.includes("avg_interest_rates")) return ok({ data: [] }, 500);
 			if (u.includes("fiscaldata.treasury.gov")) return ok({ data: [] }, 500);
@@ -288,7 +285,6 @@ describe("markets npm/crates (batch30, 4 rows)", () => {
 			if (u.includes("kalshi")) return ok({ markets: [] }, 500);
 			if (u.includes("coingecko.com/api/v3/global")) return ok({}, 500);
 			if (u.includes("blockchair.com")) return ok({}, 500);
-			if (u.includes("gold-api.com")) return ok({}, 500);
 			if (u.includes("newyorkfed.org")) return ok({ refRates: [] }, 500);
 			if (u.includes("avg_interest_rates")) return ok({ data: [] }, 500);
 			if (u.includes("fiscaldata.treasury.gov")) return ok({ data: [] }, 500);
@@ -338,7 +334,6 @@ describe("markets defi/exchanges", () => {
 			if (u.includes("kalshi")) return ok({ markets: [] }, 500);
 			if (u.includes("coingecko.com/api/v3/global")) return ok({}, 500);
 			if (u.includes("blockchair.com")) return ok({}, 500);
-			if (u.includes("gold-api.com")) return ok({}, 500);
 			if (u.includes("newyorkfed.org")) return ok({ refRates: [] }, 500);
 			if (u.includes("avg_interest_rates")) return ok({ data: [] }, 500);
 			if (u.includes("fiscaldata.treasury.gov")) return ok({ data: [] }, 500);
@@ -387,7 +382,6 @@ describe("markets nbp-pln + cbr", () => {
 			["api.elections.kalshi.com", () => ok({ markets: [] }, 500)],
 			["api.coingecko.com/api/v3/global", () => ok({}, 500)],
 			["api.blockchair.com", () => ok({}, 500)],
-			["api.gold-api.com", () => ok({}, 500)],
 			["markets.newyorkfed.org", () => ok({ rates: {} }, 500)],
 			["avg_interest_rates", () => ok({ data: [] }, 500)],
 			["fiscaldata.treasury.gov", () => ok({ data: [] }, 500)],
@@ -456,7 +450,6 @@ describe("markets pypi + rubygems + jsdelivr", () => {
 			["api.elections.kalshi.com", () => ok({ markets: [] }, 500)],
 			["api.coingecko.com/api/v3/global", () => ok({}, 500)],
 			["api.blockchair.com", () => ok({}, 500)],
-			["api.gold-api.com", () => ok({}, 500)],
 			["markets.newyorkfed.org", () => ok({ rates: {} }, 500)],
 			["avg_interest_rates", () => ok({ data: [] }, 500)],
 			["fiscaldata.treasury.gov", () => ok({ data: [] }, 500)],
@@ -528,7 +521,6 @@ describe("markets nasdaq-top", () => {
 			["api.elections.kalshi.com", () => ok({ markets: [] }, 500)],
 			["api.coingecko.com/api/v3/global", () => ok({}, 500)],
 			["api.blockchair.com", () => ok({}, 500)],
-			["api.gold-api.com", () => ok({}, 500)],
 			["markets.newyorkfed.org", () => ok({ rates: {} }, 500)],
 			["avg_interest_rates", () => ok({ data: [] }, 500)],
 			["fiscaldata.treasury.gov", () => ok({ data: [] }, 500)],
@@ -606,7 +598,6 @@ describe("markets cboe + fiscal-rates (batch61)", () => {
 			["api.elections.kalshi.com", () => ok({ markets: [] }, 500)],
 			["api.coingecko.com/api/v3/global", () => ok({}, 500)],
 			["api.blockchair.com", () => ok({}, 500)],
-			["api.gold-api.com", () => ok({}, 500)],
 			["markets.newyorkfed.org", () => ok({ rates: {} }, 500)],
 			[
 				"fiscaldata.treasury.gov/services/api/fiscal_service/v1",
@@ -755,7 +746,6 @@ describe("markets cg-movers/trending", () => {
 			["api.elections.kalshi.com", () => ok({ markets: [] }, 500)],
 			["api.coingecko.com/api/v3/global", () => ok({}, 500)],
 			["api.blockchair.com", () => ok({}, 500)],
-			["api.gold-api.com", () => ok({}, 500)],
 			["markets.newyorkfed.org", () => ok({ rates: {} }, 500)],
 			["avg_interest_rates", () => ok({ data: [] }, 500)],
 			["fiscaldata.treasury.gov", () => ok({ data: [] }, 500)],
@@ -820,7 +810,6 @@ describe("markets yahoo prev-close fallback", () => {
 			["api.elections.kalshi.com", () => ok({ markets: [] }, 500)],
 			["api.coingecko.com/api/v3/global", () => ok({}, 500)],
 			["api.blockchair.com", () => ok({}, 500)],
-			["api.gold-api.com", () => ok({}, 500)],
 			["markets.newyorkfed.org", () => ok({ rates: {} }, 500)],
 			["avg_interest_rates", () => ok({ data: [] }, 500)],
 			["fiscaldata.treasury.gov", () => ok({ data: [] }, 500)],

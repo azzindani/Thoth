@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 import { parseRSS } from "./news.js";
 
@@ -18,6 +19,11 @@ const TOPICS = [
 	"space debris",
 ];
 const HEALTH_TOPICS = ["viral hemorrhagic fever", "mpox", "avian influenza"];
+// Crossref's public pool allows 1 request/s (x-rate-limit-limit: 1,
+// interval 1s) and the topic loop fired back-to-back → 429. OpenAlex is
+// credit-metered (1000/day, 10 per search) — spaced too, to stay polite.
+const CROSSREF_SPACING_MS = 1500;
+const OPENALEX_SPACING_MS = 1000;
 
 const OpenAlexWork = z
 	.object({
@@ -94,7 +100,8 @@ export async function collect() {
 	// OpenAlex: scholarly works, keyless, polite single-topic pages.
 	try {
 		let stored = 0;
-		for (const q of TOPICS) {
+		for (const [i, q] of TOPICS.entries()) {
+			if (i) await sleep(OPENALEX_SPACING_MS);
 			const url =
 				`https://api.openalex.org/works?search=${encodeURIComponent(q)}` +
 				`&per-page=5&sort=publication_date:desc&select=id,title,doi,publication_date,cited_by_count,authorships,primary_location`;
@@ -143,7 +150,8 @@ export async function collect() {
 	// Crossref: publisher metadata mirror, keyless at daily rate.
 	try {
 		let stored = 0;
-		for (const q of TOPICS) {
+		for (const [i, q] of TOPICS.entries()) {
+			if (i) await sleep(CROSSREF_SPACING_MS);
 			const url =
 				`https://api.crossref.org/works?query=${encodeURIComponent(q)}` +
 				`&rows=5&sort=published&order=desc&select=DOI,title,published,author,URL,is-referenced-by-count`;
@@ -232,12 +240,13 @@ export async function collect() {
 		await markHealth("epmc", false, errors[errors.length - 1]);
 	}
 
-	// arXiv: one query/day (their 429 is per-second rate, not daily quota).
+	// arXiv: one query per run (their 429/406 is a per-IP throttle, not a
+	// daily quota). sortBy must be `submittedDate` — `submitted` answered 400.
 	// parseRSS reuse from news.js — Atom <entry> blocks.
 	try {
 		const url =
 			`https://export.arxiv.org/api/query?search_query=${encodeURIComponent("all:cyberwarfare OR all:autonomous weapons")}` +
-			`&sortBy=submitted&sortOrder=descending&max_results=10`;
+			`&sortBy=submittedDate&sortOrder=descending&max_results=10`;
 		assertSafeUrl(url);
 		const res = await stealthFetch(url, {}, 30000);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);

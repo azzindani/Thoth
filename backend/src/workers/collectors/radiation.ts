@@ -12,6 +12,10 @@ const EPA_COUNT_URL =
 	"https://data.epa.ie/radmon/api/v1/measurements?page=1&per_page=1";
 const EPA_PAGE_URL = (page: number) =>
 	`https://data.epa.ie/radmon/api/v1/measurements?page=${page}&per_page=100`;
+// The newest page is the deepest offset (~9.4M rows): it takes ~28 s to
+// serve, and the API ignores every ordering parameter (2026-09-24), so the
+// default 15 s fetch timeout aborted it on every run.
+const EPA_PAGE_TIMEOUT_MS = 60_000;
 
 const EPA = z.object({
 	measurement_id: z.union([z.string(), z.number()]).optional(),
@@ -86,7 +90,11 @@ export async function collect() {
 		const total = Number(cJson.count ?? 0);
 		if (!Number.isFinite(total) || total < 1) throw new Error("no count");
 		const lastPage = Math.max(1, Math.ceil(total / 100));
-		const pRes = await stealthFetch(EPA_PAGE_URL(lastPage));
+		const pRes = await stealthFetch(
+			EPA_PAGE_URL(lastPage),
+			{},
+			EPA_PAGE_TIMEOUT_MS,
+		);
 		if (!pRes.ok) throw new Error(`HTTP ${pRes.status}`);
 		const pJson = (await pRes.json()) as { list?: unknown };
 		const rows = z.array(EPA).parse(pJson.list ?? []);

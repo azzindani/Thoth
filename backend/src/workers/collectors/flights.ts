@@ -3,9 +3,11 @@ import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
-// Primary: adsb.lol (may 503 from cloud IPs). Fallback: OpenSky public (100 req/day anon).
-const ADSB_URL =
-	"https://api.adsb.lol/v2/states/all?lamin=45&lamax=55&lomin=5&lomax=15";
+// Primary: adsb.lol. Fallback: OpenSky public (100 req/day anon).
+// adsb.lol retired its OpenSky-style /v2/states/all (503 since 2026-09); the
+// radius query over the same central-European box (50N 10E, 250 NM ≈ 45–55N,
+// 4–16E) returns the same `ac` records.
+const ADSB_URL = "https://api.adsb.lol/v2/point/50/10/250";
 const OPENSKY_URL =
 	"https://opensky-network.org/api/states/all?lamin=45&lamax=55&lomin=5&lomax=15";
 // Extra theater/city regions (same shape): Tokyo Bay, Sydney Basin,
@@ -39,7 +41,8 @@ const Ac = z.object({
 	flight: z.string().nullable().optional(),
 	lat: z.number().nullable().optional(),
 	lon: z.number().nullable().optional(),
-	alt_baro: z.number().nullable().optional(),
+	// Aircraft on the ground report alt_baro "ground" (~30% of a busy sweep).
+	alt_baro: z.union([z.number(), z.string()]).nullable().optional(),
 	track: z.number().nullable().optional(),
 });
 

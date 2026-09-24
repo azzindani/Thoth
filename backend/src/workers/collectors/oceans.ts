@@ -305,11 +305,18 @@ export async function collect() {
 			errors.push(`coopspres/${st.id}: ${errMsg(e)}`);
 		}
 	}
-	const coopspresOk = !errors.some((e) => e.startsWith("coopspres/"));
+	// Pressure is sparse-by-design like wind: only met-equipped stations carry a
+	// barometer. Green when ≥1 reports; the error names pressure misses only
+	// (it used to dump every earlier leg's notes and fail on one bare station).
+	const presSkips = errors.filter((e) => e.startsWith("coopspres/"));
+	for (const s of presSkips) errors.splice(errors.indexOf(s), 1);
+	const presHits = COOPS_STATIONS.length - presSkips.length;
 	await markHealth(
 		"coops-pressure",
-		coopspresOk,
-		coopspresOk ? undefined : errors.join("; "),
+		presHits >= 1,
+		presSkips.length
+			? `${presHits}/${COOPS_STATIONS.length} stations; skips: ${presSkips.join("; ").slice(0, 300)}`
+			: undefined,
 	);
 	// CO-OPS tide predictions hilo (same datagetter, product=predictions):
 	// next high/low waters at The Battery — the forecast leg next to

@@ -129,22 +129,38 @@ describe("ems", () => {
 		assert.deepEqual([a[0].lon, a[0].lat], [11.3, 44.5]);
 		assert.deepEqual(a[0].countries, ["Italy"]);
 	});
-	it("falls back to RSS when the API fails", async () => {
+	it("falls back to the EMS portal list when the dashboard fails", async () => {
 		stub([
 			[/dashboard-api/, () => new Response("down", { status: 502 })],
 			[
-				/activations-rapid\/feed/,
-				text(
-					`<rss><channel><item><title>EMSR900: Wildfire in Attica</title><pubDate>Mon, 21 Sep 2026 10:00:00 GMT</pubDate><georss:point>38.0 23.7</georss:point></item></channel></rss>`,
-				),
+				/mapping\.emergency\.copernicus\.eu\/activations\/api/,
+				json({
+					results: [
+						{
+							code: "EMSR900",
+							name: "Wildfire in Attica",
+							countries: [{ short_name: "Greece" }],
+							category: { slug: "fire", name: "Wildfire" },
+							centroid: "POINT (23.7 38.0)",
+							activationTime: "2026-09-21T10:00:00",
+							closed: false,
+						},
+					],
+				}),
 			],
 		]);
 		const r = await ems.collect();
-		assert.deepEqual([r.ok, (r as { via?: string }).via], [true, "rss"]);
+		assert.deepEqual([r.ok, (r as { via?: string }).via], [true, "portal"]);
 		const [row] = await rows("copernicus-ems");
 		assert.equal(row.id, "ems:EMSR900");
 		assert.equal(row.severity, "watch");
 		assert.deepEqual([row.lat, row.lon], [38, 23.7]);
+	});
+	it("fails honestly when both lists are down", async () => {
+		stub([]);
+		const r = await ems.collect();
+		assert.equal(r.ok, false);
+		assert.match(String((r as { error?: string }).error), /api: .*portal: /);
 	});
 });
 

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 import { parseRSS } from "./news.js";
 
@@ -11,6 +12,27 @@ const EXTRA: { source: string; url: string }[] = [
 	{ source: "ocha", url: "https://www.unocha.org/rss.xml?q=/rss.xml" },
 	{ source: "ifrc", url: "https://www.ifrc.org/rss.xml?q=/rss.xml" },
 ];
+// OCHA answers 406 to fetch's default `Accept: */*` (2026-09-24) and 200 once
+// the request asks for a feed — plain content negotiation, same for IFRC.
+// Even then one of its AWS load-balancer nodes answers 406, and a kept-alive
+// connection stays pinned to it (8/8 retries 406 on keep-alive, 200 within
+// three tries with `Connection: close` — curl, a fresh connection each time,
+// never saw it). So OCHA/IFRC requests close their connection, and a 406 is
+// retried on a new one.
+const FEED_ACCEPT = "application/rss+xml, application/xml;q=0.9, */*;q=0.8";
+const RETRIES_ON_406 = 3;
+const RETRY_PAUSE_MS = 3000;
+
+async function fetchFeed(url: string): Promise<Response> {
+	for (let attempt = 0; ; attempt++) {
+		const res = await stealthFetch(url, {
+			headers: { Accept: FEED_ACCEPT, Connection: "close" },
+		});
+		if (res.status !== 406 || attempt >= RETRIES_ON_406) return res;
+		await res.arrayBuffer();
+		await sleep(RETRY_PAUSE_MS);
+	}
+}
 
 export async function collect() {
 	const source = "reliefweb";
@@ -60,7 +82,7 @@ async function collectExtra(): Promise<number> {
 	for (const f of EXTRA) {
 		try {
 			assertSafeUrl(f.url);
-			const res = await stealthFetch(f.url);
+			const res = await fetchFeed(f.url);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const items = parseRSS(await res.text(), 15);
 			await storeRaw(f.source, "news", res.status, { n: items.length });
