@@ -143,6 +143,11 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ≈ 630): new `succeededWithin()` store helper, the leg skips when its
   latest run succeeded within 4.5 h (a failed latest run is retried at once).
   epmc left failing (upstream 503, see outages).
+- [x] Keyless loop-16 (2026-09-24): fix run. The Akamai edge path fault
+  persisted (aljazeera failing, bbc/dw flapping): news RSS legs get one
+  spaced retry on a connect-level failure, HTTP errors and read timeouts
+  untouched; new `collectors-news` contract tests. Nothing shipped (a fix
+  run).
 - [x] Keyless loop-15 (2026-09-24): nothing fixable failing at the start.
   Shipped IFRC GO emergencies → `disasters` (new `emergencies`, source
   `ifrc-go`: 71 emergencies of the last 90 days, all placed, active appeal
@@ -198,8 +203,13 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
     bbc + aljazeera (from 10:23 UTC 2026-09-24: about half of all TCP
     connects from this host to the Akamai edge 23.195.240.0/24 time out —
     host and worker alike, other feeds fine; dw on another Akamai edge
-    flaps too). Network path, not code; re-probe next run, and if it
-    persists give the news legs one spaced retry on connect errors.
+    flaps too). Network path, not code. It persisted into the next run
+    (aljazeera 6/7 calls failing in 30 min), so the news legs now retry a
+    failed connect once after 3 s (`fetchFeed` in news.ts): three live runs
+    from the host all landed bbc, aljazeera and dw; in production after the
+    deploy aljazeera and dw landed 2/2 runs, bbc 1/2 (both attempts lost
+    once) — all three back to "ok". If bbc keeps losing runs, the edge
+    fault is the operator's (the retry is not a way around it).
   - **Dropped:** goldapi (its DNS answers NXDOMAIN for AAAA; musl takes that
     as no-such-host; Yahoo carries gold), on511 (now "Invalid Key").
 - [ ] Blocked from this host — needs an operator decision (2026-09-24). Owner:
