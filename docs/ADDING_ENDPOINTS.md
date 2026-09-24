@@ -24,16 +24,58 @@ GET /api/stats   # must include myfeed count
 GET /api/health  # must include myfeed lag
 ```
 
-## Backlog (more open-source endpoints welcome)
+## Candidate queue (keyless only — the loop works top-down)
 
-| Source | Layer | Poll | Status | Notes |
-|---|---|---|---|---|
-| Safecast radiation | radiation | 5m | proposed | keyless, complements USGS/FIRMS |
-| OpenSky OAuth2 | flights | 60s | proposed | higher limits vs adsb.lol |
-| AISHub REST | ships | 5m | proposed | fallback to aisstream WS |
-| ReliefWeb | disasters | 10m | proposed | needs appname |
-| OpenAQ / WAQI | air-quality | 10m | proposed | free key |
-| UNHCR/OCHA HAPI | displacement | daily | proposed | keyless |
-| Add yours here | — | — | open | keep keyless-first |
+Keyed sources (OpenSky OAuth2, AISHub, OpenAQ/WAQI, ACLED, …) are out of the
+loop by definition; they stay in DATA_SOURCES.md "Free-key".
 
-When a source is live, move it to `ENDPOINTS.md` + `DATA_SOURCES.md` and mark `live`.
+| Source | Layer | Status | Notes |
+|---|---|---|---|
+| warnung.bund.de KATWARN + BIWAPP + LHP floods (`/api31/{katwarn,biwapp,lhp}/mapData.json`) | disasters | next | same shape as MoWaS (batch34) — extend `warnings` |
+| Pegelonline German river gauges (`/webservices/rest-api/v2/stations.json`) | oceans | next | probed 200, ~620KB with current levels; pick flood-relevant gauges |
+| Vigicrues France flood vigilance (`vigicrues.gouv.fr/services/1/InfoVigiCru.jsonld`) | disasters | candidate | keyless per docs; probe |
+| waterlevel.ie (OPW Ireland) GeoJSON | oceans | candidate | keyless; probe |
+| Queensland / WA / SA / TAS bushfire alert feeds | fires | candidate | same AU warning levels as NSW/VIC — extend `wildfires` |
+| Canada CWFIS active fires | fires | blocked | old CSV path 404s (2026-09-24); find the current one |
+| JMA warnings (`jma.go.jp/bosai/warning/data/…`) + HKO warning summary (`warnsum`) | weather | candidate | keyless JSON |
+| abuse.ch SSLBL + CERT-FR / NCSC-UK / JPCERT advisories | cyber | candidate | CSV / RSS |
+| WHO Disease Outbreak News API | health | candidate | keyless JSON |
+| ReliefWeb API | disasters | check | appname may now need approval — probe before building |
+
+When a source is live, move it to `ENDPOINTS.md` + `DATA_SOURCES.md` and drop
+its row here. Add new finds at the bottom with a one-line probe note.
+
+## Keyless loop (the recurring shipping job)
+
+One run ships one small batch (2–6 sources). Every step is on the real host,
+in one checkout on `main` — no subagents, no worktrees, no branches.
+
+1. **Pick** from the candidate queue (or find new ones). Grep `backend/src`
+   for the upstream host first — 300+ sources exist and duplicates waste a run.
+2. **Probe live** from the host *and* from inside the worker container
+   (`docker compose exec worker node -e 'fetch(…)'`) — some upstreams refuse
+   this VPS's egress. Drop anything that needs a key or signup, 4xx/5xx, or has
+   unclear terms. Note the drop in the queue.
+3. **Build** by extending the collector that owns the theme, or a new
+   `collectors/<name>.ts` + `registry.ts` entry; add every new source to
+   `api/source-map.ts`, and to `NEVER_FROZEN` in `api/freeze.ts` if it
+   publishes a current picture that can legitimately be empty. Current-picture
+   feeds `pruneStale` after a successful poll; a changed payload shape throws
+   rather than emptying the layer. Points only on point layers (`lib/geo.ts`
+   `pointOf` for areas). ≤700 LOC per file.
+4. **Test**: contract test `test/collectors-batchNN.test.ts` with stubbed
+   fetch, then run the real collector once against the **test DB only**
+   (`thoth-testdb` container, `postgres://thoth:thoth@127.0.0.1:55432/thoth_test`
+   — the collector suites TRUNCATE, never point them at production). Gates:
+   `npm run typecheck && npm run lint && npm run test:collectors && npm run test:unit`.
+5. **Receipts**: ENDPOINTS.md row, DATA_SOURCES.md rows, PHASES.md ledger row,
+   OUTSTANDING.md entry, queue updated here.
+6. **Deploy**: `cd backend && docker compose up -d --build worker` (add `api`
+   when routes changed, `app` when the UI/catalog changed). Confirm in
+   production (read-only): the new sources' `feed_health` rows have `last_ok`
+   and no error, and their events landed with geometry.
+7. **Commit on `main` and push.** A source that fails in production gets fixed
+   or reverted before the push — never push red.
+
+Out of candidates for a run? Spend it on the fix-or-drop list of failing
+keyless feeds in OUTSTANDING.md instead.

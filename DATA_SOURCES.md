@@ -50,6 +50,9 @@ Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch
 | research | DOAJ articles + DataCite datasets | daily | open-access + data legs |
 | sanctions | UN Security Council consolidated XML | static | build-unsanctions.ts, 1,011 rows dataset='unsc' |
 | conflicts | UCDP GED v26.1 per-conflict aggregates (free research use) | static | build-ucdp.ts, 10→70 (downloads path, API needs token — not used) |
+| fires | CAL FIRE incidents API + NSW RFS majorIncidents GeoJSON + Emergency Management Victoria events GeoJSON | 15m | named agency incidents next to FIRMS hotspots; current picture, pruned |
+| weather | Environment Canada alerts (MSC GeoMet OGC API `weather-alerts`, Open Government Licence – Canada) | 15m | slow upstream (~25s), 60s timeout; one marker per alerted region |
+| disasters | Environment Agency flood warnings (England, OGL v3) + MoWaS via warnung.bund.de (BBK) | 15m | flood levels 1–3; civil-protection CAP alerts; current picture, pruned |
 
 ## Free-key (depth / limits)
 

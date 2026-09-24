@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { centroid } from "../lib/geo.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 import { parseRSS } from "./news.js";
 
@@ -60,34 +61,6 @@ function windOf(d: Record<string, unknown>): string {
 function precipOf(d: Record<string, unknown>): string {
 	const p = numOf(d, "precipitation_amount");
 	return p === null ? "?" : `${p}mm`;
-}
-
-export function centroid(g: unknown): { lon: number; lat: number } | null {
-	try {
-		const flat: Array<[number, number]> = [];
-		const walk = (c: unknown): void => {
-			if (
-				Array.isArray(c) &&
-				typeof c[0] === "number" &&
-				typeof c[1] === "number"
-			) {
-				flat.push([c[0], c[1]]);
-			} else if (Array.isArray(c)) {
-				c.forEach(walk);
-			}
-		};
-		walk((g as { coordinates?: unknown } | null)?.coordinates);
-		if (!flat.length) return null;
-		let x = 0;
-		let y = 0;
-		for (const [lon, lat] of flat) {
-			x += lon;
-			y += lat;
-		}
-		return { lon: x / flat.length, lat: y / flat.length };
-	} catch {
-		return null;
-	}
 }
 
 export async function collect() {
