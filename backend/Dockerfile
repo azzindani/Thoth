@@ -1,5 +1,5 @@
 # Thoth backend — multi-stage, non-root, reproducible (npm ci from committed lockfile).
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -8,7 +8,7 @@ COPY src ./src
 # Compiling is the image's typecheck; lint + tests are CI gates, not build steps.
 RUN npx tsc -p tsconfig.json
 
-FROM node:22-alpine AS runtime
+FROM node:25-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
