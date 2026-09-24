@@ -8,7 +8,7 @@ security model, configuration, deploy checklist, operations, upgrade notes.
 
 ```
  user ──► tunnel / reverse proxy ──► app :3000 (Next.js)
-                                        │  src/proxy.ts: APP_BASIC_AUTH gate,
+                                        │  src/proxy.ts: access-token gate,
                                         │  injects API_WRITE_KEY on writes
                                         ▼  rewrite /api/* → http://api:4000 (compose network)
                                       api :4000 (Express) ──► db (Timescale + PostGIS)
@@ -19,15 +19,29 @@ security model, configuration, deploy checklist, operations, upgrade notes.
 - **Only the app faces users.** Compose binds the API to `127.0.0.1` (host
   cron + debugging) and the DB to nothing. The browser talks same-origin to
   the app; the app proxies `/api/*` over the internal network.
-- **Reads are public to whoever can reach the app.** Put `APP_BASIC_AUTH`
-  (or an SSO proxy such as Cloudflare Access) in front if the data must not be.
+- **The access gate (ported from Folio).** With `APP_ACCESS_KEY` set, every
+  page and `/api` call needs a valid token: `Authorization: Bearer <key>`,
+  `?token=<key>`, or the `thoth_session` cookie. Open
+  `https://<host>/?token=<key>` once: the app sets a 30-day `HttpOnly`
+  session cookie (a stateless HS256 JWT) and redirects to the same URL
+  without the token, so the key leaves the address bar and history. Each
+  page load renews the window. No username/password, no browser popup —
+  unauthenticated pages get a plain 401 page, `/api` a 401 JSON body.
+  Unset, the app is open to whoever can reach it (local dev, or behind an
+  SSO proxy with `APP_TRUST_UPSTREAM_AUTH=1`).
+- **Revoking access.** Extra keys in `APP_TOKENS` (`name:key,…`) or
+  `APP_TOKENS_FILE` (JSON `{"name":"key"}`, re-read per request) can be
+  removed one by one. Sessions are signed with `APP_JWT_SECRET`, or
+  `APP_ACCESS_KEY` when that is unset — rotating the signing secret logs
+  every browser out.
 - **Writes need the key.** Every POST/PUT/PATCH/DELETE on `/api` requires
   `API_WRITE_KEY` (`Authorization: Bearer <key>` or `X-Thoth-Key`). With
   `NODE_ENV=production` and no key configured, the API refuses all writes
   (fail closed). The app attaches the key server-side — it never reaches the
-  browser — and only for callers it has vetted: passed `APP_BASIC_AUTH`, or
+  browser — and only for callers it has vetted: passed the access gate, or
   `APP_TRUST_UPSTREAM_AUTH=1` when an auth proxy in front vouches for them.
-  Anonymous visitors' writes arrive keyless and get `401`.
+  Anonymous visitors' writes arrive keyless and get `401`. The app never
+  forwards a caller's own `Authorization` header to the API.
 
 ## 2. Configuration reference
 
@@ -57,7 +71,11 @@ App (`app/src/proxy.ts`, `app/next.config.ts`):
 
 | Var | When | Notes |
 |---|---|---|
-| `APP_BASIC_AUTH` | runtime | `user:pass`; gates pages + `/api`; `/healthz` stays open |
+| `APP_ACCESS_KEY` | runtime | operator key; gates pages + `/api`; `/healthz` stays open |
+| `APP_TOKENS` | runtime | extra keys, `name:key,name2:key2` |
+| `APP_TOKENS_FILE` | runtime | extra keys, JSON `{"name":"key"}` (needs a mount in compose) |
+| `APP_JWT_SECRET` | runtime | session signing secret; defaults to `APP_ACCESS_KEY` |
+| `APP_SESSION_TTL_MS` | runtime | session cookie lifetime; default 30 days |
 | `APP_TRUST_UPSTREAM_AUTH` | runtime | `1` = an auth proxy in front vets users; key injected for all |
 | `API_WRITE_KEY` | runtime | same value as the API's |
 | `THOTH_API_INTERNAL` | **build** | rewrite target baked into the build (`http://api:4000` in compose) |
@@ -69,11 +87,13 @@ App (`app/src/proxy.ts`, `app/next.config.ts`):
 cd backend
 export POSTGRES_PASSWORD=$(openssl rand -hex 32)
 export API_WRITE_KEY=$(openssl rand -hex 32)
-export APP_BASIC_AUTH="ops:$(openssl rand -hex 12)"   # or APP_TRUST_UPSTREAM_AUTH=1 behind SSO
+export APP_ACCESS_KEY=$(openssl rand -hex 32)   # or APP_TRUST_UPSTREAM_AUTH=1 behind SSO
 docker compose up -d --build        # db → migrate → seed → api + worker → app
 curl -sf localhost:4000/api/readyz  # {"ok":true,...}
 curl -sf localhost:3000/healthz     # {"ok":true}
 ```
+
+Then open `https://<host>/?token=$APP_ACCESS_KEY` once per browser.
 
 Keep the three secrets in the host's secret store, not in shell history.
 `docker compose config -q` fails fast if any required variable is missing.
@@ -125,7 +145,22 @@ Keep the three secrets in the host's secret store, not in shell history.
 - **Demo / CI data:** `npm run db:seed:fixtures` (refuses in production;
   `-- --clean` removes every `fixture:` row).
 
-## 5. Upgrade notes (2026-09-23 hardening)
+## 5. Upgrade notes
+
+### 2026-09-24: access-token gate, compose project name
+
+1. **`APP_BASIC_AUTH` is gone.** The app now uses Folio's token gate (§1).
+   Set `APP_ACCESS_KEY` instead and log in once with `?token=`; scripts
+   send `Authorization: Bearer <key>`. A leftover `APP_BASIC_AUTH` is
+   ignored, which leaves the app **open** — set the new key before
+   upgrading.
+2. **The compose project is now `thoth`** (it was `backend`, from the
+   directory name), so containers are `thoth-<service>-1` and the database
+   volume is `thoth_thoth_pg`. On a host that ran the old compose, dump
+   first (`docker compose -p backend exec db pg_dump -U thoth -Fc thoth`),
+   bring the new stack up, then `pg_restore` as in the next section.
+
+### 2026-09-23: hardening
 
 1. **Database volume path changed — dump before upgrading.** The old compose
    mounted the volume at `/var/lib/postgresql/data`, but `timescaledb-ha`

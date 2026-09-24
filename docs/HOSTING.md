@@ -10,7 +10,7 @@ Security model, full env reference and upgrade notes: `PRODUCTION.md`.
 git clone <repo> thoth && cd thoth/backend
 export POSTGRES_PASSWORD=$(openssl rand -hex 32)   # required
 export API_WRITE_KEY=$(openssl rand -hex 32)       # required (writes fail closed without it)
-export APP_BASIC_AUTH="ops:<strong>"               # strongly recommended behind a public tunnel
+export APP_ACCESS_KEY=$(openssl rand -hex 32)      # strongly recommended once exposed
 docker compose up -d --build         # db → migrate → seed → api + worker + app
 sleep 60 && curl -s localhost:4000/api/stats | head -c 200
 ```
@@ -24,7 +24,7 @@ Expected: `{"serverTs":...}` with ~28 layers. Full freshness within ~6h
 |---|---|---|
 | `POSTGRES_PASSWORD` | (required) | strong secret |
 | `API_WRITE_KEY` | (required) | strong secret; the app injects it server-side for vetted users |
-| `APP_BASIC_AUTH` | unset (open) | `user:pass` — gate for the whole terminal; or `APP_TRUST_UPSTREAM_AUTH=1` behind SSO |
+| `APP_ACCESS_KEY` | unset (open) | gate for the whole terminal — open `/?token=<key>` once per browser; or `APP_TRUST_UPSTREAM_AUTH=1` behind SSO |
 | `REQUESTS_PER_MIN` | 300 (compose) | per real client IP now; raise only for load tests from one IP |
 | `OTX_API_KEY` | unset (honest-disabled) | free-signup key enables pulse intel |
 | `TELEGRAM_CHANNELS` | osintdefender,war_monitor,aljazeeraenglish | adjust anytime, worker picks up on restart |
@@ -70,3 +70,23 @@ Diagnose a frozen UI via browser console (`_next/static/chunks/*.js → 500`).
 - `backend/public/index.html` terminal: bannered, **delete after 2026-10-09**.
 - Rollback: previous day's dump (`pg_restore`) or fast path
   (migrate + `seed-statics.js` + 6h collector refill).
+
+## 6. Behind the shared Caddy router (thoth.casava.space)
+
+On the casava VPS, Thoth sits behind the same Caddy router as Folio, Kea and
+the others (`/root/caddy-router`, repo `Caddy_Router`), which owns :80/:443
+and TLS. No tunnel is involved.
+
+- Secrets live in `backend/.env` (gitignored, mode 600): `POSTGRES_PASSWORD`,
+  `API_WRITE_KEY`, `APP_ACCESS_KEY`. Compose reads it automatically.
+- `docker compose up -d --build` from `backend/` creates the `thoth_edge`
+  network, which holds only the app. The router joins that network and
+  proxies `thoth.casava.space` to `thoth-app-1:3000` with
+  `flush_interval -1` (the `/api/stream` SSE must not be buffered). The
+  router adds no auth of its own: the app's token gate is the only one, the
+  same arrangement as Folio's editor.
+- Log in once per browser at `https://thoth.casava.space/?token=<APP_ACCESS_KEY>`.
+- Rebuilds and `docker compose down`/`up` leave the router attached: `down`
+  reports `thoth_edge` as "still in use" and keeps it, and `up` reuses it.
+  If the network is ever deleted, re-attach it without restarting the
+  router: `docker network connect thoth_edge caddy-router`.

@@ -130,6 +130,10 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   (data lived in the container layer — dump before upgrading, PRODUCTION.md §5);
   app image build failed on a missing public/ dir; browser bypassed the app to
   hit :4000; API port no longer published on 0.0.0.0; log rotation.
+- [x] Access gate (2026-09-24, PRODUCTION.md §1): Folio's token model replaces
+  APP_BASIC_AUTH — ?token= swapped for a 30-day sliding HS256 session cookie,
+  Bearer for scripts, named revocable keys. Compose project named `thoth`, app
+  on a `thoth_edge` network for the shared Caddy router (HOSTING.md §6).
 - [x] CI deterministic (2026-09-23): fixture dataset + statics seeded, jobs split
   (static / db / app / docker image build), Node 22, dependabot. Upstream-bound
   checks left: alive warm-up (attempts only), RIPEstat/NVD/crt.sh lookups.
