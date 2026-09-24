@@ -134,6 +134,11 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   production host before shipping — CAL FIRE, NSW RFS, VIC EMV → `fires`; ECCC
   alerts → `weather`; EA floods, MoWaS → `disasters`. Loop recipe + candidate
   queue: ADDING_ENDPOINTS.md.
+- [x] Keyless loop-11 (2026-09-24): fixed reddit (arctic-shift full-text
+  search 422s on r/worldnews → newest-100 listing, hazard titles matched
+  locally) and om-flood (one stalled gauge failed the whole leg → per-gauge
+  errors); shipped batch36 — Pegelonline gauges → `oceans`, HKO warnings →
+  `weather`. Vigicrues blocked from this host (added to the queue).
 - [x] Keyless loop-10 / batch35 (2026-09-24): QLD Fire, WA DFES, ACT ESA →
   `fires`; KATWARN, BIWAPP, LHP floods, police (warnung.bund.de) →
   `disasters`. Probed live on the production host before shipping.

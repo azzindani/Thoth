@@ -55,6 +55,8 @@ Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch
 | disasters | Environment Agency flood warnings (England, OGL v3) + MoWaS via warnung.bund.de (BBK) | 15m | flood levels 1–3; civil-protection CAP alerts; current picture, pruned |
 | fires | Queensland Fire Department bushfire alerts GeoJSON + WA DFES `/v1/incidents` + `/v1/warnings` + ACT ESA current-incidents GeoRSS | 15m | AU warning levels; WA/ACT filtered to fire items; current picture, pruned |
 | disasters | warnung.bund.de KATWARN, BIWAPP, LHP (cross-state flood portal), police | 15m | same CAP shape + footprint lookup as MoWaS; often empty (honest) |
+| oceans | Pegelonline (WSV) federal waterway gauges, DL-DE/Zero | 1h | reference gauges + anything above mean high water; state vs MNW/MHW/HSW |
+| weather | Hong Kong Observatory open data `warnsum` | 15m | warnings in force, `{}` when quiet |
 
 ## Free-key (depth / limits)
 

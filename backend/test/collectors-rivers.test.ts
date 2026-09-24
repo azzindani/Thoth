@@ -56,3 +56,33 @@ describe("rivers", () => {
 		assert.equal(rows.length, 1);
 	});
 });
+
+describe("om-flood", () => {
+	it("one stalled gauge no longer fails the other seven", async () => {
+		globalThis.fetch = (async (url: unknown) => {
+			const u = String(url);
+			if (!u.includes("flood-api.open-meteo.com"))
+				return new Response("{}", { status: 500 });
+			if (u.includes("latitude=48.21"))
+				throw new DOMException("This operation was aborted", "AbortError");
+			return new Response(
+				JSON.stringify({
+					daily: {
+						time: ["2026-09-23", "2026-09-24"],
+						river_discharge: [900, 950],
+					},
+				}),
+			);
+		}) as typeof fetch;
+		await rivers();
+		const [h] = await query<{ ok: boolean; error: string | null }>(
+			"SELECT (last_ok IS NOT NULL) AS ok, error FROM feed_health WHERE source='om-flood'",
+		);
+		assert.equal(h.ok, true);
+		assert.match(h.error ?? "", /^7\/8 points; misses: Danube-Vienna: /);
+		const [c] = await query<{ n: number }>(
+			"SELECT count(*)::int AS n FROM events WHERE source='om-flood'",
+		);
+		assert.equal(c.n, 7);
+	});
+});

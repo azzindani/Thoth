@@ -31,12 +31,11 @@ loop by definition; they stay in DATA_SOURCES.md "Free-key".
 
 | Source | Layer | Status | Notes |
 |---|---|---|---|
-| Pegelonline German river gauges (`/webservices/rest-api/v2/stations.json`) | oceans | next | probed 200, ~620KB with current levels; pick flood-relevant gauges |
-| Vigicrues France flood vigilance (`vigicrues.gouv.fr/services/1/InfoVigiCru.jsonld`) | disasters | candidate | keyless per docs; probe |
-| waterlevel.ie (OPW Ireland) GeoJSON | oceans | candidate | keyless; probe |
+| Vigicrues France flood vigilance (`vigicrues.gouv.fr/services/1/InfoVigiCru.jsonld`) | disasters | blocked | TCP connect times out from this host and the worker (2026-09-24; same IP on both resolvers) — operator |
+| waterlevel.ie (OPW Ireland) GeoJSON | oceans | parked | live (464 level sensors, CC BY 4.0) but no flood thresholds — every reading would be an unrankable info dot; needs per-station statistics first |
 | SA CFS / TAS TFS / NT PFES bushfire feeds | fires | blocked | old paths moved (2026-09-24: SA `data.eso.sa.gov.au` 197B HTML, TAS 410, NT 404) — find current ones, then extend `wildfires` |
 | Canada CWFIS active fires | fires | blocked | old CSV path 404s (2026-09-24); find the current one |
-| JMA warnings (`jma.go.jp/bosai/warning/data/…`) + HKO warning summary (`warnsum`) | weather | candidate | keyless JSON |
+| JMA warnings (`jma.go.jp/bosai/warning/data/…`) | weather | candidate | keyless JSON (HKO `warnsum` shipped in batch36) |
 | abuse.ch SSLBL + CERT-FR / NCSC-UK / JPCERT advisories | cyber | candidate | CSV / RSS |
 | WHO Disease Outbreak News API | health | candidate | keyless JSON |
 | ReliefWeb API | disasters | check | appname may now need approval — probe before building |
