@@ -235,6 +235,14 @@ export const COLLECTORS = {
 	},
 	// National CERT advisories.
 	certs: { module: "./collectors/certs.js", intervalSec: 1800, ttlSec: 3600 },
+	// WHO Disease Outbreak News.
+	outbreaks: {
+		module: "./collectors/outbreaks.js",
+		intervalSec: 10800,
+		ttlSec: 21600,
+	},
+	// Malware C2 TLS certificate fingerprints.
+	sslbl: { module: "./collectors/sslbl.js", intervalSec: 3600, ttlSec: 7200 },
 	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
 } as const;
 

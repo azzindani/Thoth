@@ -362,4 +362,8 @@ export const SOURCE_MAP: Record<
 	"cert-eu": { collector: "certs", intervalSec: 1800 },
 	cccs: { collector: "certs", intervalSec: 1800 },
 	jpcert: { collector: "certs", intervalSec: 1800 },
+	// outbreaks: WHO Disease Outbreak News.
+	"who-don": { collector: "outbreaks", intervalSec: 10800 },
+	// sslbl: malware C2 TLS certificate fingerprints.
+	sslbl: { collector: "sslbl", intervalSec: 3600 },
 };
