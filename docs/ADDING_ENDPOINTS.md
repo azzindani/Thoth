@@ -36,7 +36,9 @@ loop by definition; they stay in DATA_SOURCES.md "Free-key".
 | SA CFS / TAS TFS / NT PFES bushfire feeds | fires | blocked | old paths moved (2026-09-24: SA `data.eso.sa.gov.au` 197B HTML, TAS 410, NT 404) — find current ones, then extend `wildfires` |
 | Canada CWFIS active fires | fires | blocked | old CSV path 404s (2026-09-24); find the current one |
 | JMA warnings (`jma.go.jp/bosai/warning/data/…`) | weather | candidate | keyless JSON (HKO `warnsum` shipped in batch36) |
-| abuse.ch SSLBL + CERT-FR / NCSC-UK / JPCERT advisories | cyber | candidate | CSV / RSS |
+| abuse.ch SSLBL (`sslbl.abuse.ch/blacklist/sslblacklist.csv`) | cyber | candidate | CSV, 813 KB (CERT-FR/CERT-EU/CCCS/JPCERT advisories shipped as `certs`) |
+| NCSC-UK feeds (`ncsc.gov.uk/api/1/services/v1/*-rss-feed.xml`) | cyber | parked | live, but news/reports/guidance only — no advisory feed to grade |
+| ACSC cyber.gov.au alerts/advisories RSS | cyber | blocked | HTTP/2 stream reset, then connect/read timeouts from this host (2026-09-24) — operator |
 | WHO Disease Outbreak News API | health | candidate | keyless JSON |
 | ReliefWeb API | disasters | check | appname may now need approval — probe before building |
 

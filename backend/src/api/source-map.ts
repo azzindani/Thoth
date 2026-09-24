@@ -24,6 +24,7 @@ export const SOURCE_MAP: Record<
 	"awc-taf": { collector: "metar", intervalSec: 900 },
 	bazaar: { collector: "cyber", intervalSec: 900 },
 	bbc: { collector: "news", intervalSec: 300 },
+	"bfs-odl": { collector: "radiation", intervalSec: 900 },
 	binance: { collector: "crypto", intervalSec: 1800 },
 	bitfinex: { collector: "fxdepth", intervalSec: 21600 },
 	bitstamp: { collector: "crypto", intervalSec: 1800 },
@@ -109,7 +110,6 @@ export const SOURCE_MAP: Record<
 	"energy-charts-si": { collector: "energyeu", intervalSec: 3600 },
 	"energy-charts-sk": { collector: "energyeu", intervalSec: 3600 },
 	eonet: { collector: "disasters", intervalSec: 600 },
-	"epa-ie": { collector: "radiation", intervalSec: 900 },
 	epmc: { collector: "research", intervalSec: 21600 },
 	"erapi-eur": { collector: "fxdepth", intervalSec: 21600 },
 	"erapi-usd": { collector: "fxdepth", intervalSec: 21600 },
@@ -357,4 +357,9 @@ export const SOURCE_MAP: Record<
 	"hko-warn": { collector: "warnings", intervalSec: 900 },
 	// rivers: Pegelonline gauges (NWIS and om-flood are listed above).
 	pegelonline: { collector: "rivers", intervalSec: 3600 },
+	// certs: national CERT advisories.
+	"cert-fr": { collector: "certs", intervalSec: 1800 },
+	"cert-eu": { collector: "certs", intervalSec: 1800 },
+	cccs: { collector: "certs", intervalSec: 1800 },
+	jpcert: { collector: "certs", intervalSec: 1800 },
 };

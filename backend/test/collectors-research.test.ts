@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { query } from "../src/db/client.js";
 import { collect as research } from "../src/workers/collectors/research.js";
+import { json, stubFetch } from "./helpers/collector-stubs.js";
 
 const realFetch = globalThis.fetch;
 function ok(body: unknown, status = 200) {
@@ -137,5 +138,56 @@ describe("research yahoo-search", () => {
 			"SELECT id FROM events WHERE source='yahoo-search' ORDER BY id",
 		);
 		assert.ok(rows.some((x) => x.id === "yseek:AAPL"));
+	});
+});
+
+describe("research openalex quota guard", () => {
+	const seedOk = (ago: string) =>
+		query(
+			`INSERT INTO feed_health(source, last_ok, last_attempt) VALUES ('openalex', now() - $1::interval, now())
+			 ON CONFLICT (source) DO UPDATE SET last_ok = EXCLUDED.last_ok, error = NULL`,
+			[ago],
+		);
+	it("a restart soon after a successful run spends no OpenAlex credits", async () => {
+		await seedOk("10 minutes");
+		const calls = stubFetch([[/api\.openalex\.org/, json({ results: [] })]]);
+		await research();
+		assert.equal(calls.filter((u) => u.includes("openalex")).length, 0);
+	});
+	it("retries a sporadic 429 once instead of failing the run", async () => {
+		await query("DELETE FROM feed_health WHERE source='openalex'");
+		let first = true;
+		stubFetch([
+			[
+				/api\.openalex\.org/,
+				() => {
+					if (first) {
+						first = false;
+						return new Response("", { status: 429 });
+					}
+					return new Response(JSON.stringify({ results: [] }));
+				},
+			],
+		]);
+		await research();
+		const [h] = await query<{ ok: boolean; error: string | null }>(
+			"SELECT (last_ok IS NOT NULL) AS ok, error FROM feed_health WHERE source='openalex'",
+		);
+		assert.deepEqual([h.ok, h.error], [true, null]);
+	});
+	it("polls again once most of the interval has passed", async () => {
+		await seedOk("5 hours");
+		const calls = stubFetch([[/api\.openalex\.org/, json({ results: [] })]]);
+		await research();
+		assert.ok(calls.filter((u) => u.includes("openalex")).length > 0);
+	});
+	it("a restart after a failed run retries it", async () => {
+		await seedOk("10 minutes");
+		await query(
+			"UPDATE feed_health SET error='openalex: HTTP 429' WHERE source='openalex'",
+		);
+		const calls = stubFetch([[/api\.openalex\.org/, json({ results: [] })]]);
+		await research();
+		assert.ok(calls.filter((u) => u.includes("openalex")).length > 0);
 	});
 });

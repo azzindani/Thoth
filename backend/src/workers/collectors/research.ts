@@ -6,7 +6,13 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
 import { sleep } from "../lib/sleep.js";
-import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
+import {
+	errMsg,
+	markHealth,
+	storeNormalized,
+	storeRaw,
+	succeededWithin,
+} from "../lib/store.js";
 import { parseRSS } from "./news.js";
 
 const TOPICS = [
@@ -24,6 +30,17 @@ const HEALTH_TOPICS = ["viral hemorrhagic fever", "mpox", "avian influenza"];
 // credit-metered (1000/day, 10 per search) — spaced too, to stay polite.
 const CROSSREF_SPACING_MS = 1500;
 const OPENALEX_SPACING_MS = 1000;
+// OpenAlex's anonymous tier is a daily credit budget per IP (1000; a search
+// costs 10), and every worker restart re-runs this collector — nine runs on
+// 2026-09-24 spent ~630. Skip the leg when it already succeeded within most
+// of the 6 h interval.
+const OPENALEX_MIN_GAP_SEC = 4.5 * 3600;
+// It also answers a sporadic 429 early in a run with budget left (4 of 50
+// calls on 2026-09-24, first to third request; the anonymous per-IP limits
+// are shared with every service on this VPS). Wait (Retry-After, else 10 s,
+// capped) and retry that topic once instead of failing the run.
+const OPENALEX_429_PAUSE_MS = 10_000;
+const OPENALEX_429_MAX_PAUSE_MS = 60_000;
 
 const OpenAlexWork = z
 	.object({
@@ -92,12 +109,11 @@ function datePartsToTs(dp?: number[][]): string {
 	return `${p[0]}-${m}-${d}T00:00:00Z`;
 }
 
-export async function collect() {
-	const layer = "research";
-	let n = 0;
-	const errors: string[] = [];
-
-	// OpenAlex: scholarly works, keyless, polite single-topic pages.
+/** OpenAlex: scholarly works, keyless, polite single-topic pages. */
+async function collectOpenAlex(
+	layer: string,
+	errors: string[],
+): Promise<number> {
 	try {
 		let stored = 0;
 		for (const [i, q] of TOPICS.entries()) {
@@ -106,7 +122,18 @@ export async function collect() {
 				`https://api.openalex.org/works?search=${encodeURIComponent(q)}` +
 				`&per-page=5&sort=publication_date:desc&select=id,title,doi,publication_date,cited_by_count,authorships,primary_location`;
 			assertSafeUrl(url);
-			const res = await stealthFetch(url);
+			let res = await stealthFetch(url);
+			if (res.status === 429) {
+				const after = Number(res.headers.get("retry-after")) * 1000;
+				await res.arrayBuffer();
+				await sleep(
+					Math.min(
+						after > 0 ? after : OPENALEX_429_PAUSE_MS,
+						OPENALEX_429_MAX_PAUSE_MS,
+					),
+				);
+				res = await stealthFetch(url);
+			}
 			if (!res.ok) throw new Error(`HTTP ${res.status} for ${q}`);
 			const j = (await res.json()) as { results?: unknown[] };
 			const works = z.array(OpenAlexWork).parse(j.results ?? []);
@@ -140,12 +167,24 @@ export async function collect() {
 				stored++;
 			}
 		}
-		n += stored;
 		await markHealth("openalex", true);
+		return stored;
 	} catch (e: unknown) {
 		errors.push(`openalex: ${errMsg(e)}`);
 		await markHealth("openalex", false, errors[errors.length - 1]);
+		return 0;
 	}
+}
+
+export async function collect() {
+	const layer = "research";
+	let n = 0;
+	const errors: string[] = [];
+
+	// OpenAlex is quota-metered: skip the leg when a restart re-runs the
+	// collector soon after a successful run (its rows are still current).
+	if (!(await succeededWithin("openalex", OPENALEX_MIN_GAP_SEC)))
+		n += await collectOpenAlex(layer, errors);
 
 	// Crossref: publisher metadata mirror, keyless at daily rate.
 	try {
