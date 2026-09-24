@@ -6,7 +6,7 @@ import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 const URL = "https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt";
 // NOAA CO-OPS tide gauges: US coastal water levels, keyless JSON.
 // Major hurricane/storm-surge exposed stations (MDAPI-verified IDs) +
-// batch58 second ring (Providence, Springmaid Pier, Pilots Station, San
+// a second ring (Providence, Springmaid Pier, Pilots Station, San
 // Diego, Astoria, Seattle, Nawiliwili — all probe-verified 2026-09-17 with
 // 241 obs each; 9759114 answers 400 and stays out).
 const COOPS_STATIONS = [

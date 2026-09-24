@@ -1,4 +1,4 @@
-// Collector contract tests, volcanoes: Smithsonian. Consolidated from collectors-batch4 (per-collector refactor).
+// Collector contract tests, volcanoes: Smithsonian.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

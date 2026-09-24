@@ -1,4 +1,4 @@
-// Collector contract tests, fires: FIRMS. Consolidated from collectors-batch1 (per-collector refactor).
+// Collector contract tests, fires: FIRMS.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

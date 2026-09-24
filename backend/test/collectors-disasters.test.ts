@@ -1,4 +1,4 @@
-// Collector contract tests, disasters: EONET + sentry + geometry + honest-fail. Consolidated from collectors-batch1/9/10/25 (per-collector refactor).
+// Collector contract tests, disasters: EONET + sentry + geometry + honest-fail.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

@@ -1,4 +1,6 @@
-// Collector contract tests, social: radio + lobsters/devto + reddit. Consolidated from collectors-batch34/35 (per-collector refactor; batch23 social + batch29/30 gh-events lost with files in Phase 1 — see plan).
+// Collector contract tests, social: radio + lobsters/devto + reddit.
+// Not covered here: the mastodon/lemmy/flickr/inat/gbif legs and gh-events
+// (suites lost in the per-collector refactor).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

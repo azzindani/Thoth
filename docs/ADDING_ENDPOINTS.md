@@ -83,8 +83,12 @@ branches.
    feeds `pruneStale` after a successful poll; a changed payload shape throws
    rather than emptying the layer. Points only on point layers (`lib/geo.ts`
    `pointOf` for areas). ≤700 LOC per file.
-4. **Test**: contract test `test/collectors-batchNN.test.ts` with stubbed
-   fetch, then run the real collector once against the **test DB only**
+4. **Test**: contract tests in the collector's own file,
+   `test/collectors-<collector>.test.ts` (create it for a new collector) —
+   files, describes and comments are named by what they collect, never by
+   batch or loop number; `test/helpers/collector-stubs.ts` has the fetch stub
+   and read-back helpers. Stubbed fetch first, then run the real collector
+   once against the **test DB only**
    (`thoth-testdb` container, `postgres://thoth:thoth@127.0.0.1:55432/thoth_test`
    — the collector suites TRUNCATE, never point them at production). Gates:
    `npm run typecheck && npm run lint && npm run test:collectors && npm run test:unit`.

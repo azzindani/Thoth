@@ -1,4 +1,4 @@
-// Collector contract tests, health: WHO GHO + FDA FAERS. Consolidated from collectors-batch19/28 (per-collector refactor).
+// Collector contract tests, health: WHO GHO + FDA FAERS.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -58,7 +58,7 @@ describe("who-gho helpers", () => {
 	});
 });
 
-describe("health unesco-enrol (batch62)", () => {
+describe("health unesco-enrol", () => {
 	it("stores primary-pupil rows per country", async () => {
 		globalThis.fetch = (async (url: unknown) => {
 			const u = String(url);

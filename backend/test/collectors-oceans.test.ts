@@ -1,5 +1,4 @@
 // Collector contract tests, oceans: NDBC + COOPS tides/temperature/predictions/wind/pressure.
-// Consolidated from collectors-batch3/14/37/40 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -202,7 +201,7 @@ describe("oceans coops-wind + coops-pressure", () => {
 		const wind = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops-wind' ORDER BY id",
 		);
-		assert.equal(wind.length, 15); // 8 surge + 7 batch58 ring (mock serves all)
+		assert.equal(wind.length, 15); // 8 surge + 7 second-ring stations (mock serves all)
 		assert.ok(wind.every((x) => x.id.startsWith("coopswind:")));
 		const pres = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='coops-pressure' ORDER BY id",

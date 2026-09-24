@@ -196,7 +196,8 @@ export const COLLECTORS = {
 		intervalSec: 21600,
 		ttlSec: 86400,
 	},
-	// Batch 32 (ROADMAP P3).
+	// Aviation status, emergency mapping, shipping, displacement, subsea
+	// cables, vulnerabilities, Tor exits, travel advice.
 	faa: { module: "./collectors/faa.js", intervalSec: 300, ttlSec: 900 },
 	ems: { module: "./collectors/ems.js", intervalSec: 3600, ttlSec: 7200 },
 	vessels: {
@@ -221,7 +222,7 @@ export const COLLECTORS = {
 		ttlSec: 7200,
 	},
 	fcdo: { module: "./collectors/fcdo.js", intervalSec: 21600, ttlSec: 86400 },
-	// Batch 34 (keyless loop-9): agency incident + warning feeds.
+	// Official agency fire incidents and public warnings.
 	wildfires: {
 		module: "./collectors/wildfires.js",
 		intervalSec: 900,

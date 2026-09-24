@@ -1,5 +1,4 @@
 // Collector contract tests, transit-ch: Swiss/French/Belgian rail legs.
-// Consolidated from collectors-batch24/36/37/38 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

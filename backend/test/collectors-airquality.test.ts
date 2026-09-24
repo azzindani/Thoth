@@ -1,4 +1,5 @@
-// Collector contract tests, airquality: bands + sg-psi. Consolidated from collectors-batch13/35 (per-collector refactor; batch30 luftdaten lost with file in Phase 1 — see plan).
+// Collector contract tests, airquality: bands + sg-psi.
+// Not covered here: luftdaten (suite lost in the per-collector refactor).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

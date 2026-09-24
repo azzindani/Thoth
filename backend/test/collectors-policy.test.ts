@@ -1,4 +1,5 @@
-// Collector contract tests, policy: FedReg + govtrack. Consolidated from collectors-batch19/35 (per-collector refactor; batch22 ukbills lost with file in Phase 1 — see plan).
+// Collector contract tests, policy: FedReg + govtrack.
+// Not covered here: ukbills (suite lost in the per-collector refactor).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

@@ -1,4 +1,4 @@
-// Collector contract tests, civic: 311/crime/traffic. Consolidated from collectors-batch28/33 (per-collector refactor).
+// Collector contract tests, civic: 311/crime/traffic.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

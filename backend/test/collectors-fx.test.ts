@@ -1,4 +1,4 @@
-// Collector contract tests, fx: Frankfurter rates. Consolidated from collectors-batch13 (per-collector refactor).
+// Collector contract tests, fx: Frankfurter rates.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

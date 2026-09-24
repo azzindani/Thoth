@@ -1,4 +1,4 @@
-// Collector contract tests, research: OpenAlex/Crossref + topics. Consolidated from collectors-batch19/28 (per-collector refactor).
+// Collector contract tests, research: OpenAlex/Crossref + topics.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -109,7 +109,7 @@ describe("research openaire", () => {
 	});
 });
 
-describe("research yahoo-search (batch61)", () => {
+describe("research yahoo-search", () => {
 	it("stores ticker master rows", async () => {
 		globalThis.fetch = (async (url: unknown) => {
 			const u = String(url);

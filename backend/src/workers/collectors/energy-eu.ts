@@ -307,7 +307,7 @@ export async function collect() {
 	return { ok: true, count: n };
 }
 
-// NOTE: batch59 probed three sibling paths and parked them with reason:
+// NOTE: three sibling paths were probed (2026-09-17) and parked, with reason:
 // - total_power?country=de → 200, 41 slots, same production_types shape as
 //   public_power (a fatter duplicate of the 25-country loop — skip, not new
 //   signal).

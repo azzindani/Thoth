@@ -1,4 +1,4 @@
-// Collector contract tests, airwx: AWC SIGMETs. Consolidated from collectors-batch7 (per-collector refactor).
+// Collector contract tests, airwx: AWC SIGMETs.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

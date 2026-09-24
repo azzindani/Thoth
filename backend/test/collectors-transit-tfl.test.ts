@@ -1,5 +1,4 @@
 // Collector contract tests, transit-tfl: TfL arrivals boards + bike + road + status.
-// Consolidated from collectors-batch36/37/38/40 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

@@ -1,7 +1,6 @@
 // Collector contract tests, autobahn: German roadworks on curated corridors.
-// New in the per-collector refactor (batch21 file with the original suite was
-// deleted in an earlier phase before porting; this suite is written fresh
-// from the collector contract, mock-verified, not copied).
+// Written fresh in the per-collector refactor from the collector contract
+// (the original suite was lost before porting), mock-verified, not copied.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

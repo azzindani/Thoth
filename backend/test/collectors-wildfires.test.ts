@@ -1,44 +1,192 @@
-// Collector contract tests, batch 35 (keyless loop-10): QLD Fire, WA DFES and
-// ACT ESA on `wildfires`; the other warnung.bund.de providers (KATWARN,
-// BIWAPP, LHP floods, police) on `warnings`. Upstreams stubbed at fetch.
-// Run: npm run test:collectors (needs thoth_test DB)
+// Collector contract tests, wildfires: official agency fire incidents and warnings (CAL FIRE, NSW RFS, VIC EMV, QLD Fire, WA DFES, ACT ESA) on fires.
+// Upstreams stubbed at fetch. Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { query } from "../src/db/client.js";
-import * as warnings from "../src/workers/collectors/warnings.js";
 import * as wildfires from "../src/workers/collectors/wildfires.js";
+import { pointOf } from "../src/workers/lib/geo.js";
+import {
+	eventsOf,
+	healthOf,
+	json,
+	resetTables,
+	restoreFetch,
+	stubFetch,
+	text,
+} from "./helpers/collector-stubs.js";
 
-const realFetch = globalThis.fetch;
-type Route = [RegExp, () => Response];
-function stub(routes: Route[]) {
-	globalThis.fetch = (async (url: unknown) => {
-		const u = String(url);
-		for (const [re, r] of routes) if (re.test(u)) return r();
-		return new Response("not found", { status: 404 });
-	}) as typeof fetch;
-}
-const json = (x: unknown) => () => new Response(JSON.stringify(x));
-const text = (x: string) => () => new Response(x);
-const rows = (source: string) =>
-	query<{
-		id: string;
-		title: string;
-		severity: string;
-		ts: string;
-		lon: number | null;
-		lat: number | null;
-		meta: Record<string, unknown>;
-	}>(
-		`SELECT id, title, severity, ts::text, ST_X(geom) AS lon, ST_Y(geom) AS lat, meta
-		   FROM events WHERE source=$1 ORDER BY id`,
-		[source],
-	);
+before(resetTables);
+after(restoreFetch);
 
-before(async () => {
-	await query("TRUNCATE events, raw_events, feed_health");
-});
-after(() => {
-	globalThis.fetch = realFetch;
+const CALFIRE = [
+	{
+		Name: "Timber Fire ",
+		UniqueId: "u-1",
+		Updated: "2026-09-24T00:26:21Z",
+		County: "Monterey",
+		Location: "SE of Loma Vista",
+		AcresBurned: 25452.4,
+		PercentContained: 30,
+		Latitude: 36.22,
+		Longitude: -121.73,
+		Url: "https://www.fire.ca.gov/incidents/2026/8/8/timber-fire/",
+		IsActive: true,
+	},
+	{
+		Name: "No coords",
+		UniqueId: "u-2",
+		Latitude: 0,
+		Longitude: 0,
+		IsActive: true,
+	},
+	{
+		Name: "Closed",
+		UniqueId: "u-3",
+		Latitude: 38,
+		Longitude: -120,
+		IsActive: false,
+	},
+];
+const RFS = {
+	type: "FeatureCollection",
+	features: [
+		{
+			geometry: {
+				type: "GeometryCollection",
+				geometries: [
+					{ type: "Point", coordinates: [151.87, -32.77] },
+					{
+						type: "GeometryCollection",
+						geometries: [
+							{
+								type: "Polygon",
+								coordinates: [
+									[
+										[151, -32],
+										[152, -32],
+										[152, -33],
+										[151, -32],
+									],
+								],
+							},
+						],
+					},
+				],
+			},
+			properties: {
+				title: "ABUNDANCE RD, MEDOWIE",
+				category: "Watch and Act",
+				guid: "https://incidents.rfs.nsw.gov.au/api/v1/incidents/678279",
+				pubDate: "23/09/2026 11:57:00 PM",
+				description:
+					"ALERT LEVEL: Watch and Act <br />LOCATION: ABUNDANCE RD <br />STATUS: Out of control <br />TYPE: Bush Fire <br />SIZE: 107 ha",
+			},
+		},
+	],
+};
+const VIC = {
+	type: "FeatureCollection",
+	features: [
+		{
+			geometry: { type: "Point", coordinates: [144.5, -37.5] },
+			properties: {
+				feedType: "incident",
+				id: "9",
+				category1: "Fire",
+				status: "Going",
+				location: "Kyneton",
+				updated: "2026-09-24T09:00:00+10:00",
+				sourceOrg: "CFA",
+			},
+		},
+		{
+			geometry: { type: "Point", coordinates: [145, -38] },
+			properties: {
+				feedType: "incident",
+				id: "10",
+				category1: "Fire",
+				status: "Safe",
+				location: "Done",
+			},
+		},
+		{
+			geometry: { type: "Point", coordinates: [146, -38] },
+			properties: {
+				feedType: "incident",
+				id: "11",
+				category1: "Hazardous Material",
+				status: "Going",
+				location: "Not a fire",
+			},
+		},
+	],
+};
+
+describe("wildfires: CAL FIRE, NSW RFS, VIC EMV", () => {
+	it("severity rules", () => {
+		assert.equal(wildfires.calfireSeverity(25_000, 30), "critical");
+		assert.equal(wildfires.calfireSeverity(25_000, 80), "watch");
+		assert.equal(wildfires.calfireSeverity(500, 0), "info");
+		assert.equal(wildfires.auWarningSeverity("Emergency Warning"), "critical");
+		assert.equal(wildfires.auWarningSeverity("Watch and Act"), "watch");
+		assert.equal(wildfires.auWarningSeverity("Advice"), "info");
+	});
+	it("reads NSW description fields and the collection's own Point", () => {
+		assert.deepEqual(
+			wildfires.rfsFields("ALERT LEVEL: Advice <br />SIZE: 7 ha"),
+			{
+				"alert level": "Advice",
+				size: "7 ha",
+			},
+		);
+		assert.deepEqual(pointOf(RFS.features[0].geometry), {
+			lon: 151.87,
+			lat: -32.77,
+		});
+	});
+	it("stores active incidents only, located, on fires", async () => {
+		stubFetch([
+			[/fire\.ca\.gov/, json(CALFIRE)],
+			[/rfs\.nsw/, json(RFS)],
+			[/emergency\.vic/, json(VIC)],
+		]);
+		const r = await wildfires.collect();
+		assert.equal(r.ok, true);
+		assert.equal(r.count, 3);
+		const cal = await eventsOf("calfire");
+		assert.deepEqual(
+			cal.map((x) => [x.id, x.severity, x.layer]),
+			[["calfire:u-1", "critical", "fires"]],
+		);
+		assert.match(cal[0].title, /Timber Fire — 25,452 ac, 30% contained/);
+		const nsw = await eventsOf("nsw-rfs");
+		assert.deepEqual(
+			nsw.map((x) => [x.id, x.severity, x.lon, x.lat]),
+			[["nsw-rfs:678279", "watch", 151.87, -32.77]],
+		);
+		assert.equal(nsw[0].meta.status, "Out of control");
+		const vic = await eventsOf("vic-emv");
+		assert.deepEqual(
+			vic.map((x) => [x.id, x.severity]),
+			[["vic-emv:incident:9", "watch"]],
+		);
+	});
+	it("prunes incidents that closed; a changed payload fails without pruning", async () => {
+		stubFetch([
+			[/fire\.ca\.gov/, json([])],
+			[/rfs\.nsw/, json({ error: "maintenance" })],
+			[/emergency\.vic/, json(VIC)],
+		]);
+		const r = await wildfires.collect();
+		assert.equal(r.ok, true);
+		assert.equal((await eventsOf("calfire")).length, 0);
+		assert.equal(
+			(await eventsOf("nsw-rfs")).length,
+			1,
+			"failed poll must not empty the layer",
+		);
+		const h = await healthOf("nsw-rfs");
+		assert.match(h.error ?? "", /unexpected payload/);
+	});
 });
 
 const QLD = {
@@ -153,7 +301,7 @@ Updated: 23 Sep 2026 19:49:20.82&#xD;
 <item><title>AMBULANCE RESPONSE - PHILLIP</title><type>AMBULANCE RESPONSE</type><agency>Ambulance</agency><description>Incident: x</description><guid>999</guid><georss:point>-35.3 149.1</georss:point><controlStatus>Not Applicable</controlStatus></item>
 </channel></rss>`;
 
-describe("wildfires batch35", () => {
+describe("wildfires: QLD Fire, WA DFES, ACT ESA", () => {
 	it("helpers", () => {
 		assert.equal(
 			wildfires.waWarningLevel("warnings_bushfire--emergency-warning"),
@@ -170,7 +318,7 @@ describe("wildfires batch35", () => {
 		assert.equal(wildfires.actLocalToIso("garbage", 10), null);
 	});
 	it("stores QLD, WA and ACT fire items located, skipping non-fire items", async () => {
-		stub([
+		stubFetch([
 			[/BushfireCurrentIncidents/, json(QLD)],
 			[/emergency\.wa\.gov\.au\/v1\/incidents/, json(WA_INCIDENTS)],
 			[/emergency\.wa\.gov\.au\/v1\/warnings/, json(WA_WARNINGS)],
@@ -179,7 +327,7 @@ describe("wildfires batch35", () => {
 		const r = await wildfires.collect();
 		assert.equal(r.ok, true);
 
-		const qld = await rows("qld-fire");
+		const qld = await eventsOf("qld-fire");
 		assert.deepEqual(
 			qld.map((x) => [x.id, x.severity]),
 			[
@@ -193,7 +341,7 @@ describe("wildfires batch35", () => {
 		);
 		assert.deepEqual([qld[1].lat, qld[1].lon], [-24.5079, 151.6622]);
 
-		const wa = await rows("wa-dfes");
+		const wa = await eventsOf("wa-dfes");
 		assert.deepEqual(
 			wa.map((x) => [x.id, x.severity]),
 			[
@@ -205,7 +353,7 @@ describe("wildfires batch35", () => {
 		// The warning's own Point wins over its area polygon.
 		assert.deepEqual([wa[1].lon, wa[1].lat], [127.5, -19.4]);
 
-		const act = await rows("act-esa");
+		const act = await eventsOf("act-esa");
 		assert.deepEqual(
 			act.map((x) => [x.id, x.severity]),
 			[["act-esa:015325-22092026", "watch"]],
@@ -213,79 +361,11 @@ describe("wildfires batch35", () => {
 		assert.match(act[0].ts, /^2026-09-23 09:49:20/);
 	});
 	it("a WA payload without warnings[] fails without pruning", async () => {
-		stub([
+		stubFetch([
 			[/emergency\.wa\.gov\.au\/v1\/incidents/, json(WA_INCIDENTS)],
 			[/emergency\.wa\.gov\.au\/v1\/warnings/, json({ error: "x" })],
 		]);
 		await wildfires.collect();
-		assert.equal((await rows("wa-dfes")).length, 3);
-	});
-});
-
-describe("warnings: warnung.bund.de providers", () => {
-	it("lists every provider and stores each under its own source", async () => {
-		assert.deepEqual(
-			warnings.BBK_PROVIDERS.map((p) => p.source),
-			["mowas", "katwarn", "biwapp", "lhp-floods", "de-police"],
-		);
-		const geo = json({
-			type: "FeatureCollection",
-			features: [
-				{
-					geometry: {
-						type: "Polygon",
-						coordinates: [
-							[
-								[7, 49],
-								[9, 49],
-								[9, 51],
-								[7, 51],
-								[7, 49],
-							],
-						],
-					},
-				},
-			],
-		});
-		stub([
-			[/api31\/mowas\/mapData/, json([])],
-			[
-				/api31\/katwarn\/mapData/,
-				json([
-					{
-						id: "kat.1",
-						severity: "Moderate",
-						type: "Alert",
-						i18nTitle: { de: "Unwetter", en: "Storm" },
-					},
-				]),
-			],
-			[/api31\/biwapp\/mapData/, json([])],
-			[
-				/api31\/lhp\/mapData/,
-				json([
-					{
-						id: "lhp.1",
-						severity: "Severe",
-						type: "Update",
-						i18nTitle: { de: "Hochwasser" },
-					},
-				]),
-			],
-			[/api31\/police\/mapData/, json([])],
-			[/api31\/warnings\/(kat|lhp)\.1\.geojson/, geo],
-		]);
-		await warnings.collect();
-		const kat = await rows("katwarn");
-		assert.deepEqual(
-			kat.map((x) => [x.id, x.severity, x.title]),
-			[["katwarn:kat.1", "watch", "KATWARN · Storm"]],
-		);
-		const lhp = await rows("lhp-floods");
-		assert.deepEqual(
-			lhp.map((x) => [x.id, x.severity, x.title]),
-			[["lhp-floods:lhp.1", "critical", "LHP flood · Hochwasser"]],
-		);
-		assert.ok(lhp[0].lat !== null && lhp[0].lat > 49 && lhp[0].lat < 51);
+		assert.equal((await eventsOf("wa-dfes")).length, 3);
 	});
 });

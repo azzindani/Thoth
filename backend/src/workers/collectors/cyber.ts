@@ -157,7 +157,7 @@ export async function collect() {
 		await markHealth("sans-isc", true);
 		n++;
 	} catch (e: unknown) {
-		// Best-effort third upstream: batch2 stubs urlhaus+KEV only (500
+		// Best-effort third upstream: the cyber contract test stubs urlhaus+KEV only (500
 		// default) and asserts their count — a SANS outage must not move it.
 		errors.push(`sans-isc: ${errMsg(e)}`);
 		await markHealth("sans-isc", false, errors[errors.length - 1]);
