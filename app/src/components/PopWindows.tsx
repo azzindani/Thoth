@@ -200,7 +200,10 @@ export default function PopWindows({
 	}, [refresh]);
 
 	// Leader lines follow the camera: re-render on map move (rAF-coalesced).
+	// Only while a window is open — with none, a pan must not schedule a
+	// React render every frame.
 	useEffect(() => {
+		if (!hadWins) return;
 		let raf = 0;
 		let bound: maplibregl.Map | null = null;
 		const onMove = () => {
@@ -210,19 +213,24 @@ export default function PopWindows({
 					setTick((n) => n + 1);
 				});
 		};
-		const t = setInterval(() => {
+		const bind = () => {
 			const m = getMap();
-			if (!m || m === bound) return;
+			if (!m || m === bound) return false;
 			bound = m;
 			m.on("move", onMove);
-			clearInterval(t);
-		}, 400);
+			return true;
+		};
+		const t = bind()
+			? undefined
+			: setInterval(() => {
+					if (bind()) clearInterval(t);
+				}, 400);
 		return () => {
 			clearInterval(t);
 			bound?.off("move", onMove);
 			if (raf) cancelAnimationFrame(raf);
 		};
-	}, [getMap]);
+	}, [getMap, hadWins]);
 
 	// Keep windows on screen when the viewport shrinks.
 	useEffect(() => {
