@@ -1,4 +1,4 @@
-// Collector contract tests, quakes: USGS + EMSC fold-in. Consolidated from collectors-batch1/17 (per-collector refactor).
+// Collector contract tests, quakes: USGS + EMSC fold-in.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

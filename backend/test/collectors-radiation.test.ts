@@ -1,4 +1,5 @@
-// Collector contract tests, radiation: Safecast. Consolidated from collectors-batch4 (per-collector refactor; epa-ie suite lost with batch18 file in Phase 1 — see plan).
+// Collector contract tests, radiation: Safecast.
+// Not covered here: epa-ie (suite lost in the per-collector refactor).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

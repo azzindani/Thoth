@@ -1,4 +1,4 @@
-// Collector contract tests, satellites: CelesTrak + mirror fallback + attribution + AMSAT. Consolidated from collectors-batch4/8/10/32 (per-collector refactor).
+// Collector contract tests, satellites: CelesTrak + mirror fallback + attribution + AMSAT.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -199,7 +199,7 @@ describe("satellites amsat-tle + amsat-status", () => {
 				// NOTE: the file-level freshTLE1()/TLE2 are ISS elements (norad 25544) for
 				// the mirror suites above — the AMSAT leg needs its own AO-07 elements
 				// (norad 07530), generated fresh per-run like the ISS ones (collector
-				// skips elements >3d old). Same pattern as batch32's local helper.
+				// skips elements >3d old). Same pattern as helpers/collector-stubs.ts.
 				return resp(`AO-07\n${freshAo07TLE1()}\n${AO07_TLE2}\n`);
 			if (u.includes("amsat.org/status/api/v1/reports.php"))
 				return resp({

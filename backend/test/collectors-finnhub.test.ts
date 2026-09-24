@@ -1,5 +1,5 @@
 // Collector contract tests, finnhub: disabled path + keyed path (dummy key, dynamic import).
-// Consolidated from collectors-batch11/12 (per-collector refactor; pushTelegram lives in collectors-lib).
+// pushTelegram is covered in collectors-lib.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

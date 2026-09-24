@@ -1,5 +1,4 @@
 // Collector contract tests, markets: prediction + crypto + equities + FX + ecosystems.
-// Consolidated from collectors-batch2/16/22/26/29/30/31/36/37 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -227,7 +226,7 @@ describe("markets moex", () => {
 	});
 });
 
-describe("markets npm/crates (batch29, 2 rows)", () => {
+describe("markets npm/crates (first sample, 2 rows)", () => {
 	it("npm-dl + crates-trend store rows", async () => {
 		globalThis.fetch = (async (url: unknown) => {
 			const u = String(url);
@@ -272,7 +271,7 @@ describe("markets npm/crates (batch29, 2 rows)", () => {
 	});
 });
 
-describe("markets npm/crates (batch30, 4 rows)", () => {
+describe("markets npm/crates (wider sample, 4 rows)", () => {
 	it("npm-dl + crates-trend store rows", async () => {
 		globalThis.fetch = (async (url: unknown) => {
 			const u = String(url);
@@ -584,7 +583,7 @@ describe("markets nasdaq-top", () => {
 	});
 });
 
-describe("markets cboe + fiscal-rates (batch61)", () => {
+describe("markets cboe + fiscal-rates", () => {
 	it("stores VIX/majors, EU flagships, Treasury rates", async () => {
 		stub([
 			["gamma-api.polymarket.com", () => ok([], 500)],

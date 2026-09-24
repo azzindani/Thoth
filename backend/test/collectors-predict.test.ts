@@ -1,4 +1,4 @@
-// Collector contract tests, predict: Manifold. Consolidated from collectors-batch20 (per-collector refactor).
+// Collector contract tests, predict: Manifold.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

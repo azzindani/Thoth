@@ -1,4 +1,4 @@
-// Collector contract tests, conflicts: zones + severity. Consolidated from collectors-batch4/9 (per-collector refactor).
+// Collector contract tests, conflicts: zones + severity.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

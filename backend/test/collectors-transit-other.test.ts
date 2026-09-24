@@ -1,5 +1,4 @@
 // Collector contract tests, transit-other: GBFS bikeshare + MBTA + SEPTA.
-// Consolidated from collectors-batch26/31/35/37 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

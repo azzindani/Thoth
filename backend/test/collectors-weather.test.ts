@@ -1,5 +1,4 @@
 // Collector contract tests, weather: NWS + EU alerts + nowcasts + ocean + sun.
-// Consolidated from collectors-batch2/14/18/22/23/26/36/37 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

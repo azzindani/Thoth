@@ -143,8 +143,8 @@ export async function collect() {
 		n > 0 ? undefined : errors.slice(0, 3).join("; "),
 	);
 
-	// Gov open-data catalog pulse (keyless CKAN package_search, fincept
-	// digest batch63 2026-09-18): dataset counts per portal for fixed
+	// Gov open-data catalog pulse (keyless CKAN package_search, from the
+	// fincept digest, 2026-09-18): dataset counts per portal for fixed
 	// probe queries — the catalog-freshness leg next to IDMC rows.
 	// Probe-verified: Canada 576 (gdp), Swiss 1321 (energy, redirect host),
 	// AU 11679 (climate, /data/api path), Slovenia 3 (energy).

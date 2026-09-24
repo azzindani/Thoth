@@ -1,4 +1,4 @@
-// Collector contract tests, sentiment: Fear & Greed. Consolidated from collectors-batch19 (per-collector refactor).
+// Collector contract tests, sentiment: Fear & Greed.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

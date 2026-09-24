@@ -329,7 +329,8 @@ export const SOURCE_MAP: Record<
 	"yr-forecast": { collector: "weather", intervalSec: 300 },
 	"yr-nowcast": { collector: "weather", intervalSec: 300 },
 	zenodo: { collector: "research", intervalSec: 21600 },
-	// Batch 32 (ROADMAP P3).
+	// One source each: FAA airport status, Copernicus EMS, AIS vessels, UNHCR
+	// displacement, subsea cables, ENISA EUVD, Tor exits, UK travel advice.
 	"faa-nas": { collector: "faa", intervalSec: 300 },
 	"copernicus-ems": { collector: "ems", intervalSec: 3600 },
 	"digitraffic-ais": { collector: "vessels", intervalSec: 600 },
@@ -338,22 +339,22 @@ export const SOURCE_MAP: Record<
 	"enisa-euvd": { collector: "euvd", intervalSec: 3600 },
 	"tor-onionoo": { collector: "torexits", intervalSec: 3600 },
 	"uk-fcdo": { collector: "fcdo", intervalSec: 21600 },
-	// Batch 34 (keyless loop-9).
+	// wildfires: official agency fire incidents and warnings.
 	calfire: { collector: "wildfires", intervalSec: 900 },
 	"nsw-rfs": { collector: "wildfires", intervalSec: 900 },
 	"vic-emv": { collector: "wildfires", intervalSec: 900 },
-	"eccc-alerts": { collector: "warnings", intervalSec: 900 },
-	"ea-floods": { collector: "warnings", intervalSec: 900 },
-	mowas: { collector: "warnings", intervalSec: 900 },
-	// Batch 35 (keyless loop-10).
 	"qld-fire": { collector: "wildfires", intervalSec: 900 },
 	"wa-dfes": { collector: "wildfires", intervalSec: 900 },
 	"act-esa": { collector: "wildfires", intervalSec: 900 },
+	// warnings: official public warnings.
+	"eccc-alerts": { collector: "warnings", intervalSec: 900 },
+	"ea-floods": { collector: "warnings", intervalSec: 900 },
+	mowas: { collector: "warnings", intervalSec: 900 },
 	katwarn: { collector: "warnings", intervalSec: 900 },
 	biwapp: { collector: "warnings", intervalSec: 900 },
 	"lhp-floods": { collector: "warnings", intervalSec: 900 },
 	"de-police": { collector: "warnings", intervalSec: 900 },
-	// Batch 36 (keyless loop-11).
-	pegelonline: { collector: "rivers", intervalSec: 3600 },
 	"hko-warn": { collector: "warnings", intervalSec: 900 },
+	// rivers: Pegelonline gauges (NWIS and om-flood are listed above).
+	pegelonline: { collector: "rivers", intervalSec: 3600 },
 };

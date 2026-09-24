@@ -1,10 +1,10 @@
 // Collector contract tests, energyeu: Energy-Charts country mixes (25-country loop).
-// Consolidated from collectors-batch22/35/37/38 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { query } from "../src/db/client.js";
 import { collect as energy } from "../src/workers/collectors/energy-eu.js";
+import { healthOf } from "./helpers/collector-stubs.js";
 
 const realFetch = globalThis.fetch;
 
@@ -674,7 +674,7 @@ describe("energy-eu HU + SI + swiss LS-BE", () => {
 });
 
 describe("energy-eu EU27 RO/SK/HR/IE/LU/EE/LV/LT", () => {
-	it("stores the batch58 eastern/northern mix rows", async () => {
+	it("stores the eastern/northern country mix rows", async () => {
 		// 429-swallowing rule: new country keys all 500 except the asserted
 		// ones — first-match-wins means an unlisted URL hits the 500 default.
 		stub([
@@ -799,5 +799,36 @@ describe("energy-eu EU27 RO/SK/HR/IE/LU/EE/LV/LT", () => {
 			"SELECT id FROM events WHERE source IN ('energy-charts-ro','energy-charts-sk','energy-charts-hr') ORDER BY id",
 		);
 		assert.equal(rows.length, 3);
+	});
+});
+
+describe("energy-charts country legs", () => {
+	it("asks for a 48 h window and retries a 429 once", async () => {
+		const seen: string[] = [];
+		const tries = new Map<string, number>();
+		const payload = {
+			unix_seconds: [1_790_000_000, 1_790_000_900],
+			production_types: [{ name: "Wind onshore", data: [120, null] }],
+		};
+		globalThis.fetch = (async (url: unknown) => {
+			const u = String(url);
+			const cc = u.match(/country=([a-z]{2})&start=/)?.[1];
+			if (!cc) return ok({}, 500);
+			seen.push(u);
+			const n = (tries.get(cc) ?? 0) + 1;
+			tries.set(cc, n);
+			return cc === "lu" && n === 1 ? ok({}, 429) : ok(payload);
+		}) as typeof fetch;
+		await energy();
+		assert.ok(
+			seen.every((u) => /&start=\d{4}-\d\d-\d\dT\d\d:\d\dZ&end=/.test(u)),
+		);
+		assert.equal(tries.get("lu"), 2);
+		assert.equal((await healthOf("energy-charts-lu")).ok, true);
+		// The trailing empty slot is skipped: the row is stamped with the filled one.
+		const [row] = await query<{ ts: string }>(
+			"SELECT ts::text FROM events WHERE source='energy-charts-lu'",
+		);
+		assert.match(row.ts, /^2026-09-21 /);
 	});
 });

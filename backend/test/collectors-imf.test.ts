@@ -1,4 +1,4 @@
-// Collector contract tests, imf: WEO + CPI + FX + WB. Consolidated from collectors-batch20 (per-collector refactor).
+// Collector contract tests, imf: WEO + CPI + FX + WB.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

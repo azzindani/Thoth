@@ -1,5 +1,4 @@
 // Collector contract tests, cyber: urlhaus/KEV + SANS + GHSA + secrss + spamdrop + feodo/dshield + threatfox/bazaar + ransomware/msrc + blocklistde.
-// Consolidated from collectors-batch2/15/21/22/27/35/36/37 files (per-collector refactor, Phase 1).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

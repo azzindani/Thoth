@@ -38,6 +38,9 @@
 ## Readability
 
 - Names say what it is (`content_ts`, not `ts2`). Comments say *why*.
+- Files, tests and code comments are named by function, never by the batch
+  or loop that added them (`collectors-wildfires.test.ts`, not
+  `collectors-batch34.test.ts`). Batch numbers live in the PHASES ledger only.
 - Boring patterns. Frameworks over hand-rolls; services over scripts.
 - UI: IBM Plex Sans for chrome, Plex Mono for every number; ONE accent
   (faience) for selection/focus/primary action only; colour on data means

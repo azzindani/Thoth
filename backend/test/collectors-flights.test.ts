@@ -1,4 +1,4 @@
-// Collector contract tests, flights: adsb/open-sky fallback + regions + honest-fail. Consolidated from collectors-batch1/9/10/39 (per-collector refactor).
+// Collector contract tests, flights: adsb/open-sky fallback + regions + honest-fail.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -7,6 +7,7 @@ import {
 	airlineOf,
 	collect as flights,
 } from "../src/workers/collectors/flights.js";
+import { healthOf } from "./helpers/collector-stubs.js";
 
 const realFetch = globalThis.fetch;
 
@@ -364,5 +365,35 @@ describe("flights regions", () => {
 			rows.map((x) => x.id),
 			["opensky-mex:0d121b", "opensky-syd:7c78b6", "opensky-tyo:8744f6"],
 		);
+	});
+});
+
+describe("adsb.lol radius query", () => {
+	it('keeps aircraft on the ground (alt_baro "ground")', async () => {
+		globalThis.fetch = (async (url: unknown) =>
+			String(url).includes("api.adsb.lol/v2/point/")
+				? ok({
+						ac: [
+							{
+								hex: "4b1880",
+								flight: "SWR3W",
+								lat: 48.7,
+								lon: 4.1,
+								alt_baro: 39000,
+								track: 114,
+							},
+							{
+								hex: "3c6444",
+								flight: "DLH1",
+								lat: 50.03,
+								lon: 8.56,
+								alt_baro: "ground",
+							},
+						],
+					})
+				: ok({}, 500)) as typeof fetch;
+		const r = await flights();
+		assert.deepEqual([r.ok, (r as { count?: number }).count], [true, 2]);
+		assert.equal((await healthOf("adsb.lol")).ok, true);
 	});
 });

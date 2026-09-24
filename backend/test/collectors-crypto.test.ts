@@ -1,4 +1,4 @@
-// Collector contract tests, crypto: exchanges + Deribit. Consolidated from collectors-batch20/25 (per-collector refactor).
+// Collector contract tests, crypto: exchanges + Deribit.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";

@@ -1,5 +1,6 @@
 // Collector contract tests, lib: shared helpers (vuln-enrich, push, static builders, store).
-// Consolidated from collectors-batch10/11/19 (per-collector refactor; owid/sunspots/registry/un-suites lost with batch21/24 files in earlier phase — unit.test.ts covers parseUnXml/hans).
+// Not covered here: owid/sunspots/registry/UN suites (lost in the per-collector
+// refactor); unit.test.ts covers parseUnXml/hans.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -78,7 +79,7 @@ describe("vuln-enrich", () => {
 	});
 });
 
-describe("static builders (batch19)", () => {
+describe("static builders", () => {
 	it("pickPlants keeps >=1000MW geo'd plants", () => {
 		const head = [
 			"country_long",

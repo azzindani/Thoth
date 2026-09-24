@@ -1,4 +1,4 @@
-// Collector contract tests, forecast: Open-Meteo + BOM + IPMA + honest-fail. Consolidated from collectors-batch19/25/34/35 (per-collector refactor).
+// Collector contract tests, forecast: Open-Meteo + BOM + IPMA + honest-fail.
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -153,7 +153,7 @@ describe("forecast ipma + iss-now", () => {
 	});
 });
 
-describe("forecast batch35 (ipma/iss-now covered in batch34)", () => {
+describe("forecast with every leg present (ipma/iss-now covered above)", () => {
 	it("still collects with new blocks present", async () => {
 		stub([
 			["api.open-meteo.com", () => ok({}, 500)],

@@ -1,5 +1,4 @@
 // Collector contract tests, otx: disabled path + enabled path (dummy key, dynamic import).
-// Consolidated from collectors-batch4/6 (per-collector refactor).
 // Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
