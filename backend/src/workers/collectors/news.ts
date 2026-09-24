@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // Free world-news bundle: keyless RSS/Atom, no signup, no key.
@@ -102,6 +103,22 @@ const SnapiArticle = z.object({
 	news_site: z.string().optional(),
 });
 
+// A connect-level failure (undici's "fetch failed": refused, reset,
+// connect timeout) gets one spaced retry to the same host. 2026-09-24:
+// half the TCP connects from this host to one Akamai edge timed out, so
+// bbc/aljazeera/dw failed runs at random. HTTP errors are the server's
+// answer and a timed-out read already spent its budget — neither retries.
+const CONNECT_RETRY_PAUSE_MS = 3000;
+export async function fetchFeed(url: string): Promise<Response> {
+	try {
+		return await stealthFetch(url);
+	} catch (e: unknown) {
+		if (!(e instanceof TypeError && e.message === "fetch failed")) throw e;
+		await sleep(CONNECT_RETRY_PAUSE_MS);
+		return stealthFetch(url);
+	}
+}
+
 export async function collect() {
 	const layer = "news";
 	let n = 0;
@@ -109,7 +126,7 @@ export async function collect() {
 	for (const f of FEEDS) {
 		try {
 			assertSafeUrl(f.url);
-			const res = await stealthFetch(f.url);
+			const res = await fetchFeed(f.url);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const xml = await res.text();
 			const items = parseRSS(xml);
