@@ -366,4 +366,6 @@ export const SOURCE_MAP: Record<
 	"who-don": { collector: "outbreaks", intervalSec: 10800 },
 	// sslbl: malware C2 TLS certificate fingerprints.
 	sslbl: { collector: "sslbl", intervalSec: 3600 },
+	// emergencies: IFRC GO emergencies with their appeals.
+	"ifrc-go": { collector: "emergencies", intervalSec: 10800 },
 };

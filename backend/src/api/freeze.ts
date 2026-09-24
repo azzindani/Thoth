@@ -21,6 +21,8 @@ const BUDGET: [RegExp, number][] = [
 	// SSLBL lists C2 certificates most days, but a day and a half without a
 	// listing happens (2026-09-16, 2026-09-19).
 	[/^sslbl$/, 3 * 86400],
+	// IFRC GO opens ~0.75 emergencies a day; a quiet week happens.
+	[/^ifrc-go$/, 7 * 86400],
 	[
 		/^(usgs|emsc|ingv|jma|jma-forecast|bmkg|turkey-kandilli|turkey-afad|opensky|opensky-bosporus|opensky-tokyo|opensky-sydney|opensky-mexico|adsb|telegram|neptun|celestrak|tle-mirror|iss-live|ndbc|coops|coops-temp|coops-pred|coops-wind|coops-pressure|urlhaus|swpc-kp|om-flood)$/,
 		7200,

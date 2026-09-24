@@ -61,10 +61,12 @@ Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch
 | cyber | National CERT advisories: CERT-FR avis + alertes RSS, CERT-EU security advisories RSS, Canadian Centre for Cyber Security (CCCS) alerts & advisories Atom, JPCERT/CC English RDF | 30m | exploitation named in the text → critical, alerts → watch, vendor advisories → info; rolling windows, rows kept |
 | health | WHO Disease Outbreak News (who.int OData `diseaseoutbreaknews`) | 3h | newest 30 DON reports at the first named country's capital; Ebola/Marburg/Nipah/MERS/avian flu etc. critical; kept after they scroll off |
 | cyber | abuse.ch SSLBL SSL certificate blacklist (CSV, CC0) | 1h | malware C2 TLS certificate SHA-1s listed in the last 7 days, by family; older listings pruned |
+| disasters | IFRC GO emergencies (`goadmin.ifrc.org/api/v2/event/`) + active appeals (`/appeal/?status=0`) | 3h | Red Cross/Red Crescent emergencies of the last 90 days at the affected country's capital; IFRC Red/Orange/Yellow → critical/watch/info, Emergency Appeal lifts Yellow; appeal funding joined; pruned past the window |
 
 ## Free-key (depth / limits)
 
 - `FIRMS_MAP_KEY` (email, 5k/10min), `OPENSKY_CLIENT_ID/SECRET` (OAuth2, higher limits), `N2YO_API_KEY` (1k/hr), `AIS_API_KEY` (aisstream.io WS live ships), `CLOUDFLARE_API_TOKEN` (Radar Read), `ETHERSCAN_API_KEY` + `HELIUS_API_KEY` (ETH internal + SOL parses), `GEMINI_API_KEY` (AI briefs only)
+- ReliefWeb API v2: needs an approved `appname` (request form at apidoc.reliefweb.int; v1 decommissioned, unapproved names answer 403 — 2026-09-24). OCHA/IFRC headlines already arrive via the `relief` RSS legs.
 
 ## Paid / gated (avoid until traction)
 

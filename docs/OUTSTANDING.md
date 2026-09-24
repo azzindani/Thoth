@@ -143,6 +143,12 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ≈ 630): new `succeededWithin()` store helper, the leg skips when its
   latest run succeeded within 4.5 h (a failed latest run is retried at once).
   epmc left failing (upstream 503, see outages).
+- [x] Keyless loop-15 (2026-09-24): nothing fixable failing at the start.
+  Shipped IFRC GO emergencies → `disasters` (new `emergencies`, source
+  `ifrc-go`: 71 emergencies of the last 90 days, all placed, active appeal
+  funding joined). ReliefWeb left the queue: API v2 needs an approved
+  appname (DATA_SOURCES "Free-key"). JTWC queued. bbc + aljazeera started
+  failing mid-run on an Akamai path fault (outage list above).
 - [x] Keyless loop-14 (2026-09-24): nothing fixable failing (the rest wait
   for keys or the operator; epmc and metrotransit recovered upstream).
   Shipped WHO Disease Outbreak News → `health` (new `outbreaks`, 30 reports,
@@ -189,6 +195,11 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
     every endpoint, 2026-09-24); epmc (Europe PMC REST search answers 503
     from the host too while ebi.ac.uk itself is up, 2026-09-24). Both
     recovered on their own by 09:57 UTC the same day — no code change.
+    bbc + aljazeera (from 10:23 UTC 2026-09-24: about half of all TCP
+    connects from this host to the Akamai edge 23.195.240.0/24 time out —
+    host and worker alike, other feeds fine; dw on another Akamai edge
+    flaps too). Network path, not code; re-probe next run, and if it
+    persists give the news legs one spaced retry on connect errors.
   - **Dropped:** goldapi (its DNS answers NXDOMAIN for AAAA; musl takes that
     as no-such-host; Yahoo carries gold), on511 (now "Invalid Key").
 - [ ] Blocked from this host — needs an operator decision (2026-09-24). Owner:
