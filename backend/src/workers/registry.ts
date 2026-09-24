@@ -243,6 +243,12 @@ export const COLLECTORS = {
 	},
 	// Malware C2 TLS certificate fingerprints.
 	sslbl: { module: "./collectors/sslbl.js", intervalSec: 3600, ttlSec: 7200 },
+	// IFRC GO emergencies and their appeals.
+	emergencies: {
+		module: "./collectors/emergencies.js",
+		intervalSec: 10800,
+		ttlSec: 21600,
+	},
 	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
 } as const;
 
