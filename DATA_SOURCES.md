@@ -62,6 +62,8 @@ Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch
 | health | WHO Disease Outbreak News (who.int OData `diseaseoutbreaknews`) | 3h | newest 30 DON reports at the first named country's capital; Ebola/Marburg/Nipah/MERS/avian flu etc. critical; kept after they scroll off |
 | cyber | abuse.ch SSLBL SSL certificate blacklist (CSV, CC0) | 1h | malware C2 TLS certificate SHA-1s listed in the last 7 days, by family; older listings pruned |
 | disasters | IFRC GO emergencies (`goadmin.ifrc.org/api/v2/event/`) + active appeals (`/appeal/?status=0`) | 3h | Red Cross/Red Crescent emergencies of the last 90 days at the affected country's capital; IFRC Red/Orange/Yellow → critical/watch/info, Emergency Appeal lifts Yellow; appeal funding joined; pruned past the window |
+| weather | JMA warnings, 2026 "r8" system (`bosai/warning/data/r8/map.json` + sub-area polygons `bosai/common/const/geojson/class10s.json`) | 15m | one marker per forecast sub-area with anything in force, worst level wins: special/danger warning critical, warning watch, advisory info; current picture, pruned |
+| volcanoes | JMA eruption warnings (`bosai/volcano/data/warning.json` + summits `bosai/volcano/const/volcano_list.json`) | 1h | every Japanese volcano above normal: Level 4–5 / residential critical, Level 2–3, near-crater and sea-area warnings watch, Level 1 info; current picture, pruned |
 
 ## Free-key (depth / limits)
 

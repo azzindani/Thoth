@@ -1,4 +1,4 @@
-// Collector contract tests, warnings: official public warnings (Environment Canada, EA floods, warnung.bund.de providers, Hong Kong Observatory).
+// Collector contract tests, warnings: official public warnings (Environment Canada, EA floods, warnung.bund.de providers, Hong Kong Observatory, Japan Meteorological Agency).
 // Upstreams stubbed at fetch. Run: npm run test:collectors (needs thoth_test DB)
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
@@ -294,5 +294,126 @@ describe("warnings: Hong Kong Observatory", () => {
 		await warnings.collect();
 		assert.equal((await eventsOf("hko-warn")).length, 0);
 		assert.equal((await healthOf("hko-warn")).ok, true);
+	});
+});
+
+describe("warnings: Japan Meteorological Agency", () => {
+	const square = (lon: number, lat: number) => ({
+		type: "MultiPolygon",
+		coordinates: [
+			[
+				[
+					[lon, lat],
+					[lon + 1, lat],
+					[lon + 1, lat + 1],
+					[lon, lat + 1],
+					[lon, lat],
+				],
+			],
+		],
+	});
+	const AREAS = {
+		type: "FeatureCollection",
+		features: [
+			{
+				type: "Feature",
+				properties: {
+					code: "130010",
+					name: "東京地方",
+					enName: "Tokyo Region",
+				},
+				geometry: square(139, 35),
+			},
+			// The same code again as an island part: no English name, and it
+			// must not move or rename the area.
+			{
+				type: "Feature",
+				properties: { code: "130010", name: "東京地方", islandBold: true },
+				geometry: square(150, 20),
+			},
+			{
+				type: "Feature",
+				properties: {
+					code: "460040",
+					name: "奄美地方",
+					enName: "Amami Region",
+				},
+				geometry: square(129, 28),
+			},
+		],
+	};
+	// Two data types from the same office: the area's picture is the union.
+	const REPORTS = [
+		{
+			reportDatetime: "2026-09-24T10:00:00+09:00",
+			warning: {
+				class10Items: [
+					{
+						areaCode: "130010",
+						kinds: [
+							{ code: "03", status: "発表" },
+							{ code: "14", status: "継続" },
+							{ code: "10", status: "解除" },
+						],
+					},
+					{
+						areaCode: "460040",
+						kinds: [{ status: "発表警報・注意報はなし" }],
+					},
+				],
+			},
+		},
+		{
+			reportDatetime: "2026-09-24T11:00:00+09:00",
+			warning: {
+				class10Items: [
+					{ areaCode: "130010", kinds: [{ code: "48", status: "発表" }] },
+					{ areaCode: "999999", kinds: [{ code: "24", status: "継続" }] },
+				],
+			},
+		},
+	];
+	it("grades r8 levels", () => {
+		assert.equal(warnings.jmaSeverity(50), "critical");
+		assert.equal(warnings.jmaSeverity(40), "critical");
+		assert.equal(warnings.jmaSeverity(30), "watch");
+		assert.equal(warnings.jmaSeverity(20), "info");
+	});
+	it("one row per area at its worst level; lifted and quiet areas left out", async () => {
+		const calls = stubFetch([
+			[/warning\/data\/r8\/map\.json/, json(REPORTS)],
+			[/geojson\/class10s\.json/, json(AREAS)],
+		]);
+		await warnings.collect();
+		const rows = await eventsOf("jma-warn");
+		assert.deepEqual(
+			rows.map((x) => [x.id, x.severity, x.title, x.lon, x.lat]),
+			[
+				[
+					"jma:130010",
+					"critical",
+					"JMA · Tokyo Region — storm surge danger warning, heavy rain warning, thunderstorm advisory",
+					// lib/geo averages the ring's vertices (closing one included).
+					139.4,
+					35.4,
+				],
+				// Unknown area code: kept, unplaced.
+				["jma:999999", "info", "JMA · 999999 — frost advisory", null, null],
+			],
+		);
+		assert.equal(rows[0].ts, "2026-09-24 02:00:00+00");
+		// Area polygons are static: a second run does not refetch them.
+		await warnings.collect();
+		assert.equal(calls.filter((u) => u.includes("class10s")).length, 1);
+	});
+	it("an empty report list is a moved path, not a quiet day", async () => {
+		stubFetch([[/warning\/data\/r8\/map\.json/, json([])]]);
+		await warnings.collect();
+		assert.match(
+			(await healthOf("jma-warn")).error ?? "",
+			/unexpected payload: no reports/,
+		);
+		// The last good picture stays until the feed answers again.
+		assert.equal((await eventsOf("jma-warn")).length, 2);
 	});
 });

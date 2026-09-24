@@ -10,6 +10,8 @@
 //                footprint lookup as MoWaS (DWD weather is `dwd-warn`)
 //   hko-warn     Hong Kong Observatory warnings in force (typhoon signals,
 //                rainstorm, landslip, tsunami…) → `weather`
+//   jma-warn     Japan Meteorological Agency warnings and advisories (2026
+//                "r8" system), one row per forecast sub-area → `weather`
 // Area geometries become one marker each (lib/geo pointOf); area lookups are
 // cached in memory, since flood areas and warning footprints do not move.
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
@@ -59,6 +61,62 @@ const HKO_WARN_URL =
 	"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en";
 const HKO_PAGE = "https://www.hko.gov.hk/en/wxinfo/dailywx/wxwarntoday.htm";
 const HKO_AT = { lat: 22.3022, lon: 114.1741 };
+// JMA "r8" warnings (the 2026 revision; the old data/warning/*.json froze on
+// 2026-05-28). map.json holds each forecast office's latest report per data
+// type (VPWW55–61); an area's picture is the union of its active kinds
+// across them. Sub-area polygons (class10s.json, 153 areas) give the marker.
+const JMA_WARN_URL = "https://www.jma.go.jp/bosai/warning/data/r8/map.json";
+const JMA_AREAS_URL =
+	"https://www.jma.go.jp/bosai/common/const/geojson/class10s.json";
+const JMA_PAGE = "https://www.jma.go.jp/bosai/warning/";
+/** r8 kind codes → element + level, from the JMA warning page's own table:
+ * 50 special warning, 40 danger warning (new in 2026), 30 warning,
+ * 20 advisory. */
+const JMA_KINDS: Record<string, [string, 20 | 30 | 40 | 50]> = {
+	"02": ["snowstorm", 30],
+	"03": ["heavy rain", 30],
+	"05": ["storm", 30],
+	"06": ["heavy snow", 30],
+	"07": ["high waves", 30],
+	"08": ["storm surge", 30],
+	"09": ["landslide", 30],
+	"10": ["heavy rain", 20],
+	"12": ["heavy snow", 20],
+	"13": ["snowstorm", 20],
+	"14": ["thunderstorm", 20],
+	"15": ["gale", 20],
+	"16": ["high waves", 20],
+	"17": ["snowmelt", 20],
+	"19": ["storm surge", 20],
+	"20": ["dense fog", 20],
+	"21": ["dry air", 20],
+	"22": ["avalanche", 20],
+	"23": ["low temperature", 20],
+	"24": ["frost", 20],
+	"25": ["ice accretion", 20],
+	"26": ["snow accretion", 20],
+	"29": ["landslide", 20],
+	"32": ["snowstorm", 50],
+	"33": ["heavy rain", 50],
+	"35": ["storm", 50],
+	"36": ["heavy snow", 50],
+	"37": ["high waves", 50],
+	"38": ["storm surge", 50],
+	"39": ["landslide", 50],
+	"43": ["heavy rain", 40],
+	"48": ["storm surge", 40],
+	"49": ["landslide", 40],
+};
+const JMA_LEVEL_NAME = {
+	20: "advisory",
+	30: "warning",
+	40: "danger warning",
+	50: "special warning",
+} as const;
+/** Lifted (解除) and "none in force" (…なし) are the only inactive states. */
+const jmaActive = (status?: string) =>
+	!!status && status !== "解除" && !status.includes("なし");
+
 /** Per-run cap on uncached area lookups — a flood crisis can raise hundreds
  * of warnings; the rest get located on later runs as the cache fills. */
 const MAX_LOOKUPS_PER_RUN = 60;
@@ -270,11 +328,104 @@ export function hkoRows(sum: Record<string, HkoWarning>): Row[] {
 	return rows;
 }
 
+export type JmaReport = {
+	reportDatetime?: string;
+	warning?: {
+		class10Items?: {
+			areaCode?: string;
+			kinds?: { code?: string; status?: string }[];
+		}[];
+	};
+};
+export type JmaArea = { name: string; at: LonLat };
+
+export const jmaSeverity = (level: number): Sev =>
+	level >= 40 ? "critical" : level >= 30 ? "watch" : "info";
+
+/** Latest reports → one row per sub-area with anything in force, at its
+ * worst level; kinds listed worst first. Areas without geometry are kept
+ * unplaced rather than dropped. */
+export function jmaRows(
+	reports: JmaReport[],
+	areas: Map<string, JmaArea>,
+): Row[] {
+	const byArea = new Map<string, { kinds: Set<string>; at: string }>();
+	for (const r of reports)
+		for (const it of r.warning?.class10Items ?? []) {
+			if (!it.areaCode) continue;
+			for (const k of it.kinds ?? []) {
+				if (!k.code || !JMA_KINDS[k.code] || !jmaActive(k.status)) continue;
+				const a = byArea.get(it.areaCode) ?? { kinds: new Set(), at: "" };
+				a.kinds.add(k.code);
+				if ((r.reportDatetime ?? "") > a.at) a.at = r.reportDatetime ?? "";
+				byArea.set(it.areaCode, a);
+			}
+		}
+	const rows: Row[] = [];
+	for (const [code, a] of byArea) {
+		const kinds = [...a.kinds]
+			.map((c) => JMA_KINDS[c])
+			.sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+		const level = kinds[0][1];
+		const area = areas.get(code);
+		rows.push({
+			id: `jma:${code}`,
+			ts: new Date(Date.parse(a.at) || Date.now()).toISOString(),
+			source: "jma-warn",
+			layer: "weather",
+			title: `JMA · ${area?.name ?? code} — ${kinds
+				.map(([el, lv]) => `${el} ${JMA_LEVEL_NAME[lv]}`)
+				.join(", ")}`.slice(0, 300),
+			url: JMA_PAGE,
+			severity: jmaSeverity(level),
+			confidence: 0.95,
+			lat: area?.at.lat,
+			lon: area?.at.lon,
+			entities: { agency: "Japan Meteorological Agency" },
+			meta: {
+				area: code,
+				level: JMA_LEVEL_NAME[level],
+				kinds: [...a.kinds].sort(),
+			},
+		});
+	}
+	return rows;
+}
+
+/** class10s.json → area code → English name + marker. Ten codes repeat as
+ * a separate island part (`islandBold`, no English name); the main feature
+ * names and places the area. */
+export function jmaAreas(geo: unknown): Map<string, JmaArea> {
+	const out = new Map<string, JmaArea>();
+	const feats = (geo as { features?: unknown[] } | null)?.features ?? [];
+	for (const f of feats as {
+		properties?: {
+			code?: string;
+			name?: string;
+			enName?: string;
+			islandBold?: boolean;
+		};
+		geometry?: unknown;
+	}[]) {
+		const code = f.properties?.code;
+		const at = pointOf(f.geometry);
+		if (!code || !at) continue;
+		if (out.has(code) && f.properties?.islandBold) continue;
+		out.set(code, {
+			name: f.properties?.enName || f.properties?.name || code,
+			at,
+		});
+	}
+	return out;
+}
+
 // Area/footprint caches survive across runs (the worker is long-lived).
 // null = looked up, has no usable geometry — don't ask again.
 const eaAreas = new Map<string, LonLat | null>();
 // Warning ids are unique across providers, so one footprint cache serves all.
 const bbkFootprints = new Map<string, LonLat | null>();
+// JMA sub-area polygons are static: fetched once per worker life.
+let jmaAreaCache: Map<string, JmaArea> | null = null;
 
 async function fetchJson(
 	url: string,
@@ -359,6 +510,24 @@ const SOURCES: Array<{
 			if (!json || typeof json !== "object" || Array.isArray(json))
 				throw new Error("unexpected payload: not an object");
 			return { status, rows: hkoRows(json as Record<string, HkoWarning>) };
+		},
+	},
+	{
+		source: "jma-warn",
+		layer: "weather",
+		run: async () => {
+			const { status, json } = await fetchJson(JMA_WARN_URL);
+			// Every forecast office always has a latest report; an empty or
+			// non-list payload means the r8 path moved again.
+			if (!Array.isArray(json) || !json.length)
+				throw new Error("unexpected payload: no reports");
+			if (!jmaAreaCache) {
+				const geo = await fetchJson(JMA_AREAS_URL);
+				const areas = jmaAreas(geo.json);
+				if (!areas.size) throw new Error("no sub-area geometry");
+				jmaAreaCache = areas;
+			}
+			return { status, rows: jmaRows(json as JmaReport[], jmaAreaCache) };
 		},
 	},
 	...BBK_PROVIDERS.map((p) => ({

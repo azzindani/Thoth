@@ -143,6 +143,12 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ≈ 630): new `succeededWithin()` store helper, the leg skips when its
   latest run succeeded within 4.5 h (a failed latest run is retried at once).
   epmc left failing (upstream 503, see outages).
+- [x] Keyless loop-18 (2026-09-24): nothing fixable failing (bbc back to ok;
+  the rest wait for keys or the operator). Shipped JMA warnings (2026 r8
+  system) → `weather` (`jma-warn`, 24 sub-areas live, English names) and
+  JMA eruption warnings → `volcanoes` (`jma-volcano`, 14 volcanoes above
+  normal) — the Japanese volcano picture while Smithsonian stays blocked.
+  JMA river-flood forecasts queued (empty today).
 - [x] Keyless loop-17 (2026-09-24): fix run — jtwc was "ok" but wrong. The
   RSS moved to single-quoted links, so no system got its warning text (25W
   Surigae unplaced); the last system of an item fell through to the next
