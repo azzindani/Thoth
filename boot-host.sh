@@ -5,7 +5,7 @@
 #
 #   export POSTGRES_PASSWORD=$(openssl rand -hex 32)
 #   export API_WRITE_KEY=$(openssl rand -hex 32)
-#   export APP_BASIC_AUTH="ops:$(openssl rand -hex 12)"   # the tunnel is public
+#   export APP_ACCESS_KEY=$(openssl rand -hex 32)   # the tunnel is public
 #   sh boot-host.sh
 #
 # Prints a https://<name>.trycloudflare.com link at the end. Tunnel is
@@ -28,8 +28,8 @@ if ! command -v cloudflared >/dev/null; then
 fi
 [ -n "$POSTGRES_PASSWORD" ] || { echo "export POSTGRES_PASSWORD first"; exit 1; }
 [ -n "$API_WRITE_KEY" ] || { echo "export API_WRITE_KEY first (openssl rand -hex 32)"; exit 1; }
-if [ -z "$APP_BASIC_AUTH" ] && [ -z "$APP_TRUST_UPSTREAM_AUTH" ]; then
-	echo "warning: no APP_BASIC_AUTH — anyone with the tunnel link can read; UI writes will be refused"
+if [ -z "$APP_ACCESS_KEY" ] && [ -z "$APP_TRUST_UPSTREAM_AUTH" ]; then
+	echo "warning: no APP_ACCESS_KEY — anyone with the tunnel link can read; UI writes will be refused"
 fi
 [ -f backend/docker-compose.yml ] || { echo "run from repo root (backend/docker-compose.yml not found)"; exit 1; }
 
@@ -50,8 +50,7 @@ for i in $(seq 1 30); do
 	if curl -sf -m 5 -o /dev/null http://localhost:3000/healthz; then break; fi
 	sleep 10
 done
-AUTH=${APP_BASIC_AUTH:+-u $APP_BASIC_AUTH}
-CHUNK=$(curl -s -m 10 $AUTH http://localhost:3000/ | grep -o 'chunks/[a-z0-9]*\.js' | head -1)
+CHUNK=$(curl -s -m 10 -H "Authorization: Bearer ${APP_ACCESS_KEY:-}" http://localhost:3000/ | grep -o 'chunks/[a-z0-9]*\.js' | head -1)
 curl -sf -m 10 -o /dev/null "http://localhost:3000/_next/static/$CHUNK" \
 	|| { echo "app chunk not servable — stale build, rerun app/restart.sh logic"; exit 1; }
 echo "app: up, chunk $CHUNK servable"
@@ -69,5 +68,5 @@ if [ -z "$LINK" ]; then
 	exit 1
 fi
 echo ""
-echo "THOTH LIVE AT: $LINK"
+echo "THOTH LIVE AT: $LINK${APP_ACCESS_KEY:+/?token=<APP_ACCESS_KEY>}"
 echo "(tunnel dies with the shell session — run under tmux/nohup on the host; DNS cutover per docs/HOSTING.md)"

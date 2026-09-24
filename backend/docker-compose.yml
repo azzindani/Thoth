@@ -6,6 +6,12 @@
 # browser talks same-origin to the app, which proxies /api to the api service
 # on the internal network and injects API_WRITE_KEY server-side. The API port
 # binds to localhost for host cron + debugging only.
+#
+# Behind a shared reverse proxy (docs/HOSTING.md §6): the proxy joins the
+# `thoth_edge` network, which holds the app and nothing else — it can reach
+# thoth-app-1:3000 but not the API or the database.
+
+name: thoth
 
 x-logging: &logging
   driver: json-file
@@ -99,6 +105,11 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    # The image's HEALTHCHECK probes the API on :4000, which this process
+    # never serves, so it could only ever report unhealthy. Worker liveness
+    # is its DB heartbeat instead (Monitor tab: WORKER DOWN after 60s).
+    healthcheck:
+      disable: true
     restart: unless-stopped
     # Worker drains in-flight collectors for up to 25s on SIGTERM.
     stop_grace_period: 30s
@@ -117,11 +128,18 @@ services:
         THOTH_API_INTERNAL: http://api:4000
     environment:
       API_WRITE_KEY: ${API_WRITE_KEY:?set API_WRITE_KEY (openssl rand -hex 32)}
-      # Set one of these, or writes from the UI are refused (fail closed):
-      APP_BASIC_AUTH: ${APP_BASIC_AUTH:-}
+      # Access gate (src/proxy.ts). Set one of these, or the app is open to
+      # anyone who reaches it and writes from the UI are refused (fail closed).
+      APP_ACCESS_KEY: ${APP_ACCESS_KEY:-}
+      APP_TOKENS: ${APP_TOKENS:-}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:-}
+      APP_SESSION_TTL_MS: ${APP_SESSION_TTL_MS:-}
       APP_TRUST_UPSTREAM_AUTH: ${APP_TRUST_UPSTREAM_AUTH:-}
     ports:
       - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    networks:
+      - default
+      - edge
     depends_on:
       api:
         condition: service_healthy
@@ -131,6 +149,10 @@ services:
         limits:
           memory: 1G
     logging: *logging
+
+networks:
+  edge:
+    name: thoth_edge
 
 volumes:
   thoth_pg:
