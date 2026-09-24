@@ -143,6 +143,14 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ≈ 630): new `succeededWithin()` store helper, the leg skips when its
   latest run succeeded within 4.5 h (a failed latest run is retried at once).
   epmc left failing (upstream 503, see outages).
+- [x] Keyless loop-14 (2026-09-24): nothing fixable failing (the rest wait
+  for keys or the operator; epmc and metrotransit recovered upstream).
+  Shipped WHO Disease Outbreak News → `health` (new `outbreaks`, 30 reports,
+  19 placed at a named country's capital) and abuse.ch SSLBL C2 certificate
+  fingerprints → `cyber` (new `sslbl`, 85 in the last 7 days). The shared
+  country table gains the United States. JMA warnings stay queued: the old
+  path froze on 2026-05-28; the r8 feed and its code table are found, but it
+  carries no coordinates (queue note).
 - [x] Keyless loop-13 (2026-09-24): fix pass after the host reboot —
   epa-ie **dropped** (its newest rows sit at the deepest page offset, ~9.4M
   rows in; that page now outlasts the upstream's 30 s gateway and 500s every
@@ -179,7 +187,8 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
     statement lags 1–3 business days, rates are monthly → 5 d / 40 d budgets).
   - **Upstream outage, left failing:** metrotransit (NexTrip answers 500 on
     every endpoint, 2026-09-24); epmc (Europe PMC REST search answers 503
-    from the host too while ebi.ac.uk itself is up, 2026-09-24).
+    from the host too while ebi.ac.uk itself is up, 2026-09-24). Both
+    recovered on their own by 09:57 UTC the same day — no code change.
   - **Dropped:** goldapi (its DNS answers NXDOMAIN for AAAA; musl takes that
     as no-such-host; Yahoo carries gold), on511 (now "Invalid Key").
 - [ ] Blocked from this host — needs an operator decision (2026-09-24). Owner:

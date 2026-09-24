@@ -35,12 +35,11 @@ loop by definition; they stay in DATA_SOURCES.md "Free-key".
 | waterlevel.ie (OPW Ireland) GeoJSON | oceans | parked | live (464 level sensors, CC BY 4.0) but no flood thresholds — every reading would be an unrankable info dot; needs per-station statistics first |
 | SA CFS / TAS TFS / NT PFES bushfire feeds | fires | blocked | old paths moved (2026-09-24: SA `data.eso.sa.gov.au` 197B HTML, TAS 410, NT 404) — find current ones, then extend `wildfires` |
 | Canada CWFIS active fires | fires | blocked | old CSV path 404s (2026-09-24); find the current one |
-| JMA warnings (`jma.go.jp/bosai/warning/data/…`) | weather | candidate | keyless JSON (HKO `warnsum` shipped in batch36) |
-| abuse.ch SSLBL (`sslbl.abuse.ch/blacklist/sslblacklist.csv`) | cyber | candidate | CSV, 813 KB (CERT-FR/CERT-EU/CCCS/JPCERT advisories shipped as `certs`) |
+| JMA warnings, 2026 (r8) system (`jma.go.jp/bosai/warning/data/r8/map.json`) | weather | candidate | the old `data/warning/*.json` froze on 2026-05-28 when JMA revised its warnings. r8 `map.json` = one call, every forecast office (class10/class20 area codes, kinds[code,status]); names from `bosai/common/const/area.json`. Code → element/level table lives in the warning page's inline script: level 50 special warning (32/33/35–39, flood 51/53), 40 danger warning (43/48/49, flood 40/41), 30 warning (02/03/05–09, flood 30/31), 20 advisory (10, 12–17, 19–26, 29). Needs geometry: no coordinates in the feed — class10 polygons or office anchors first (2026-09-24) |
 | NCSC-UK feeds (`ncsc.gov.uk/api/1/services/v1/*-rss-feed.xml`) | cyber | parked | live, but news/reports/guidance only — no advisory feed to grade |
 | ACSC cyber.gov.au alerts/advisories RSS | cyber | blocked | HTTP/2 stream reset, then connect/read timeouts from this host (2026-09-24) — operator |
-| WHO Disease Outbreak News API | health | candidate | keyless JSON |
 | ReliefWeb API | disasters | check | appname may now need approval — probe before building |
+| IFRC GO emergencies (`goadmin.ifrc.org/api/v2/event/?ordering=-disaster_start_date`) | disasters | candidate | keyless JSON (6,075 events; disaster type, countries with ISO3, DREF/appeal amounts) — probed 2026-09-24; the `ifrc` RSS leg carries headlines only |
 
 When a source is live, move it to `ENDPOINTS.md` + `DATA_SOURCES.md` and drop
 its row here. Add new finds at the bottom with a one-line probe note.

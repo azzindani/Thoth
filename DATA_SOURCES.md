@@ -59,6 +59,8 @@ Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch
 | weather | Hong Kong Observatory open data `warnsum` | 15m | warnings in force, `{}` when quiet |
 | radiation | BfS ODL (Bundesamt für Strahlenschutz) `odlinfo_odl_1h_latest` WFS, DL-DE/BY-2.0 | 15m (hourly data) | ~1,600 German gamma dose-rate stations; ≥0.3 µSv/h watch, ≥1 critical; current picture, pruned. Replaces EPA Ireland radmon (dropped 2026-09-24) |
 | cyber | National CERT advisories: CERT-FR avis + alertes RSS, CERT-EU security advisories RSS, Canadian Centre for Cyber Security (CCCS) alerts & advisories Atom, JPCERT/CC English RDF | 30m | exploitation named in the text → critical, alerts → watch, vendor advisories → info; rolling windows, rows kept |
+| health | WHO Disease Outbreak News (who.int OData `diseaseoutbreaknews`) | 3h | newest 30 DON reports at the first named country's capital; Ebola/Marburg/Nipah/MERS/avian flu etc. critical; kept after they scroll off |
+| cyber | abuse.ch SSLBL SSL certificate blacklist (CSV, CC0) | 1h | malware C2 TLS certificate SHA-1s listed in the last 7 days, by family; older listings pruned |
 
 ## Free-key (depth / limits)
 
