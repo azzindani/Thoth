@@ -134,6 +134,24 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   production host before shipping — CAL FIRE, NSW RFS, VIC EMV → `fires`; ECCC
   alerts → `weather`; EA floods, MoWaS → `disasters`. Loop recipe + candidate
   queue: ADDING_ENDPOINTS.md.
+- [x] Keyless loop-12 (2026-09-24), fix pass: openalex drew sporadic 429s
+  early in a run with budget left (4 of 50 calls; the call log shows it was
+  not budget exhaustion — likely the anonymous per-IP limits, shared with
+  every service on this VPS). The leg now waits (Retry-After, else 10 s) and
+  retries that topic once. Separately, every worker restart re-ran it and
+  spent the daily credit budget (1000/IP, 10 per search; nine runs today
+  ≈ 630): new `succeededWithin()` store helper, the leg skips when its
+  latest run succeeded within 4.5 h (a failed latest run is retried at once).
+  epmc left failing (upstream 503, see outages).
+- [x] Keyless loop-13 (2026-09-24): fix pass after the host reboot —
+  epa-ie **dropped** (its newest rows sit at the deepest page offset, ~9.4M
+  rows in; that page now outlasts the upstream's 30 s gateway and 500s every
+  run, mid-depth pages take 27 s, and the API ignores every filter/ordering
+  parameter) and replaced as the radiation layer's live pulse by BfS ODL
+  (German gamma dose-rate network, 1,581 operating stations, current
+  picture); bitstamp moved to the host-blocked list (see below). Shipped
+  `certs`: CERT-FR avis + alertes, CERT-EU, CCCS (Canada), JPCERT/CC →
+  `cyber`, 146 advisories on first run.
 - [x] Keyless loop-11 (2026-09-24): fixed reddit (arctic-shift full-text
   search 422s on r/worldnews → newest-100 listing, hazard titles matched
   locally) and om-flood (one stalled gauge failed the whole leg → per-gauge
@@ -160,14 +178,19 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
     `submittedDate`), fiscaldata/fiscal-rates (recovered into "frozen": daily
     statement lags 1–3 business days, rates are monthly → 5 d / 40 d budgets).
   - **Upstream outage, left failing:** metrotransit (NexTrip answers 500 on
-    every endpoint, 2026-09-24).
+    every endpoint, 2026-09-24); epmc (Europe PMC REST search answers 503
+    from the host too while ebi.ac.uk itself is up, 2026-09-24).
   - **Dropped:** goldapi (its DNS answers NXDOMAIN for AAAA; musl takes that
     as no-such-host; Yahoo carries gold), on511 (now "Invalid Key").
 - [ ] Blocked from this host — needs an operator decision (2026-09-24). Owner:
   operator. Due 2026-10-08. celestrak (no TCP connect), smithsonian (reset
   after handshake), nga-msi (Akamai 503), enisa-euvd (Azure WAF 403), gdelt
   (429 on every call, one per 30 s still refused), binance + kalshi
-  (resolver 153.92.2.6 answers with the Indonesian content-filter page), govtrack
+  (resolver 153.92.2.6 answers with the Indonesian content-filter page),
+  bitstamp (same filter, 2026-09-24: `www.bitstamp.net` resolves to two
+  filter IPs instead of its Incapsula edge — one is
+  `lamanlabuh.aduankonten.id`, the block page, and fetches landing there time
+  out, so runs fail at random), govtrack
   (closes the connection), medrxiv (timeouts). Options: leave them honestly
   failing, drop them, or route those hosts through an egress elsewhere.
 - [ ] 51 sources "frozen" (succeeding, newest item older than budget) —

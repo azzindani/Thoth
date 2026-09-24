@@ -233,6 +233,8 @@ export const COLLECTORS = {
 		intervalSec: 900,
 		ttlSec: 1800,
 	},
+	// National CERT advisories.
+	certs: { module: "./collectors/certs.js", intervalSec: 1800, ttlSec: 3600 },
 	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
 } as const;
 

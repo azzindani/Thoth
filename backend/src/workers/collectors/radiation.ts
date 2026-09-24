@@ -1,33 +1,109 @@
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
-import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
+import {
+	dbClock,
+	errMsg,
+	markHealth,
+	pruneStale,
+	storeNormalized,
+	storeRaw,
+} from "../lib/store.js";
 
 // Safecast citizen radiation network, keyless. Rolling 7-day window so the layer
 // reflects live sensors, not the 2020 backfill the unfiltered endpoint returns.
 // NOTE 2026-09-15: the API now ignores order/captured_after (serves 2013 rows),
-// so Safecast is a frozen-honest fallback; Ireland EPA carries the live pulse.
-// EPA Ireland radmon open API (keyless, validated lab + monitor data):
-// latest page = newest measurement_ids (auto-increment).
-const EPA_COUNT_URL =
-	"https://data.epa.ie/radmon/api/v1/measurements?page=1&per_page=1";
-const EPA_PAGE_URL = (page: number) =>
-	`https://data.epa.ie/radmon/api/v1/measurements?page=${page}&per_page=100`;
-// The newest page is the deepest offset (~9.4M rows): it takes ~28 s to
-// serve, and the API ignores every ordering parameter (2026-09-24), so the
-// default 15 s fetch timeout aborted it on every run.
-const EPA_PAGE_TIMEOUT_MS = 60_000;
+// so Safecast is a frozen-honest fallback; BfS ODL carries the live pulse.
+// BfS ODL (Bundesamt für Strahlenschutz, keyless WFS, DL-DE/BY-2.0): the
+// latest 1-hour gamma dose rate of every German monitoring station (~1,600
+// operating). Current picture: stations that stop reporting are pruned.
+// (EPA Ireland radmon was dropped 2026-09-24: its newest rows sit at the
+// deepest page offset, past the upstream's 30 s gateway limit, and the API
+// ignores every filter and ordering parameter.)
+const BFS_ODL_URL =
+	"https://www.imis.bfs.de/ogc/opendata/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=opendata:odlinfo_odl_1h_latest&outputFormat=application/json";
+// ~900 KB; served in ~4 s, slower under load.
+const BFS_TIMEOUT_MS = 60_000;
+// Readings older than this are a station that stopped reporting.
+const BFS_MAX_AGE_MS = 6 * 3600_000;
+// Natural background in Germany is ~0.05–0.18 µSv/h; heavy rain washes
+// radon progeny down and can briefly lift a station toward 0.3.
+const BFS_WATCH_USV_H = 0.3;
+const BFS_CRITICAL_USV_H = 1;
 
-const EPA = z.object({
-	measurement_id: z.union([z.string(), z.number()]).optional(),
-	value: z.union([z.string(), z.number()]).nullable().optional(),
-	value_unit_code: z.string().nullable().optional(),
-	nuclide_code: z.string().nullable().optional(),
-	sample_type_description: z.string().nullable().optional(),
-	latitude_dec: z.union([z.string(), z.number()]).nullable().optional(),
-	longitude_dec: z.union([z.string(), z.number()]).nullable().optional(),
-	end_meas: z.string().nullable().optional(),
-	is_approved: z.boolean().nullable().optional(),
+const OdlFeature = z.object({
+	geometry: z
+		.object({ type: z.literal("Point"), coordinates: z.array(z.number()) })
+		.nullable(),
+	properties: z
+		.object({
+			id: z.string(),
+			name: z.string().nullish(),
+			site_status: z.number().nullish(),
+			value: z.number().nullish(),
+			value_cosmic: z.number().nullish(),
+			value_terrestrial: z.number().nullish(),
+			unit: z.string().nullish(),
+			end_measure: z.string().nullish(),
+			validated: z.number().nullish(),
+			height_above_sea: z.number().nullish(),
+		})
+		.passthrough(),
 });
+const OdlCollection = z
+	.object({ features: z.array(z.unknown()) })
+	.passthrough();
+
+export type OdlReading = {
+	id: string;
+	name: string;
+	lon: number;
+	lat: number;
+	value: number;
+	ts: string;
+	meta: Record<string, unknown>;
+};
+
+export function odlSeverity(usvh: number): "critical" | "watch" | "info" {
+	if (usvh >= BFS_CRITICAL_USV_H) return "critical";
+	return usvh >= BFS_WATCH_USV_H ? "watch" : "info";
+}
+
+/** Operating stations with a reading newer than BFS_MAX_AGE_MS. Throws when
+ * the payload is not a feature collection (shape changed). */
+export function odlReadings(j: unknown, now = Date.now()): OdlReading[] {
+	const out: OdlReading[] = [];
+	for (const raw of OdlCollection.parse(j).features) {
+		const f = OdlFeature.safeParse(raw);
+		if (!f.success || !f.data.geometry) continue;
+		const p = f.data.properties;
+		const [lon, lat] = f.data.geometry.coordinates;
+		const ts = Date.parse(p.end_measure ?? "");
+		if (p.site_status !== 1 || p.value == null || Number.isNaN(ts)) continue;
+		if (now - ts > BFS_MAX_AGE_MS) continue;
+		if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+		out.push({
+			id: p.id,
+			name: p.name ?? p.id,
+			lon,
+			lat,
+			value: p.value,
+			ts: new Date(ts).toISOString(),
+			meta: {
+				value: p.value,
+				cosmic: p.value_cosmic ?? null,
+				terrestrial: p.value_terrestrial ?? null,
+				unit: p.unit ?? "µSv/h",
+				validated: p.validated === 1,
+				altitude: p.height_above_sea ?? null,
+			},
+		});
+	}
+	return out;
+}
+
+/** Newest hour stored by the last run (the worker is long-lived; a restart
+ * simply rewrites the picture once). Data is hourly, polls are 15 min. */
+let lastOdlHour = "";
 
 const M = z.object({
 	id: z.union([z.string(), z.number()]).optional(),
@@ -83,57 +159,38 @@ export async function collect() {
 		await markHealth("safecast", false, errors[errors.length - 1]);
 	}
 	try {
-		assertSafeUrl(EPA_COUNT_URL);
-		const cRes = await stealthFetch(EPA_COUNT_URL);
-		if (!cRes.ok) throw new Error(`HTTP ${cRes.status}`);
-		const cJson = (await cRes.json()) as { count?: number };
-		const total = Number(cJson.count ?? 0);
-		if (!Number.isFinite(total) || total < 1) throw new Error("no count");
-		const lastPage = Math.max(1, Math.ceil(total / 100));
-		const pRes = await stealthFetch(
-			EPA_PAGE_URL(lastPage),
-			{},
-			EPA_PAGE_TIMEOUT_MS,
-		);
-		if (!pRes.ok) throw new Error(`HTTP ${pRes.status}`);
-		const pJson = (await pRes.json()) as { list?: unknown };
-		const rows = z.array(EPA).parse(pJson.list ?? []);
-		await storeRaw("epa-ie", layer, pRes.status, { n: rows.length });
-		for (const r of rows.slice(0, 100)) {
-			const lat = Number(r.latitude_dec);
-			const lon = Number(r.longitude_dec);
-			const v = Number(r.value);
-			const ts = Date.parse(r.end_meas ?? "");
-			if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-			if (!Number.isFinite(v) || Number.isNaN(ts)) continue;
-			await storeNormalized({
-				id: `epaire:${String(r.measurement_id)}`,
-				ts: new Date(ts).toISOString(),
-				source: "epa-ie",
-				layer,
-				title:
-					`${r.nuclide_code ?? "?"} ${v} ${r.value_unit_code ?? ""} — ${r.sample_type_description ?? "sample"}`.slice(
-						0,
-						300,
-					),
-				severity: "info",
-				confidence: 0.85,
-				lon,
-				lat,
-				entities: {},
-				meta: {
-					value: r.value,
-					unit: r.value_unit_code,
-					nuclide: r.nuclide_code,
-					approved: r.is_approved,
-				},
-			});
-			n++;
+		const runStart = await dbClock();
+		assertSafeUrl(BFS_ODL_URL);
+		const res = await stealthFetch(BFS_ODL_URL, {}, BFS_TIMEOUT_MS);
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const rows = odlReadings(await res.json());
+		await storeRaw("bfs-odl", layer, res.status, { n: rows.length });
+		if (!rows.length) throw new Error("no operating stations with a reading");
+		const newest = rows.reduce((m, r) => (r.ts > m ? r.ts : m), "");
+		if (newest !== lastOdlHour) {
+			for (const r of rows) {
+				await storeNormalized({
+					id: `bfs-odl:${r.id}`,
+					ts: r.ts,
+					source: "bfs-odl",
+					layer,
+					title: `${r.value} µSv/h — ${r.name}`.slice(0, 300),
+					severity: odlSeverity(r.value),
+					confidence: 0.95,
+					lon: r.lon,
+					lat: r.lat,
+					entities: {},
+					meta: r.meta,
+				});
+			}
+			await pruneStale("bfs-odl", runStart);
+			lastOdlHour = newest;
 		}
-		await markHealth("epa-ie", true);
+		n += rows.length;
+		await markHealth("bfs-odl", true);
 	} catch (e: unknown) {
-		errors.push(`epa-ie: ${errMsg(e)}`);
-		await markHealth("epa-ie", false, errors[errors.length - 1]);
+		errors.push(`bfs-odl: ${errMsg(e)}`);
+		await markHealth("bfs-odl", false, errors[errors.length - 1]);
 	}
 	if (n === 0) return { ok: false, error: errors.join("; ") };
 	return { ok: true, count: n };

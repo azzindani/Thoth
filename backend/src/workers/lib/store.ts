@@ -117,6 +117,17 @@ export async function pruneStale(source: string, runStart: string) {
 	return rows.length;
 }
 
+/** True when `source`'s latest run succeeded less than `sec` seconds ago.
+ * Lets a quota-metered leg skip the extra run that every worker restart
+ * triggers; a failed latest run is always retried. */
+export async function succeededWithin(source: string, sec: number) {
+	const r = await query<{ fresh: boolean }>(
+		"SELECT last_ok > now() - make_interval(secs => $2) AND error IS NULL AS fresh FROM feed_health WHERE source=$1",
+		[source, sec],
+	);
+	return r[0]?.fresh === true;
+}
+
 export async function markHealth(source: string, ok: boolean, error?: string) {
 	await flushVersions();
 	// Content-age contract: freshness = newest observation date stored for this
