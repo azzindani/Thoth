@@ -44,7 +44,7 @@ describe("fedreg", () => {
 			)) as typeof fetch;
 		const r = await policy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='fedreg'",
 		);
 		assert.ok(rows.length >= 1);
@@ -76,7 +76,7 @@ describe("policy govtrack", () => {
 		]);
 		const r = await policy();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='govtrack'",
 		);
 		assert.deepEqual(

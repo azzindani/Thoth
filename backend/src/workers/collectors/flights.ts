@@ -11,10 +11,26 @@ const OPENSKY_URL =
 // Extra theater/city regions (same shape): Tokyo Bay, Sydney Basin,
 // Mexico City. Null-states regions (Kyiv — closed airspace) excluded.
 const OPENSKY_REGIONS: [string, string, string][] = [
-	["opensky-bosporus", "opensky-bos", "https://opensky-network.org/api/states/all?lamin=40&lamax=42&lomin=27&lomax=31"],
-	["opensky-tokyo", "opensky-tyo", "https://opensky-network.org/api/states/all?lamin=35&lamax=37&lomin=135&lomax=142"],
-	["opensky-sydney", "opensky-syd", "https://opensky-network.org/api/states/all?lamin=-33&lamax=-32&lomin=151&lomax=152"],
-	["opensky-mexico", "opensky-mex", "https://opensky-network.org/api/states/all?lamin=19&lamax=20&lomin=-100&lomax=-98"],
+	[
+		"opensky-bosporus",
+		"opensky-bos",
+		"https://opensky-network.org/api/states/all?lamin=40&lamax=42&lomin=27&lomax=31",
+	],
+	[
+		"opensky-tokyo",
+		"opensky-tyo",
+		"https://opensky-network.org/api/states/all?lamin=35&lamax=37&lomin=135&lomax=142",
+	],
+	[
+		"opensky-sydney",
+		"opensky-syd",
+		"https://opensky-network.org/api/states/all?lamin=-33&lamax=-32&lomin=151&lomax=152",
+	],
+	[
+		"opensky-mexico",
+		"opensky-mex",
+		"https://opensky-network.org/api/states/all?lamin=19&lamax=20&lomin=-100&lomax=-98",
+	],
 ];
 // adsb.fi opendata (keyless): second opinion when both above fail.
 const ADSFI_URL = "https://opendata.adsb.fi/api/v2/mil";
@@ -140,8 +156,7 @@ export async function collect() {
 							const [bicao, bcs, , , , blon, blat, bbaro, , btrack] = bs;
 							if (typeof blat !== "number" || typeof blon !== "number")
 								continue;
-							const bname =
-								typeof bcs === "string" ? bcs.trim() : "";
+							const bname = typeof bcs === "string" ? bcs.trim() : "";
 							await storeNormalized({
 								id: `${prefix}:${String(bicao)}`,
 								ts: new Date().toISOString(),

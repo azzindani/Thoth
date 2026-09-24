@@ -500,7 +500,11 @@ export async function collect() {
 				lon: lo,
 				lat: la,
 				entities: {},
-				meta: { sunrise: sr, sunset: ss, dayLength: j.results?.day_length ?? null },
+				meta: {
+					sunrise: sr,
+					sunset: ss,
+					dayLength: j.results?.day_length ?? null,
+				},
 			});
 			n++;
 		} catch (e: unknown) {

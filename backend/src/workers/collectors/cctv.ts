@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // CCTV federation: SG LTA + TfL JamCams + Ontario 511 (all keyless, verified).
@@ -61,7 +62,7 @@ export async function collect() {
 			let live: boolean | null = null;
 			if (i % Math.max(1, Math.floor(cams.length / 10)) === probeOffset % 10) {
 				live = await probe(c.image);
-				await new Promise((r) => setTimeout(r, 300));
+				await sleep(300);
 			}
 			await storeNormalized({
 				id: `cctv:sg:${c.camera_id}`,
@@ -98,7 +99,7 @@ export async function collect() {
 			let live: boolean | null = null;
 			if (props.imageUrl && i % 40 === probeOffset % 10) {
 				live = await probe(props.imageUrl);
-				await new Promise((r) => setTimeout(r, 300));
+				await sleep(300);
 			}
 			await storeNormalized({
 				id: `cctv:tfl:${p.id}`,

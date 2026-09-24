@@ -1,7 +1,8 @@
 "use client";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import { useEffect, useState } from "react";
-import { LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
+import { LAYER_NAMES } from "../lib/layer-catalog";
+import { PALETTE, SEV_INK } from "../lib/palette";
 import type { ObjProps } from "./MapView";
 
 interface Node {
@@ -43,7 +44,14 @@ export default function EntityGraph({
 			const feats: { p: ObjProps; layer: string; lng: number; lat: number }[] =
 				[];
 			try {
-				const ids = [...LAYER_NAMES, ...LAYER_NAMES.map((n) => `${n}-c`)];
+				// Clusters come from the count-label layers (-n): on the globe,
+				// maplibre 6 returns no circle (-c) features for a whole-viewport
+				// query, while the label layer carries the same cluster features.
+				// Only existing layers: one unknown id errors the whole query.
+				const ids = [
+					...LAYER_NAMES,
+					...LAYER_NAMES.map((n) => `${n}-n`),
+				].filter((id) => map.getLayer(id));
 				const rendered = map.queryRenderedFeatures({ layers: ids });
 				for (const f of rendered) {
 					const g = f.geometry as unknown as { coordinates?: unknown };
@@ -52,7 +60,7 @@ export default function EntityGraph({
 					const p = f.properties as unknown as ObjProps;
 					const lid =
 						(f as unknown as { layer?: { id?: string } }).layer?.id ?? "?";
-					const layer = lid.endsWith("-c") ? lid.slice(0, -2) : lid;
+					const layer = lid.endsWith("-n") ? lid.slice(0, -2) : lid;
 					const count = (p as unknown as { point_count?: number }).point_count;
 					feats.push({
 						p: {
@@ -76,7 +84,7 @@ export default function EntityGraph({
 					id: "sel",
 					label: sel.title ?? sel.id ?? "selected",
 					layer: "",
-					color: "#fff",
+					color: PALETTE.accent,
 					x: cx,
 					y: cy,
 					lng: 0,
@@ -102,7 +110,9 @@ export default function EntityGraph({
 					id: `n${i}`,
 					label: (f.p.title ?? f.p.id ?? f.layer).slice(0, 18),
 					layer: f.layer,
-					color: (LAYERS[f.layer]?.color as string) ?? "var(--amber)",
+					// severity is the only colour on data; the rest stays bone
+					color:
+						SEV_INK[String(f.p.severity ?? "").toLowerCase()] ?? PALETTE.txt2,
 					x: cx + R * Math.cos(a),
 					y: cy + R * Math.sin(a),
 					lng: f.lng,
@@ -140,15 +150,20 @@ export default function EntityGraph({
 		x: W / 2,
 		y: H / 2,
 		label: "viewport",
-		color: "#fff",
+		color: PALETTE.accent,
 	};
 	return (
 		<div className="entitygraph">
 			<div className="eg-head">
 				<b>Entity graph</b>
 				<span className="dim">{note}</span>
-				<button className="go" onClick={onClose}>
-					X
+				<button
+					className="ghost-btn"
+					onClick={onClose}
+					aria-label="close entity graph"
+					style={{ height: 24, padding: "0 8px" }}
+				>
+					CLOSE
 				</button>
 			</div>
 			<svg width={W} height={H} role="img">
@@ -170,12 +185,12 @@ export default function EntityGraph({
 				{nodes.map((n) =>
 					n.center ? (
 						<g key={n.id}>
-							<circle cx={n.x} cy={n.y} r="9" fill="#fff" />
+							<circle cx={n.x} cy={n.y} r="8" fill={PALETTE.accent} />
 							<text
 								x={n.x}
 								y={n.y + 22}
 								textAnchor="middle"
-								fill="#fff"
+								fill={PALETTE.txt}
 								fontSize="10"
 							>
 								{(n.label ?? "").slice(0, 22)}
@@ -204,7 +219,7 @@ export default function EntityGraph({
 						x={W / 2}
 						y={H / 2}
 						textAnchor="middle"
-						fill="#fff"
+						fill={PALETTE.dim}
 						fontSize="10"
 					>
 						viewport

@@ -47,7 +47,7 @@ describe("autobahn", () => {
 		}) as typeof fetch;
 		const r = await autobahn();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='autobahn' ORDER BY id",
 		);
 		assert.deepEqual(

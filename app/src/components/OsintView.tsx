@@ -974,8 +974,8 @@ export default function OsintView({
 												y={H - h}
 												width={Math.max(1, bw - 2)}
 												height={h}
-												fill="var(--accent)"
-												opacity="0.85"
+												fill="var(--chart)"
+												opacity="0.7"
 											/>
 										</g>
 									);

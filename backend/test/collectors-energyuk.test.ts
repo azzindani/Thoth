@@ -43,7 +43,7 @@ describe("energy-uk", () => {
 		}) as typeof fetch;
 		const r = await energyuk();
 		assert.equal(r.ok, true);
-		const rows = await query<{ title: string }[]>(
+		const rows = await query<{ title: string }>(
 			"SELECT title FROM events WHERE source='carbon-uk'",
 		);
 		assert.match(rows[0].title, /60 gCO₂\/kWh/);
@@ -81,14 +81,14 @@ describe("energy-uk", () => {
 		}) as typeof fetch;
 		const r = await energyuk();
 		assert.equal(r.ok, true);
-		const fw = await query<{ id: string }[]>(
+		const fw = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='carbon-uk-fw'",
 		);
 		assert.deepEqual(
 			fw.map((x) => x.id),
 			["carbonfw:2026-09-17"],
 		);
-		const mix = await query<{ id: string }[]>(
+		const mix = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='carbon-uk-mix' ORDER BY id",
 		);
 		assert.equal(mix.length, 3);

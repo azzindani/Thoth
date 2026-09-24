@@ -1,5 +1,18 @@
-# Thoth production compose: Timescale+PostGIS DB, one-shot migrate, API + worker + Next.js app.
-# Secrets via env only (see .env.example). First boot: docker compose up -d --build
+# Thoth production compose: Timescale+PostGIS DB, one-shot migrate + seed,
+# API + worker + Next.js app. Secrets via env only (see .env.example).
+# First boot: docker compose up -d --build
+#
+# Exposure model: only the app (:3000) is meant to face users/tunnels. The
+# browser talks same-origin to the app, which proxies /api to the api service
+# on the internal network and injects API_WRITE_KEY server-side. The API port
+# binds to localhost for host cron + debugging only.
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+x-db-url: &db-url postgres://${POSTGRES_USER:-thoth}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-thoth}
+
 services:
   db:
     image: timescale/timescaledb-ha:pg16
@@ -8,81 +21,107 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-thoth}
     volumes:
-      - thoth_pg:/var/lib/postgresql/data
+      - thoth_pg:/home/postgres/pgdata/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thoth}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thoth} -d ${POSTGRES_DB:-thoth}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
+    logging: *logging
 
   migrate:
     build: .
-    command: ["npm", "run", "db:migrate"]
+    command: ["node", "dist/scripts/migrate.js"]
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-thoth}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-thoth}
+      NODE_ENV: production
+      DATABASE_URL: *db-url
     depends_on:
       db:
         condition: service_healthy
+    logging: *logging
 
   seed:
     build: .
     command: ["node", "dist/scripts/seed-statics.js"]
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-thoth}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-thoth}
+      NODE_ENV: production
+      DATABASE_URL: *db-url
     depends_on:
       migrate:
         condition: service_completed_successfully
+    logging: *logging
 
   api:
     build: .
     command: ["node", "dist/api/server.js"]
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-thoth}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-thoth}
+      NODE_ENV: production
+      DATABASE_URL: *db-url
       PORT: "4000"
+      API_WRITE_KEY: ${API_WRITE_KEY:?set API_WRITE_KEY (openssl rand -hex 32)}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      REQUESTS_PER_MIN: ${REQUESTS_PER_MIN:-120}
+      TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
+      REQUESTS_PER_MIN: ${REQUESTS_PER_MIN:-300}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     ports:
-      - "${OSIRIS_PORT:-4000}:4000"
+      - "127.0.0.1:${API_PORT:-4000}:4000"
     depends_on:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
     restart: unless-stopped
+    stop_grace_period: 15s
     deploy:
       resources:
         limits:
           memory: 512M
+    logging: *logging
 
   worker:
     build: .
     command: ["node", "dist/workers/run.js"]
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-thoth}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-thoth}
+      NODE_ENV: production
+      DATABASE_URL: *db-url
       POLL_JITTER_PCT: ${POLL_JITTER_PCT:-10}
       TELEGRAM_CHANNELS: ${TELEGRAM_CHANNELS:-osintdefender,war_monitor,aljazeeraenglish}
+      OTX_API_KEY: ${OTX_API_KEY:-}
+      FINNHUB_KEY: ${FINNHUB_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    # Worker drains in-flight collectors for up to 25s on SIGTERM.
+    stop_grace_period: 30s
     deploy:
       resources:
         limits:
           memory: 512M
+    logging: *logging
 
   app:
     build:
       context: ../app
       args:
-        NEXT_PUBLIC_THOTH_API: ${THOTH_API_PUBLIC:-http://localhost:4000}
+        # Same-origin: browser → app → (rewrite) → api on the compose network.
+        NEXT_PUBLIC_THOTH_API: ""
+        THOTH_API_INTERNAL: http://api:4000
     environment:
-      NEXT_PUBLIC_THOTH_API: ${THOTH_API_PUBLIC:-http://localhost:4000}
+      API_WRITE_KEY: ${API_WRITE_KEY:?set API_WRITE_KEY (openssl rand -hex 32)}
+      # Set one of these, or writes from the UI are refused (fail closed):
+      APP_BASIC_AUTH: ${APP_BASIC_AUTH:-}
+      APP_TRUST_UPSTREAM_AUTH: ${APP_TRUST_UPSTREAM_AUTH:-}
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_healthy
@@ -91,6 +130,7 @@ services:
       resources:
         limits:
           memory: 1G
+    logging: *logging
 
 volumes:
   thoth_pg:

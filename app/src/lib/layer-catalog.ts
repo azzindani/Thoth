@@ -1,4 +1,4 @@
-// Layer catalog: the single source of truth for all 25 layers (global-monitor pattern).
+// Layer catalog: the single source of truth for every map layer (global-monitor pattern).
 // Symbols: Lucide icon paths (ISC licence). Colors must stay in primitives tokens.
 export interface LayerDef {
 	color: string;
@@ -186,9 +186,140 @@ export const LAYERS: Record<string, LayerDef> = {
 		svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>',
 		intervalSec: 86400,
 	},
+	// NGA navigational warnings: firing/launch boxes, mines, GNSS notices.
+	// Mixed geometry — areas, tracklines and single positions (see the
+	// point fallback in MapView's polygon branch).
+	navwarn: {
+		color: "#38bdf8",
+		svg: '<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
+		intervalSec: 1800,
+		polygon: true,
+	},
+	// GNSS interference cells derived from ADS-B navigation accuracy.
+	gpsjam: {
+		color: "#f472b6",
+		svg: '<line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><path d="M7.11 7.11C5.83 8.39 5 10.1 5 12c0 3.87 3.13 7 7 7 1.9 0 3.61-.83 4.89-2.11"/><path d="M18.71 13.96c.19-.63.29-1.29.29-1.96 0-3.87-3.13-7-7-7-.67 0-1.33.1-1.96.29"/><line x1="2" x2="22" y1="2" y2="22"/>',
+		intervalSec: 1800,
+		polygon: true,
+	},
+	// US State Dept travel advisory level per country (capital anchor).
+	advisories: {
+		color: "#fca5a5",
+		svg: '<path d="M6 20a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2"/><path d="M8 18V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v14"/><path d="M10 20h4"/><circle cx="16" cy="20" r="2"/><circle cx="8" cy="20" r="2"/>',
+		intervalSec: 21600,
+	},
+	// Live AIS positions (Digitraffic, Baltic). A heading arrow: the symbol
+	// layer rotates it by meta.track.
+	vessels: {
+		color: "#7dd3fc",
+		svg: '<path d="M12 2 19 21 12 17 5 21Z"/>',
+		intervalSec: 600,
+	},
+	// People displaced from each origin country (UNHCR, annual).
+	displacement: {
+		color: "#fdba74",
+		svg: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+		intervalSec: 86400,
+	},
+	// Submarine cable routes (lines) + landing stations (points).
+	cables: {
+		color: "#a5b4fc",
+		svg: '<path d="M17 21v-2a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1"/><path d="M19 15V6.5a1 1 0 0 0-7 0v11a1 1 0 0 1-7 0V9"/><path d="M21 21v-2h-4"/><path d="M3 5h4V3"/><path d="M7 5a1 1 0 0 1 1 1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a1 1 0 0 1 1-1V3"/>',
+		intervalSec: 86400,
+		polygon: true,
+	},
+	// Derived (P4): corroborated incidents across layers/sources…
+	incidents: {
+		color: "#fda4af",
+		svg: '<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+		intervalSec: 300,
+	},
+	// …and cells whose activity left their 7-day baseline.
+	anomalies: {
+		color: "#fcd34d",
+		svg: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+		intervalSec: 300,
+		polygon: true,
+	},
 };
 
 export const LAYER_NAMES = Object.keys(LAYERS);
+
+/** Explorer sections: 36 flat rows read as noise; six named groups give
+ * the list a scannable shape. Every layer belongs to exactly one group
+ * (test/catalog.test.ts); anything unlisted falls into "Other". */
+export const LAYER_GROUPS: [string, string[]][] = [
+	["Intelligence", ["incidents", "anomalies"]],
+	[
+		"Hazards",
+		[
+			"quakes",
+			"volcanoes",
+			"fires",
+			"perims",
+			"disasters",
+			"gdacs",
+			"radiation",
+		],
+	],
+	[
+		"Weather & space",
+		[
+			"weather",
+			"metar",
+			"forecast",
+			"airwx",
+			"airquality",
+			"oceans",
+			"spacewx",
+		],
+	],
+	[
+		"Security",
+		[
+			"conflicts",
+			"drones",
+			"navwarn",
+			"gpsjam",
+			"advisories",
+			"telegram",
+			"cyber",
+			"bases",
+			"signals",
+			"theaters",
+		],
+	],
+	[
+		"Movement",
+		[
+			"flights",
+			"vessels",
+			"satellites",
+			"transit",
+			"ports",
+			"airports",
+			"chokepoints",
+		],
+	],
+	["Infrastructure", ["energy", "cables", "datacenters", "cctv"]],
+	[
+		"Society & markets",
+		["news", "displacement", "markets", "policy", "research", "health"],
+	],
+];
+
+export function groupedLayers(names: string[]): [string, string[]][] {
+	const seen = new Set<string>();
+	const out: [string, string[]][] = [];
+	for (const [g, ls] of LAYER_GROUPS) {
+		const hit = ls.filter((l) => names.includes(l));
+		for (const l of hit) seen.add(l);
+		if (hit.length) out.push([g, hit]);
+	}
+	const rest = names.filter((l) => !seen.has(l));
+	if (rest.length) out.push(["Other", rest]);
+	return out;
+}
 
 export const MISSIONS: Record<string, string[]> = {
 	crisis: [
@@ -200,6 +331,7 @@ export const MISSIONS: Record<string, string[]> = {
 		"fires",
 		"telegram",
 		"cctv",
+		"advisories",
 	],
 	cyber: ["cyber", "markets", "datacenters", "signals"],
 	markets: ["markets", "energy", "chokepoints", "ports", "news"],
@@ -232,6 +364,9 @@ export const MISSIONS: Record<string, string[]> = {
 		"research",
 		"health",
 		"policy",
+		"navwarn",
+		"gpsjam",
+		"advisories",
 	],
 	wartime: [
 		"drones",
@@ -243,6 +378,8 @@ export const MISSIONS: Record<string, string[]> = {
 		"cctv",
 		"satellites",
 		"airports",
+		"navwarn",
+		"gpsjam",
 	],
 };
 
@@ -261,10 +398,9 @@ export const STREAMS: [string, string, string][] = [
 	["NASA TV", "21X5lGlDOfg", "Space"],
 ];
 
-/** Bake a Lucide glyph on a dark halo disc → ImageData map sprite (osiris pattern). */
 /** Mute a layer color toward slate so 29 layers read as one calm system
  * instead of confetti. Hue survives (layer identity), loudness doesn't.
- * Severity still shouts: critical pins stay full red via severity paint. */
+ * Kept for back-compat; the map now renders monochrome (see bakeIcon). */
 export function mutedTone(hex: string): string {
 	const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
 	if (!m) return hex;
@@ -274,12 +410,15 @@ export function mutedTone(hex: string): string {
 	return `rgb(${mix[0]}, ${mix[1]}, ${mix[2]})`;
 }
 
-export async function bakeIcon(name: string): Promise<ImageData> {
+/** Bake a Lucide glyph on a warm-black disc → ImageData map sprite.
+ * `ink` is the severity colour (bone for info): layers are told apart by
+ * shape, and colour on the map only ever means severity. */
+export async function bakeIcon(name: string, ink: string): Promise<ImageData> {
 	const L = LAYERS[name];
 	const svg =
 		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">` +
-		`<circle cx="12" cy="12" r="11" fill="rgba(8,9,10,0.78)"/>` +
-		`<g fill="none" stroke="${mutedTone(L.color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${L.svg}</g></svg>`;
+		`<circle cx="12" cy="12" r="11" fill="rgba(11,11,10,0.86)" stroke="${ink}" stroke-opacity="0.35" stroke-width="0.75"/>` +
+		`<g transform="translate(4.2 4.2) scale(0.65)" fill="none" stroke="${ink}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${L.svg}</g></svg>`;
 	const img = new Image();
 	await new Promise<void>((resolve, reject) => {
 		img.onload = () => resolve();

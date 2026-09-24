@@ -82,7 +82,7 @@ describe("satellites collect()", () => {
 		const r = await sats();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 1);
-		const rows = await query<{ meta: { altKm: number } }[]>(
+		const rows = await query<{ meta: { altKm: number } }>(
 			"SELECT meta FROM events WHERE layer='satellites'",
 		);
 		assert.ok(
@@ -117,7 +117,7 @@ describe("satellites mirror fallback", () => {
 		// only ISS resolves; the rest 404 → partial success, ISS row lands
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 1);
-		const rows = await query<{ id: string; source: string }[]>(
+		const rows = await query<{ id: string; source: string }>(
 			"SELECT id, source FROM events WHERE layer='satellites' AND source='tle-mirror'",
 		);
 		assert.equal(rows.length, 1);
@@ -145,7 +145,7 @@ describe("satellites mirror fallback", () => {
 		}) as typeof fetch;
 		const r = await sats();
 		assert.equal(r.ok, true, "hang falls through to mirror, run stays ok");
-		const rows = await query<{ id: string; source: string }[]>(
+		const rows = await query<{ id: string; source: string }>(
 			"SELECT id, source FROM events WHERE layer='satellites' AND source='tle-mirror'",
 		);
 		assert.equal(rows.length, 1);
@@ -164,7 +164,7 @@ describe("satellites source attribution", () => {
 		}) as typeof fetch;
 		const r = await sats();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; source: string }[]>(
+		const rows = await query<{ id: string; source: string }>(
 			"SELECT id, source FROM events WHERE layer='satellites' AND source='celestrak'",
 		);
 		assert.equal(rows.length, 1);
@@ -237,14 +237,14 @@ describe("satellites amsat-tle + amsat-status", () => {
 		}) as typeof fetch;
 		const r = await sats();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; source: string }[]>(
+		const rows = await query<{ id: string; source: string }>(
 			"SELECT id, source FROM events WHERE source IN ('amsat-tle','amsat-status') ORDER BY id",
 		);
 		assert.deepEqual(
 			rows.map((x) => x.id),
 			["amsat-status:1356521", "amsat-tle:07530"],
 		);
-		const heard = await query<{ lat: number; lon: number }[]>(
+		const heard = await query<{ lat: number; lon: number }>(
 			"SELECT ST_Y(geom) AS lat, ST_X(geom) AS lon FROM events WHERE id='amsat-status:1356521'",
 		);
 		assert.ok(Math.abs(heard[0].lat - 47.5625) < 0.01);

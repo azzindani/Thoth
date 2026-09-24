@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 
-// ThreatClock — ironsight dial driven by the live brief.
-// DEFCON ring color + rotating sweep; title shows the top critical.
+// ThreatClock — threat readout driven by the live brief: DEFCON level plus
+// a five-cell meter; the title carries the top critical. (Replaced the
+// ironsight dial 2026-09-23: a spinning sweep is decoration, not data.)
 export default function ThreatClock() {
 	const [defcon, setDefcon] = useState(5);
 	const [top, setTop] = useState("no criticals");
@@ -39,58 +40,23 @@ export default function ThreatClock() {
 			clearInterval(t);
 		};
 	}, []);
+	// Only an elevated state earns colour (critical ≤2, watch 3); 4–5 stay
+	// neutral — "healthy is quiet" (docs/UI_PRIMITIVES.md §0).
 	const col =
-		defcon <= 2 ? "var(--red)" : defcon === 3 ? "var(--amber)" : "var(--grn)";
-	const ticks = Array.from({ length: 12 }, (_, i) => ({
-		a: (i * Math.PI) / 6,
-		i,
-	}));
+		defcon <= 2 ? "var(--red)" : defcon === 3 ? "var(--amber)" : "var(--txt2)";
+	// Five cells, DEFCON 5 → 1 left to right; cells up to the level light up.
+	const lit = 6 - defcon;
 	return (
 		<div className="threatclock" title={`DEFCON ${defcon} · ${top}`}>
-			<svg width="52" height="52" viewBox="0 0 52 52" role="img">
-				<title>{`DEFCON ${defcon}`}</title>
-				<circle
-					cx="26"
-					cy="26"
-					r="23"
-					fill="none"
-					stroke={col}
-					strokeWidth="2.5"
-				/>
-				{ticks.map(({ a, i }) => (
-					<line
-						key={`tick-${i}`}
-						x1={26 + 19 * Math.cos(a)}
-						y1={26 + 19 * Math.sin(a)}
-						x2={26 + 23 * Math.cos(a)}
-						y2={26 + 23 * Math.sin(a)}
-						stroke={col}
-						strokeWidth={i % 3 === 0 ? 2 : 1}
-						opacity="0.7"
-					/>
+			<span className="tc-label">Threat</span>
+			<span className="tc-num" style={{ color: col }}>
+				DEFCON {defcon}
+			</span>
+			<span className="tc-meter" role="img" aria-label={`DEFCON ${defcon}`}>
+				{[1, 2, 3, 4, 5].map((i) => (
+					<i key={i} style={i <= lit ? { background: col } : undefined} />
 				))}
-				<line
-					x1="26"
-					y1="26"
-					x2="26"
-					y2="8"
-					stroke={col}
-					strokeWidth="1.5"
-					opacity="0.9"
-					className="tc-sweep"
-				/>
-				<circle cx="26" cy="26" r="2.5" fill={col} />
-				<text
-					x="26"
-					y="34"
-					textAnchor="middle"
-					fill={col}
-					fontSize="13"
-					fontWeight="700"
-				>
-					{defcon}
-				</text>
-			</svg>
+			</span>
 		</div>
 	);
 }

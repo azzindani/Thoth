@@ -5,8 +5,9 @@
 // Overlapping layers each fire their own hover card, so card assertions
 // match as sets (filtered .first()), never a bare multi-match locator.
 // Pointer tests re-query fresh coords + retry: tiles re-resolve async.
-import { expect, type Page, test } from "playwright/test";
+
 import { LAYER_NAMES } from "../src/lib/layer-catalog";
+import { expect, type Page, test } from "./fixtures";
 
 test.describe
 	.serial("hud desk", () => {
@@ -64,6 +65,7 @@ test.describe
 			) => {
 				geometry: { type: string; coordinates: number[] };
 				properties: Record<string, string | number>;
+				layer: { id: string };
 			}[];
 			project: (c: number[]) => { x: number; y: number };
 			getContainer: () => HTMLElement;
@@ -121,14 +123,21 @@ test.describe
 					const feats = mm
 						.queryRenderedFeatures({ layers: [layer] })
 						.filter((f) => f.geometry?.type === "Point");
-					const pts = feats.map((f) => {
-						const s = mm.project(f.geometry.coordinates);
-						return {
-							x: s.x + rr.left,
-							y: s.y + rr.top,
-							title: String(f.properties.title ?? ""),
-						};
-					});
+					// Reachable only: floating panels cover part of the full-bleed
+					// map, and a point behind chrome cannot be hovered or clicked.
+					const pts = feats
+						.map((f) => {
+							const s = mm.project(f.geometry.coordinates);
+							return {
+								x: s.x + rr.left,
+								y: s.y + rr.top,
+								title: String(f.properties.title ?? ""),
+							};
+						})
+						.filter((p) => {
+							const hit = document.elementFromPoint(p.x, p.y);
+							return hit?.tagName === "CANVAS" && !!hit.closest("#map");
+						});
 					if (!overlap) return pts[0] ?? null;
 					for (let i = 0; i < pts.length; i++)
 						for (let j = i + 1; j < pts.length; j++) {
@@ -321,6 +330,11 @@ test.describe
 								.slice(0, 80);
 							for (const f of feats) {
 								const s = mm.project(f.geometry.coordinates);
+								const el = document.elementFromPoint(
+									s.x + rr.left,
+									s.y + rr.top,
+								);
+								if (el?.tagName !== "CANVAS" || !el.closest("#map")) continue;
 								const hit = mm
 									.queryRenderedFeatures([s.x, s.y], {})
 									.filter((h) =>
@@ -340,12 +354,14 @@ test.describe
 				);
 			}
 			let sawPicker = false;
+			let clicked: ScreenPt | null = null;
 			for (let i = 0; i < 5 && !sawPicker; i++) {
 				const p = await stackPixel();
 				if (!p) {
 					await page.waitForTimeout(2000);
 					continue;
 				}
+				clicked = p;
 				await page.mouse.click(p.x, p.y);
 				await page.waitForTimeout(1200);
 				if (await page.locator(".maplibregl-popup-content .pick").isVisible())
@@ -355,6 +371,18 @@ test.describe
 			await expect(
 				page.locator(".maplibregl-popup-content .pick"),
 			).toContainText("stacked — pick one");
+			// No hover echo over the picker: nudging the pointer on the same
+			// stack used to re-attach the hover card on top (double hover).
+			if (clicked)
+				for (const [dx, dy] of [
+					[2, 0],
+					[0, 2],
+					[-2, -1],
+				]) {
+					await page.mouse.move(clicked.x + dx, clicked.y + dy);
+					await page.waitForTimeout(150);
+				}
+			await expect(pointCards()).toHaveCount(0);
 			await page.screenshot({ path: "e2e/shots/desk-picker.png" });
 			const first = await page
 				.locator(".maplibregl-popup-content .pick-row b")
@@ -377,7 +405,10 @@ test.describe
 				const m = (window as unknown as { __thothMap?: Record<string, never> })
 					.__thothMap as unknown as MLMap;
 				const found: { n: number; c: number[] }[] = [];
-				for (const l of ["datacenters-c", "cctv-c", "flights-c", "news-c"]) {
+				// Discover via the count labels (-n): a whole-viewport query of the
+				// circle layers returns nothing on the globe in maplibre 6; the
+				// hit filter below still requires the circle (-c) under the pixel.
+				for (const l of ["datacenters-n", "cctv-n", "flights-n", "news-n"]) {
 					for (const x of m.queryRenderedFeatures({ layers: [l] })) {
 						const n = Number(x.properties.point_count ?? 0);
 						if (x.geometry?.type === "Point" && n > 5)
@@ -386,10 +417,27 @@ test.describe
 				}
 				found.sort((a, b) => b.n - a.n);
 				const r = m.getContainer().getBoundingClientRect();
-				return found.slice(0, 4).map((b) => {
-					const s = m.project(b.c);
-					return { x: s.x + r.left, y: s.y + r.top, z: m.getZoom(), n: b.n };
-				});
+				// Only clusters the pointer can actually reach: on the globe a
+				// cluster near the horizon is "rendered" but not hit-testable.
+				return found
+					.map((b) => ({ b, s: m.project(b.c) }))
+					.filter(({ s }) => {
+						const hit = document.elementFromPoint(s.x + r.left, s.y + r.top);
+						return (
+							hit?.tagName === "CANVAS" &&
+							!!hit.closest("#map") &&
+							m
+								.queryRenderedFeatures([s.x, s.y])
+								.some((f) => f.layer.id.endsWith("-c"))
+						);
+					})
+					.slice(0, 4)
+					.map(({ b, s }) => ({
+						x: s.x + r.left,
+						y: s.y + r.top,
+						z: m.getZoom(),
+						n: b.n,
+					}));
 			});
 			if (!cands.length) throw new Error("no cluster renders");
 			let c = cands[0];
@@ -468,17 +516,23 @@ test.describe
 				// Prefer screen center: a SIGMET covering it is the common case.
 				const cx = r.left + r.width / 2;
 				const cy = r.top + r.height / 2;
+				// Reachable = the map canvas is what a pointer hits there (the
+				// map is full-bleed under floating panels).
+				const reach = (x: number, y: number) => {
+					const el = document.elementFromPoint(x, y);
+					return el?.tagName === "CANVAS" && !!el.closest("#map");
+				};
 				const atCenter = m.queryRenderedFeatures([cx - r.left, cy - r.top], {
 					layers: ["airwx"],
 				});
-				if (atCenter.length > 0) return { x: cx, y: cy };
+				if (atCenter.length > 0 && reach(cx, cy)) return { x: cx, y: cy };
 				for (const f of m.queryRenderedFeatures({ layers: ["airwx"] })) {
 					const ring = f.geometry?.coordinates?.[0] ?? [];
 					for (let i = 0; i < ring.length; i += 3) {
 						const s = m.project(ring[i]);
 						const vx = s.x + r.left;
 						const vy = s.y + r.top;
-						if (vx > 250 && vx < W - 350 && vy > 60 && vy < H - 160)
+						if (vx > 0 && vx < W && vy > 0 && vy < H && reach(vx, vy))
 							return { x: vx, y: vy };
 					}
 				}
@@ -505,6 +559,11 @@ test.describe
 			expect(shown.some((t) => airwxTitles.includes(t.trim()))).toBe(true);
 			await page.mouse.click(p.x, p.y);
 			await page.waitForTimeout(1200);
+			// Clicking inside the fill answers with a pin/picker; moving within
+			// the same polygon must not bring the hover card back.
+			await page.mouse.move(p.x + 3, p.y + 2, { steps: 3 });
+			await page.waitForTimeout(300);
+			await expect(pointCards()).toHaveCount(0);
 			// A point stacked over the fill routes through the picker instead.
 			if (await page.locator(".maplibregl-popup-content .pick").isVisible()) {
 				await page
@@ -518,6 +577,23 @@ test.describe
 			// Polygon click pins the preview — dismiss for later tests.
 			await expect(page.locator("#fullview")).toBeHidden();
 			await dismissPin();
+			// Dismissing the pin ends the click's mute: hover works again, and
+			// grabbing the globe drops it (it used to ride the rotation).
+			let back = false;
+			for (let i = 0; i < 3 && !back; i++) {
+				await page.mouse.move(p.x + 40, p.y + 40);
+				await page.mouse.move(p.x, p.y, { steps: 3 });
+				back = await pointCards()
+					.first()
+					.waitFor({ timeout: 2500 })
+					.then(() => true)
+					.catch(() => false);
+			}
+			expect(back, "hover returns after the pin closes").toBe(true);
+			await page.mouse.down();
+			await page.mouse.move(p.x + 80, p.y + 20, { steps: 8 });
+			await expect(pointCards()).toHaveCount(0);
+			await page.mouse.up();
 		});
 
 		test("layer toggle + sev chips + mission presets", async () => {
@@ -629,18 +705,28 @@ test.describe
 				box.x + box.width * 0.75,
 				box.y + box.height * 0.3,
 			);
-			await page.waitForTimeout(2500);
-			const after = await page.evaluate(() =>
-				(
-					window as unknown as {
-						__thothMap?: { getCenter: () => { lng: number; lat: number } };
-					}
-				).__thothMap?.getCenter(),
-			);
-			expect(
-				Math.abs((after?.lng ?? 0) - (before?.lng ?? 0)) +
-					Math.abs((after?.lat ?? 0) - (before?.lat ?? 0)),
-			).toBeGreaterThan(1);
+			// The fly is animated: on CI's software GL a frame can take ~1 s, so
+			// wait for the camera to arrive rather than a fixed time.
+			await expect
+				.poll(
+					async () => {
+						const after = await page.evaluate(() =>
+							(
+								window as unknown as {
+									__thothMap?: {
+										getCenter: () => { lng: number; lat: number };
+									};
+								}
+							).__thothMap?.getCenter(),
+						);
+						return (
+							Math.abs((after?.lng ?? 0) - (before?.lng ?? 0)) +
+							Math.abs((after?.lat ?? 0) - (before?.lat ?? 0))
+						);
+					},
+					{ timeout: 20000 },
+				)
+				.toBeGreaterThan(1);
 		});
 
 		test("status strip: SSE state, monitor rows, cadence hints", async () => {
@@ -665,6 +751,82 @@ test.describe
 				.locator('.lrow[title*="refresh every"]')
 				.count();
 			expect(rowTips).toBeGreaterThan(20);
+		});
+
+		test("command palette (Ctrl+K) and shortcut sheet (?)", async () => {
+			await page.locator("body").click({ position: { x: 5, y: 5 } });
+			await page.keyboard.press("Control+k");
+			const pal = page.locator("#palette");
+			await expect(pal).toBeVisible();
+			await page.keyboard.type("incidents tab");
+			await expect(pal.locator(".pal-item.on")).toContainText("Incidents tab");
+			await page.keyboard.press("Enter");
+			await expect(pal).toHaveCount(0);
+			await expect(
+				page.locator('#tabs button[data-tab="incidents"]'),
+			).toHaveClass(/on/);
+			// Layer toggles read and flip live state.
+			await page.keyboard.press("Control+k");
+			await page.keyboard.type("hide quakes");
+			await page.keyboard.press("Enter");
+			await expect(
+				page.locator(".lrow", { hasText: "quakes" }).first(),
+			).toHaveClass(/off/);
+			await page.keyboard.press("Control+k");
+			await page.keyboard.type("show quakes");
+			await page.keyboard.press("Enter");
+			await expect(
+				page.locator(".lrow", { hasText: "quakes" }).first(),
+			).not.toHaveClass(/off/);
+			// ? opens the sheet, Esc closes it.
+			await page.keyboard.press("?");
+			await expect(page.locator("#shortcuts")).toContainText("Command palette");
+			await page.keyboard.press("Escape");
+			await expect(page.locator("#shortcuts")).toHaveCount(0);
+		});
+
+		test("incidents tab: corroborated incidents + anomalies as tables", async () => {
+			await page.locator('#tabs button[data-tab="incidents"]').click();
+			const body = page.locator("#insp-body");
+			await expect(body.locator("#inc-kpis")).toContainText("critical", {
+				timeout: 15000,
+			});
+			const row = body.locator(".inc-row").first();
+			await expect(row).toContainText("Fixture Trench");
+			await row.click();
+			await expect(row).toHaveAttribute("aria-expanded", "true");
+			await expect(body.locator(".inc-timeline")).toContainText(
+				"duplicate report",
+			);
+			await body.getByRole("button", { name: "ANOMALIES" }).click();
+			await expect(body.locator(".ano-row").first()).toContainText(
+				"Air traffic drop",
+			);
+		});
+
+		test("monitor v2: summary, views, source detail, run now", async () => {
+			await page.locator('button[data-tab="monitor"]').first().click();
+			const body = page.locator("#insp-body");
+			await expect(body.locator("#mon-kpis")).toContainText("worker", {
+				timeout: 15000,
+			});
+			await expect(body.locator("#mon-kpis")).toContainText("failing");
+			// Source rows carry a run strip and open a detail on click.
+			const row = body.locator(".mon-row").first();
+			await expect(row.locator(".mon-strip")).toHaveCount(1);
+			await row.click();
+			await expect(row).toHaveAttribute("aria-expanded", "true");
+			await expect(body.locator(".mon-detail").first()).toBeVisible();
+			// Collectors view: every collector, run-now queues.
+			await body.getByRole("button", { name: "COLLECTORS" }).click();
+			await expect(body.locator(".mon-crow")).not.toHaveCount(0);
+			const volc = body.locator(".mon-crow", { hasText: "volcanoes" });
+			await volc.getByRole("button", { name: "RUN NOW" }).click();
+			await expect(volc.getByRole("button", { name: "QUEUED" })).toBeVisible();
+			// Endpoints view renders (rows or the honest empty state).
+			await body.getByRole("button", { name: "ENDPOINTS" }).click();
+			await expect(body).toContainText(/calls|No upstream calls/);
+			await body.getByRole("button", { name: "SOURCES" }).click();
 		});
 
 		test("cmdbar depth commands", async () => {

@@ -40,7 +40,7 @@ describe("sentiment", () => {
 			)) as typeof fetch;
 		const r = await sentiment();
 		assert.equal(r.ok, true);
-		const rows = await query<{ title: string }[]>(
+		const rows = await query<{ title: string }>(
 			"SELECT title FROM events WHERE source='fng'",
 		);
 		assert.equal(rows.length, 1);

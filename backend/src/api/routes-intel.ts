@@ -1,14 +1,11 @@
 import type express from "express";
 import { z } from "zod";
 import { query } from "../db/client.js";
-import {
-	getBrief,
-	getLayerSlice as slice,
-	getVersions as versions,
-} from "../db/queries.js";
+import { getBrief, getLayerSlice as slice } from "../db/queries.js";
 import { pushTelegram } from "../workers/lib/push.js";
 import { queryImagery } from "./imagery.js";
-import { LayerParams, VERSION } from "./server.js";
+import { LayerParams } from "./shared.js";
+import { streamHandler } from "./stream.js";
 
 /** Intel routes: theaters, search, watch, sitrep, imagery, notify, trend, export, stream. */
 export function registerIntel(app: express.Express): void {
@@ -89,15 +86,35 @@ export function registerIntel(app: express.Express): void {
 	});
 
 	// Watchlists: keyword / layer / severity watches + match scanning.
-	const WatchParams = z.object({
-		kind: z.enum(["keyword", "layer", "severity"]),
-		value: z.string().trim().min(1).max(200),
-		note: z.string().trim().max(500).optional().default(""),
+	// Area watches (P5) carry a circle (lat/lon/radius_km) or a GeoJSON
+	// polygon; the other kinds are matched on text/layer/severity.
+	const Polygon = z.object({
+		type: z.enum(["Polygon", "MultiPolygon"]),
+		coordinates: z.array(z.unknown()).min(1),
 	});
+	const WatchParams = z.discriminatedUnion("kind", [
+		z.object({
+			kind: z.enum(["keyword", "layer", "severity"]),
+			value: z.string().trim().min(1).max(200),
+			note: z.string().trim().max(500).optional().default(""),
+		}),
+		z.object({
+			kind: z.literal("area"),
+			value: z.string().trim().min(1).max(200),
+			note: z.string().trim().max(500).optional().default(""),
+			lat: z.number().min(-90).max(90).optional(),
+			lon: z.number().min(-180).max(180).optional(),
+			radius_km: z.number().positive().max(2000).optional(),
+			geom: Polygon.optional(),
+		}),
+	]);
 	app.get("/api/watch", async (_req, res) => {
 		res.json({
 			ok: true,
-			items: await query("SELECT * FROM watchlists ORDER BY created_at"),
+			items: await query(
+				`SELECT id, kind, value, note, created_at,
+				        ST_AsGeoJSON(geom)::json AS geom FROM watchlists ORDER BY created_at`,
+			),
 		});
 	});
 	app.post("/api/watch", async (req, res) => {
@@ -105,15 +122,48 @@ export function registerIntel(app: express.Express): void {
 		if (!p.success) {
 			res.status(400).json({
 				ok: false,
-				error: "kind=keyword|layer|severity, value required",
+				error:
+					"kind=keyword|layer|severity with value, or kind=area with value + lat/lon/radius_km or a polygon geom",
 			});
 			return;
 		}
-		const id = `w:${p.data.kind}:${p.data.value.toLowerCase()}`;
+		const d = p.data;
+		if (d.kind === "area") {
+			const circle = d.lat != null && d.lon != null && d.radius_km != null;
+			if (!circle && !d.geom) {
+				res.status(400).json({
+					ok: false,
+					error: "area needs lat, lon and radius_km, or a polygon geom",
+				});
+				return;
+			}
+			const id = `w:area:${d.value.toLowerCase()}`;
+			await query(
+				`INSERT INTO watchlists(id, kind, value, note, geom)
+				 VALUES ($1, 'area', $2, $3,
+				   CASE WHEN $4::jsonb IS NOT NULL
+				        THEN ST_SetSRID(ST_GeomFromGeoJSON($4::jsonb), 4326)
+				        ELSE ST_Buffer(ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography,
+				                       $7 * 1000, 32)::geometry END)
+				 ON CONFLICT (id) DO UPDATE SET note=EXCLUDED.note, geom=EXCLUDED.geom`,
+				[
+					id,
+					d.value,
+					d.note,
+					d.geom ? JSON.stringify(d.geom) : null,
+					d.lat ?? null,
+					d.lon ?? null,
+					d.radius_km ?? null,
+				],
+			);
+			res.json({ ok: true, id });
+			return;
+		}
+		const id = `w:${d.kind}:${d.value.toLowerCase()}`;
 		await query(
 			`INSERT INTO watchlists(id, kind, value, note) VALUES ($1,$2,$3,$4)
      ON CONFLICT (id) DO UPDATE SET note=EXCLUDED.note`,
-			[id, p.data.kind, p.data.value, p.data.note],
+			[id, d.kind, d.value, d.note],
 		);
 		res.json({ ok: true, id });
 	});
@@ -126,8 +176,8 @@ export function registerIntel(app: express.Express): void {
 			Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1),
 			200,
 		);
-		const watches = await query<{ kind: string; value: string }>(
-			"SELECT kind, value FROM watchlists",
+		const watches = await query<{ id: string; kind: string; value: string }>(
+			"SELECT id, kind, value FROM watchlists",
 		);
 		if (!watches.length) {
 			res.json({ ok: true, count: 0, items: [] });
@@ -140,6 +190,13 @@ export function registerIntel(app: express.Express): void {
 				params.push(`%${w.value}%`);
 				ors.push(
 					`(title ILIKE $${params.length} OR body ILIKE $${params.length})`,
+				);
+			} else if (w.kind === "area") {
+				// Anything live inside the area; catalogs (airports…) never.
+				params.push(w.id);
+				ors.push(
+					`(source <> 'static' AND geom IS NOT NULL AND ST_Intersects(geom,
+					   (SELECT g.geom FROM watchlists g WHERE g.id = $${params.length})))`,
 				);
 			} else if (w.kind === "layer") {
 				params.push(w.value);
@@ -343,11 +400,14 @@ export function registerIntel(app: express.Express): void {
 		title: z.string().trim().min(1).max(200),
 		body: z.string().max(8000).default(""),
 		category: z
-			.enum(["idea", "earnings", "risk", "macro", "watch"])
+			.enum(["idea", "earnings", "risk", "macro", "watch", "place"])
 			.default("idea"),
 		tickers: z.string().max(200).default(""),
 		sentiment: z.enum(["BULLISH", "BEARISH", "NEUTRAL"]).default("NEUTRAL"),
 		favorite: z.coerce.boolean().default(false),
+		// Map notes (P5): optionally pinned to a place (both or neither).
+		lat: z.number().min(-90).max(90).optional(),
+		lon: z.number().min(-180).max(180).optional(),
 	});
 	app.get("/api/notes", async (req, res) => {
 		const q = String(req.query.q ?? "")
@@ -365,8 +425,11 @@ export function registerIntel(app: express.Express): void {
 	});
 	app.post("/api/notes", async (req, res) => {
 		const p = NoteParams.safeParse(req.body);
-		if (!p.success) {
-			res.status(400).json({ ok: false, error: "title required" });
+		if (!p.success || (p.data.lat == null) !== (p.data.lon == null)) {
+			res.status(400).json({
+				ok: false,
+				error: "title required; lat and lon go together",
+			});
 			return;
 		}
 		const id = `n:${Date.now().toString(36)}:${p.data.title
@@ -374,8 +437,8 @@ export function registerIntel(app: express.Express): void {
 			.replace(/[^a-z0-9]+/g, "-")
 			.slice(0, 40)}`;
 		await query(
-			`INSERT INTO notes(id, title, body, category, tickers, sentiment, favorite)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+			`INSERT INTO notes(id, title, body, category, tickers, sentiment, favorite, lat, lon)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 			[
 				id,
 				p.data.title,
@@ -384,6 +447,8 @@ export function registerIntel(app: express.Express): void {
 				p.data.tickers.toUpperCase(),
 				p.data.sentiment,
 				p.data.favorite,
+				p.data.lat ?? null,
+				p.data.lon ?? null,
 			],
 		);
 		res.json({ ok: true, id });
@@ -543,67 +608,6 @@ export function registerIntel(app: express.Express): void {
 		res.send(csv);
 	});
 
-	// Live SSE: emits layer_changed when layer_versions move, heartbeat 15s.
-	app.get("/api/stream", async (req, res) => {
-		// Resume: client passes ?known=<base64 JSON {layer:version}> (or Last-Event-ID
-		// with the same payload). Server replays every layer that moved since, so a
-		// reconnect never silently misses ticks (gate_sse.py pattern).
-		let known: Record<string, string> = {};
-		const rawKnown =
-			(req.query.known as string | undefined) ??
-			(req.headers["last-event-id"] as string | undefined);
-		if (rawKnown) {
-			try {
-				const txt = rawKnown.startsWith("{")
-					? rawKnown
-					: Buffer.from(rawKnown, "base64").toString("utf8");
-				const parsed = JSON.parse(txt) as unknown;
-				if (parsed && typeof parsed === "object")
-					known = parsed as Record<string, string>;
-			} catch {
-				/* unknown resume state → full catch-up */
-			}
-		}
-		res.writeHead(200, {
-			"Content-Type": "text/event-stream",
-			"Cache-Control": "no-cache",
-			Connection: "keep-alive",
-		});
-		res.write(
-			`event: connected\ndata: {"ts":"${new Date().toISOString()}","version":"${VERSION}"}\n\n`,
-		);
-		const last = new Map<string, string>(Object.entries(known));
-		let alive = true;
-		req.on("close", () => {
-			alive = false;
-		});
-		const timer = setInterval(async () => {
-			if (!alive) {
-				clearInterval(timer);
-				return;
-			}
-			try {
-				const v = await versions();
-				const changed = v.filter((r) => last.get(r.layer) !== r.version);
-				last.clear();
-				for (const r of v) last.set(r.layer, r.version);
-				res.write(
-					changed.length
-						? `event: layer_changed\ndata: ${JSON.stringify({ layers: changed.map((r) => r.layer), versions: changed, ts: new Date().toISOString() })}\n\n`
-						: `event: heartbeat\ndata: {"ts":"${new Date().toISOString()}"}\n\n`,
-				);
-			} catch {
-				/* keep stream open on transient DB errors */
-			}
-		}, 5000);
-		try {
-			const v = await versions();
-			for (const r of v) last.set(r.layer, r.version);
-			res.write(
-				`event: snapshot\ndata: ${JSON.stringify({ versions: v })}\n\n`,
-			);
-		} catch {
-			/* ignore */
-		}
-	});
+	// Live SSE: shared-poller hub, see stream.ts for the wire contract.
+	app.get("/api/stream", streamHandler);
 }

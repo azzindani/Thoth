@@ -55,7 +55,7 @@ describe("airwx collect()", () => {
 		const r = await airwx();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 1);
-		const rows = await query<{ severity: string }[]>(
+		const rows = await query<{ severity: string }>(
 			"SELECT severity FROM events WHERE layer='airwx'",
 		);
 		assert.equal(rows[0]?.severity, "critical", "AWC severity 5 → critical");
@@ -120,11 +120,11 @@ describe("airwx collect()", () => {
 		}) as typeof fetch;
 		const r = await airwx();
 		assert.equal(r.ok, true);
-		const gm = await query<{ id: string }[]>(
+		const gm = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='awc-gairmet'",
 		);
 		assert.equal(gm.length, 1);
-		const ism = await query<{ id: string }[]>(
+		const ism = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='awc-isigmet'",
 		);
 		assert.equal(ism.length, 1);

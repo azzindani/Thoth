@@ -76,6 +76,8 @@ markets, research, health, policy) surface via ticker + counts + timeline + aler
 | research/fx/cyber (NEW 2026-09-16 batch27/loop-2) | CORE papers + Figshare datasets → `research`; CoinPaprika 3 coins → `markets`; Spamhaus DROP 60 nets → `cyber` |
 | weather/space/transit/markets (NEW 2026-09-16 batch26/loop-1) | YR 3-city 6h + NWS 3 stations + FMI Helsinki + DWD JSONP → `weather`; SILSO daily → `spacewx`; GBFS sample + TfL AQ/tube → `transit`; MOEX IMOEX → `markets` |
 | relief/crypto/research/space/forecast (NEW 2026-09-16 batch25) | OCHA+IFRC RSS → `news` (relief.ts, WAF-proof ?q= path); Gate.io 3 pairs + StopForumSpam heartbeat → `markets` (crypto.ts); medRxiv filtered preprints → `research`; JPL Sentry top-10 Palermo → `disasters`; BOM 4 AU cities → `forecast` |
+| security/hazards (NEW 2026-09-23 batch31) | NGA MSI broadcast warnings (NAVAREA IV/XII, HYDROLANT/PAC/ARC; coords parsed from text → areas/tracklines/points, cancelled warnings pruned) → new `navwarn`; GNSS interference cells derived from ADS-B NACp at adsb.lol→adsb.fi over 6 hotspots (gpsjam.org method, 1° cells, >10% critical / 2–10% watch, cleared cells pruned) → new `gpsjam`; US State Dept travel advisories (L4 critical / L3 watch, capital anchor via `lib/countries.ts`) → new `advisories`; NOAA SPC storm reports today+yesterday (tornado critical, sig-severe watch) → `weather`; NTWC+PTWC tsunami Atom bulletins → `quakes`; JTWC West Pacific/Indian Ocean cyclones (position + winds from warning text) → `disasters` (storms.ts). Contract-tested with stubbed upstreams; not yet probed live from a networked host |
+| movement/security/society (NEW 2026-09-23 batch32, ROADMAP P3) | Digitraffic AIS (Baltic positions ≤20 min + vessel names/types, current picture pruned) → new `vessels`; UNHCR Refugee Data Finder (displaced by origin, newest year with data; ≥1M critical / ≥100k watch; capital anchor) → new `displacement`; TeleGeography Submarine Cable Map routes + landing points (CC BY-NC-SA 3.0, credited per row) → new `cables` (line layer, 12px pick band); FAA NAS status XML (ground stops critical, GDPs/closures watch, delays info; airport-catalog anchor; recovered airports pruned) → `airwx`; Copernicus EMS rapid-mapping activations (dashboard API, RSS fallback; open watch / closed info) → `disasters`; ENISA EUVD latest/critical/exploited (exploited or CVSS≥9 critical) → `cyber`; Tor exit relays per country (Onionoo, count + exit share) → `cyber`; UK FCDO travel advice (GOV.UK content API, only changed pages refetched; whole-country no-go critical) → `advisories`. Deferred: FEWS NET (keyless API shape unconfirmed), RIPE RIS Live (websocket stream — needs a streaming worker). Contract-tested with stubbed upstreams; not yet probed live from a networked host |
 | OSINT (57: +6 2026-09-16 batch25) | `rxnorm` dose forms, `chembl` ChEMBL phase (.json suffix!), `sbdb` orbit/PHA, `deps` transitive deps, `nasa-img` thumbnails, `planespotter` photos (contact UA) |
 | OSINT (60: +3 2026-09-17 flowsint digest) | `sirene` French SIREN + HQ geo + activity (INSEE, keyless), `stealers` HudsonRock info-stealer check (email/username, free tier), `gravatar` existence + profile (md5 addressing, HEAD d=404) |
 | OSINT (51: +2 2026-09-16 batch24) | `funder` OpenAlex, `museum` AIC+Met |
@@ -114,7 +116,12 @@ Base: same-origin Next.js Route Handlers. All GET return `{items,total,serverTs,
 ```bash
 GET /api/stats                          # counts only, for badges — public, fast
 GET /api/versions                       # {layer: version} — public, live
-GET /api/layers/:layer?bbox=minLon,minLat,maxLon,maxLat&since=123
+GET /api/layers/:layer[?since=]          # newest 500 rows (inspector, ticker)
+GET /api/layers/:layer?z=6&bbox=w,s,e,n  # map view: rows inside bbox (w>e crosses
+                                        # the antimeridian); over the zoom's limit
+                                        # (1000 / 1800 / 3000 at z<3 / <5 / ≥5) rows are
+                                        # dealt round-robin across a zoom-sized grid,
+                                        # best severity first → {matched, truncated}
 GET /api/health                         # {uptime, perFeed:{lagSec,lastOk,hitRate}, dbSize}
 ```
 

@@ -51,7 +51,7 @@ describe("otx collect() enabled", () => {
 		const r = await otx();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 2, "nameless pulse skipped, bad date tolerated");
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='otx' ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -59,11 +59,11 @@ describe("otx collect() enabled", () => {
 			rows.every((x) => x.severity === "watch"),
 			"pulses are watch, never critical",
 		);
-		const raw = await query<{ http_status: number }[]>(
+		const raw = await query<{ http_status: number }>(
 			"SELECT http_status FROM raw_events WHERE source='otx'",
 		);
 		assert.equal(raw.length, 1, "raw receipt kept");
-		const h = await query<{ last_ok: string | null }[]>(
+		const h = await query<{ last_ok: string | null }>(
 			"SELECT last_ok FROM feed_health WHERE source='otx'",
 		);
 		assert.ok(h[0]?.last_ok, "health marked ok");
@@ -93,7 +93,7 @@ describe("otx collect()", () => {
 		const r = await otx();
 		assert.equal(r.ok, false);
 		assert.ok((r.error ?? "").includes("OTX_API_KEY"), "key slot named");
-		const h = await query<{ error: string | null }[]>(
+		const h = await query<{ error: string | null }>(
 			"SELECT error FROM feed_health WHERE source='otx'",
 		);
 		assert.ok(h[0]?.error, "health records disabled state");

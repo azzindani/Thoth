@@ -50,6 +50,7 @@ type Row = {
 	layer: string;
 	title?: string;
 	url?: string;
+	severity?: string;
 };
 
 async function get<T>(path: string): Promise<T> {
@@ -95,6 +96,53 @@ describe("layers", () => {
 				assert.ok(first[k], `${layer}.${k}`);
 		});
 	}
+
+	// Viewport slices (ROADMAP P2) — airports is the 5,280-row static catalog.
+	type View = {
+		items: { geom: { coordinates: number[] } }[];
+		total: number;
+		matched: number;
+		truncated: boolean;
+	};
+	const regions = (v: View) =>
+		new Set(
+			v.items.map(
+				(i) =>
+					`${Math.floor(i.geom.coordinates[0] / 30)},${Math.floor(i.geom.coordinates[1] / 30)}`,
+			),
+		).size;
+	it("world view samples every region instead of the newest 500", async () => {
+		const flat = await get<View>("/api/layers/airports");
+		const world = await get<View>("/api/layers/airports?z=1.5");
+		assert.equal(world.matched, 5280);
+		assert.ok(world.truncated && world.total === 1000);
+		assert.ok(
+			regions(world) > regions(flat) * 2,
+			`${regions(world)} regions vs ${regions(flat)}`,
+		);
+	});
+	it("a zoomed-in view returns every row inside it", async () => {
+		const v = await get<View>("/api/layers/airports?z=6&bbox=-10,35,30,60");
+		assert.equal(v.truncated, false);
+		assert.equal(v.total, v.matched);
+		assert.ok(v.total > 500);
+		for (const i of v.items) {
+			const [x, y] = i.geom.coordinates;
+			assert.ok(x >= -10 && x <= 30 && y >= 35 && y <= 60);
+		}
+	});
+	it("a view across the antimeridian covers both sides", async () => {
+		const v = await get<View>("/api/layers/airports?z=4&bbox=170,-50,-170,-10");
+		const xs = v.items.map((i) => i.geom.coordinates[0]);
+		assert.ok(xs.some((x) => x > 170) && xs.some((x) => x < -170));
+		assert.ok(xs.every((x) => x >= 170 || x <= -170));
+	});
+	it("rejects a malformed view", async () => {
+		for (const q of ["z=4&bbox=1,2,3", "z=abc", "z=4&bbox=0,60,10,50"]) {
+			const r = await fetch(`${API}/api/layers/airports?${q}`);
+			assert.equal(r.status, 400, q);
+		}
+	});
 
 	it("quakes history buckets fill the timeline", async () => {
 		const j = await get<{ buckets: Array<{ bucket: string; count: string }> }>(

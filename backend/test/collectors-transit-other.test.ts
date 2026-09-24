@@ -74,7 +74,7 @@ describe("transit gbfs/tfl", () => {
 		}) as typeof fetch;
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('gbfs','tfl-aq','tfl-tube')",
 		);
 		assert.ok(rows.length >= 3);
@@ -111,7 +111,7 @@ describe("transit mbta", () => {
 		}) as typeof fetch;
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='mbta'",
 		);
 		assert.deepEqual(
@@ -153,7 +153,7 @@ describe("transit septa", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='septa'",
 		);
 		assert.deepEqual(
@@ -194,7 +194,7 @@ describe("transit septa-rail", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='septa-rail'",
 		);
 		assert.deepEqual(
@@ -267,7 +267,7 @@ describe("transit gbfs-divvy + gbfs-cabi", () => {
 		assert.equal(r.ok, true);
 		// NOTE: status legs 500 → byId empty → bikes=0 → still stored (watch);
 		// info legs carry the single mock station each (step > n keeps idx 0).
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('gbfs-divvy','gbfs-cabi') ORDER BY id",
 		);
 		assert.ok(rows.some((x) => x.id.startsWith("gbfs-divvy:d1")));
@@ -307,7 +307,10 @@ describe("transit gbfs-blue + gbfs-toronto", () => {
 			["StopPoint/940GZZLUBST/Arrivals", () => ok([], 500)],
 			["StopPoint/940GZZLUKSX/Arrivals", () => ok([], 500)],
 			["StopPoint/940GZZLUEUS/Arrivals", () => ok([], 500)],
-			["victoria,central,jubilee,piccadilly,northern,bakerloo/Status", () => ok([], 500)],
+			[
+				"victoria,central,jubilee,piccadilly,northern,bakerloo/Status",
+				() => ok([], 500),
+			],
 			[
 				"gbfs.bluebikes.com",
 				() =>
@@ -345,7 +348,7 @@ describe("transit gbfs-blue + gbfs-toronto", () => {
 		]);
 		const r = await transit();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('gbfs-blue','gbfs-toronto') ORDER BY id",
 		);
 		assert.ok(rows.some((x) => x.id.startsWith("gbfs-blue:b1")));

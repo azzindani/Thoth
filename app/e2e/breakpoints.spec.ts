@@ -1,7 +1,7 @@
 // Thoth rail + phone suites: the UX that used to swallow map taps.
 // Serial + one shared page per breakpoint (slow CDN boot happens once).
 // Screenshots kept in e2e/shots/.
-import { expect, type Page, test } from "playwright/test";
+import { expect, type Page, test } from "./fixtures";
 
 async function boot(page: Page) {
 	await page.goto("/");
@@ -47,13 +47,19 @@ async function firstPoint(page: Page, layer: string) {
 			project: (c: number[]) => { x: number; y: number };
 			getContainer: () => HTMLElement;
 		};
-		const f = m
-			.queryRenderedFeatures({ layers: [layer] })
-			.find((x) => x.geometry?.type === "Point");
-		if (!f) return null;
-		const s = m.project(f.geometry.coordinates);
 		const r = m.getContainer().getBoundingClientRect();
-		return { x: s.x + r.left, y: s.y + r.top, title: f.properties.title };
+		// Reachable only: the map is full-bleed under floating panels, so a
+		// rendered point may sit behind chrome a pointer cannot click through.
+		for (const f of m.queryRenderedFeatures({ layers: [layer] })) {
+			if (f.geometry?.type !== "Point") continue;
+			const s = m.project(f.geometry.coordinates);
+			const x = s.x + r.left;
+			const y = s.y + r.top;
+			const hit = document.elementFromPoint(x, y);
+			if (hit?.tagName === "CANVAS" && hit.closest("#map"))
+				return { x, y, title: f.properties.title };
+		}
+		return null;
 	}, layer);
 	if (!p) throw new Error(`no ${layer} point rendered`);
 	return p as { x: number; y: number; title: string };
@@ -92,7 +98,7 @@ async function zoomForFreePoint(
 					}[];
 				};
 				const f = m
-					.queryRenderedFeatures({ layers: [`${layer}-c`] })
+					.queryRenderedFeatures({ layers: [`${layer}-n`] })
 					.find((x) => x.geometry?.type === "Point");
 				return f ? (f.geometry.coordinates as [number, number]) : null;
 			},

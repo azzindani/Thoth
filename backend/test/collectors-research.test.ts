@@ -53,7 +53,7 @@ describe("research", () => {
 		}) as typeof fetch;
 		const r = await research();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='openalex'",
 		);
 		assert.ok(rows.length >= 1);
@@ -101,7 +101,7 @@ describe("research openaire", () => {
 		}) as typeof fetch;
 		const r = await research();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='openaire'",
 		);
 		assert.equal(rows.length, 1);
@@ -133,7 +133,7 @@ describe("research yahoo-search (batch61)", () => {
 		}) as typeof fetch;
 		const r = await research();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='yahoo-search' ORDER BY id",
 		);
 		assert.ok(rows.some((x) => x.id === "yseek:AAPL"));

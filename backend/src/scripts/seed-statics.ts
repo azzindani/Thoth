@@ -57,7 +57,8 @@ const LAYERS: {
 	{
 		file: "sunspots.json",
 		layer: "spacewx",
-		title: (it) => `Sunspots ${it.year}-${String(it.month).padStart(2, "0")}: ${it.mean}`,
+		title: (it) =>
+			`Sunspots ${it.year}-${String(it.month).padStart(2, "0")}: ${it.mean}`,
 	},
 ];
 

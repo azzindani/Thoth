@@ -48,7 +48,7 @@ describe("hdx-idmc", () => {
 		}) as typeof fetch;
 		const r = await hdx();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='hdx-idmc'",
 		);
 		assert.ok(rows.length >= 1);
@@ -71,7 +71,7 @@ describe("hdx-idmc", () => {
 		}) as typeof fetch;
 		const r = await hdx();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source LIKE 'ckan-%' ORDER BY id",
 		);
 		assert.equal(rows.length, 4);

@@ -114,6 +114,91 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
 - `docker compose up --build` never verified here (sandbox denies mounts) — first
   green build must happen on a real host.
 - Flights quota: OpenSky 100/day anon — 15-min cadence holds, but a key raises it.
+- [x] Monitoring (ROADMAP P1, 2026-09-23): run/source/upstream-call history,
+  worker heartbeat + schedule, feed alerts (failing / frozen / mass) with
+  Telegram push, run-now queue, `/metrics`, batched retention, Monitor v2
+  data tables. Alert delivery to a real Telegram chat unverified here.
+- [x] Production hardening pass (2026-09-23, see PRODUCTION.md): Express 5 (async
+  errors no longer hang requests), JSON 404/500 + request ids + access log,
+  security headers, CORS that honours CORS_ORIGIN, per-client rate limiting via
+  TRUST_PROXY (was one shared bucket behind the Next proxy), API_WRITE_KEY write
+  gate (fail closed in prod) + app-side injection behind APP_BASIC_AUTH,
+  livez/readyz, shared SSE poller + resume replay, graceful API/worker shutdown,
+  tracked transactional migrations, pool error handling + statement timeout,
+  per-batch layer_versions bumps, maplibre-gl 6 (critical XSS advisory).
+- [x] Deploy fixes (2026-09-23): compose DB volume pointed at the wrong PGDATA
+  (data lived in the container layer — dump before upgrading, PRODUCTION.md §5);
+  app image build failed on a missing public/ dir; browser bypassed the app to
+  hit :4000; API port no longer published on 0.0.0.0; log rotation.
+- [x] CI deterministic (2026-09-23): fixture dataset + statics seeded, jobs split
+  (static / db / app / docker image build), Node 22, dependabot. Upstream-bound
+  checks left: alive warm-up (attempts only), RIPEstat/NVD/crt.sh lookups.
+- [x] UI redesign (2026-09-23): warm-black/bone tokens, faience single accent,
+  severity-only data colour, monochrome glyphs + per-severity map sprites,
+  neutral clusters with severity rings, square segmented controls, Plex
+  type, grouped layer list, DEFCON meter (replaced the dial), severity-edge
+  brief, collapsible feed gaps, phone map-first layout, tablet sheet anchored
+  under the status bar. Fixed on the way: timeline never drew (read b.n,
+  API serves count), phone sheet inherited tablet rail cells.
+- [x] Modern UI pass (2026-09-23): full-bleed map with floating glass panels
+  (desk/tab/phone), radius + motion token scales, raised segmented cells,
+  hover/press/focus-visible states, sheet slide motion, reduced-motion and
+  reduced-transparency fallbacks, map camera padding from panel rects
+  (globe centres in the free area), measured `--dock-h`. E2e point pickers
+  now require the map canvas to be the hit target. vitest 37/37, e2e 28/29
+  locally (ASN lookup needs network; green in CI).
+- [x] Sources batch31 (2026-09-23): navwarn (NGA MSI), gpsjam (ADS-B NACp,
+  derived), advisories (US State Dept), SPC storm reports, NTWC/PTWC
+  tsunami bulletins, JTWC cyclones. New `pruneStale()` store helper for
+  current-picture sources (only after a complete, non-empty poll). Map:
+  polygon layers now render point geometries too (`<layer>-p`, pickable).
+  Contract tests 212/212 collectors (+21 new), fixtures for the 3 new
+  layers, e2e 28/29 locally (ASN needs network).
+- [x] Floating UI (2026-09-23): collapsible panels with edge handles and
+  clear view (`\` / CLEAR; `/` restores the dock), camera eases into the
+  freed space, state remembered; pop-out object windows from pinned cards
+  (drag, raise, minimise tray, leader lines, live refresh on SSE, layout
+  remembered; tablet/phone = swipeable stack); hover/pin/picker cards
+  anchor inside the free area (`fitAnchor`). e2e: new floating.spec.ts
+  (5 tests), full suite 33/34 locally (ASN needs network).
+- [x] Intelligence layer (2026-09-23, ROADMAP P4): duplicate quake merge,
+  incidents (DBSCAN clusters corroborated across layers/sources, with
+  timeline), anomalies (7-day median/MAD per layer and 5° cell; dead-feed
+  guard), Incidents tab (two data tables, rows fly the map). Tests: intel
+  7/7 (collectors 242/242), e2e incidents tab. Live behaviour needs real
+  feeds + a day of samples; tune EPS/thresholds from production data.
+- [x] Sources batch32 (2026-09-23, ROADMAP P3): vessels (Digitraffic
+  AIS), displacement (UNHCR), cables (submarine cable routes + landings),
+  FAA NAS status, Copernicus EMS, ENISA EUVD, Tor exits, UK FCDO. Three
+  new layers; polygon layers gain an invisible 12px line pick band
+  (`<layer>-h`) and outline picks, so 1px routes hover and click. Slow
+  catalog-like sources (state-travel, uk-fcdo, unhcr, cables, EMS) no
+  longer raise false "frozen" alerts. Contract tests 235/235 (+12).
+- Batch32 live verification: built without egress, so formats follow the
+  published docs (NAS status XML lists, EMS `results[]`+WKT centroid with
+  RSS fallback, Digitraffic `features[].properties.timestampExternal`,
+  UNHCR `items[]` with `coo_iso`, cable-geo.json, EUVD list endpoints,
+  Onionoo `relays[]`, GOV.UK `links.children` + `details.alert_status`).
+  EMS is the least certain (undocumented dashboard API). Run
+  `npm run dev:worker -- --once <name>` for faa, ems, vessels, unhcr,
+  cables, euvd, torexits, fcdo on a networked host and check the monitor.
+- Batch31 live verification: the sandbox that built these has no egress,
+  so field names follow the published formats (NGA `broadcast-warn`,
+  readsb `nac_p`/`gpsOkBefore`, SPC 3-section CSV, tsunami.gov Atom
+  `geo:lat`, JTWC RSS + `web.txt`, State Dept `Title` "X - Level N").
+  Run `npm run dev:worker -- --once <name>` for navwarn, gpsjam, spc,
+  tsunami, storms, advisories on a networked host and check /api/health.
+  The gpsjam NACp<8 threshold may need tuning against gpsjam.org once live.
+  UK FCDO advisories deferred: no level in the index, needs ~226
+  per-country fetches. Owner: next data pass.
+- Basemap recolour: CARTO dark-matter stays as served (cool neutral). A
+  warm-tuned style (own style JSON over the same tiles) would finish the
+  palette; needs visual verification against live tiles. Owner: next UI pass.
+- CSP for the app — needs an audited allowlist (CARTO tiles, Esri imagery,
+  Google Fonts, video embeds). Owner: next hardening pass.
+- Multi-replica API: rate-limit + SSE client state are in-process; move to
+  Postgres/Redis before running >1 API container.
+- Per-user identity/audit for writes (single shared key today).
 
 ## E. Tests (89 → 128, 2026-09-09)
 
@@ -124,7 +209,11 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ThreatClock, EntityGraph, CmdBar routing). Gap closed, nothing remains.
 - [x] Perims/airwx mock suite — batch7 (polygon round-trip, severity maps).
 - Flake fixes: collector suites serial (`--test-concurrency=1`, TRUNCATE races),
-  CI/e2e `REQUESTS_PER_MIN=2000` (page loads cost ~35 req).
+  CI/e2e `REQUESTS_PER_MIN=2000` (page loads cost ~35 req — all from one IP
+  in tests; production limits are per client since 2026-09-23).
+- [x] Collector suite 9m → 27s (2026-09-23): pg pool `allowExitOnIdle` (each file
+  idled 10s) + `THOTH_DELAY_SCALE=0` for backoff sleeps; forecast/marine stub
+  ordering bug fixed (marine rows were never exercised).
 - [x] Coverage hermeticity (2026-09-10): `test:coverage` runs on thoth_test and
   excludes the HTTP liveness suite; batch TRUNCATEs wiped the dev DB twice
   before this (repaired via seed-statics + --once cycles). Satellites fallback

@@ -56,9 +56,10 @@ describe("flights collect()", () => {
 		]);
 		const r = await flights();
 		assert.equal(r.ok, true);
-		const rows = await query<
-			{ title: string; meta: { airline: string | null } }[]
-		>("SELECT title, meta FROM events WHERE layer='flights'");
+		const rows = await query<{
+			title: string;
+			meta: { airline: string | null };
+		}>("SELECT title, meta FROM events WHERE layer='flights'");
 		assert.ok(rows.length >= 1, "flight stored");
 		assert.equal(rows[0].title, "UAL123");
 		assert.equal(rows[0].meta.airline, "United Airlines");
@@ -99,7 +100,7 @@ describe("flights fallback + airlineOf", () => {
 		const r = await flights();
 		assert.equal(r.ok, true);
 		assert.equal((r as { source?: string }).source, "opensky");
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE layer='flights' AND source='opensky' AND id='opensky:abc123'",
 		);
 		assert.equal(rows.length, 1, "null-coord state skipped");
@@ -135,7 +136,7 @@ describe("flights fallback + airlineOf", () => {
 		const r = await flights();
 		assert.equal(r.ok, true);
 		assert.equal((r as { source?: string }).source, "adsb.lol");
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='adsb.lol' ORDER BY id",
 		);
 		assert.deepEqual(
@@ -195,14 +196,14 @@ describe("flights adsb garbage fallback", () => {
 		assert.equal((r as { source?: string }).source, "opensky");
 		// NOTE: the EU opensky stub also feeds the 4 region legs (same host) —
 		// scope to the EU row under test.
-		const rows = await query<{ id: string; source: string }[]>(
+		const rows = await query<{ id: string; source: string }>(
 			"SELECT id, source FROM events WHERE layer='flights' AND source='opensky' AND id='opensky:b00b11'",
 		);
 		assert.deepEqual(
 			rows.map((x) => [x.id, x.source]),
 			[["opensky:b00b11", "opensky"]],
 		);
-		const h = await query<{ ok: boolean }[]>(
+		const h = await query<{ ok: boolean }>(
 			"SELECT (error IS NULL) AS ok FROM feed_health WHERE source='adsb.lol'",
 		);
 		assert.equal(h[0]?.ok, false, "adsb rung marked unhealthy");
@@ -255,7 +256,7 @@ describe("flights bosporus", () => {
 		// NOTE: the EU opensky stub feeds every same-host region leg, so the
 		// bosporus source also collects the EU rows — assert the bosporus row
 		// is present (shared-host pattern, cf. energyeu DE scoping fix).
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='opensky-bosporus' ORDER BY id",
 		);
 		assert.ok(rows.some((x) => x.id === "opensky-bos:4bb1e8"));
@@ -356,7 +357,7 @@ describe("flights regions", () => {
 		}) as typeof fetch;
 		const r = await flights();
 		assert.equal((r as { ok: boolean }).ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('opensky-tokyo','opensky-sydney','opensky-mexico') AND id IN ('opensky-tyo:8744f6','opensky-syd:7c78b6','opensky-mex:0d121b') ORDER BY id",
 		);
 		assert.deepEqual(

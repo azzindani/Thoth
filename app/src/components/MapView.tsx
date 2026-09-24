@@ -1,9 +1,11 @@
 "use client";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { api, type LayerItem } from "../lib/api";
-import { bakeIcon, LAYER_NAMES, LAYERS, mutedTone } from "../lib/layer-catalog";
+import { api, type CameraView, type LayerItem } from "../lib/api";
+import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
+import { PALETTE, SEV_INK } from "../lib/palette";
 import {
 	armThumb,
 	ensurePickHandler,
@@ -66,6 +68,219 @@ type LoadOpts = {
 	onFull: Props["onSelect"];
 };
 
+/** Viewport-aware slices (ROADMAP P2). Below zoom 3 the whole world is
+ * requested (the API samples it across regions); closer in, the visible
+ * bounds padded by half a screen and snapped outward to a zoom-sized grid,
+ * so small pans reuse the same request. */
+export function cameraView(map: maplibregl.Map): CameraView {
+	const z = Math.floor(map.getZoom() * 2) / 2;
+	if (z < 3) return { z };
+	const b = map.getBounds();
+	const padX = (b.getEast() - b.getWest()) / 2;
+	const padY = (b.getNorth() - b.getSouth()) / 2;
+	const step = 360 / 2 ** Math.floor(z);
+	const snap = (v: number, up: boolean) =>
+		(up ? Math.ceil(v / step) : Math.floor(v / step)) * step;
+	let w = snap(b.getWest() - padX, false);
+	let e = snap(b.getEast() + padX, true);
+	const s = Math.max(-90, snap(b.getSouth() - padY, false));
+	const n = Math.min(90, snap(b.getNorth() + padY, true));
+	if (e - w >= 360) {
+		w = -180;
+		e = 180;
+	} else {
+		const wrap = (v: number) => ((((v + 180) % 360) + 360) % 360) - 180;
+		w = wrap(w);
+		e = wrap(e) === -180 ? 180 : wrap(e);
+	}
+	return { z, bbox: [w, s, e, n] };
+}
+const viewKey = (v: CameraView) => `${v.z}|${v.bbox?.join(",") ?? "world"}`;
+/** Per layer: did the last slice leave rows out, and for which view. */
+const sliceState: Record<string, { truncated: boolean; key: string }> = {};
+
+/** After the camera settles: re-slice visible layers whose last slice was
+ *  truncated and was cut for a different view. Complete layers never
+ *  reload on camera moves (SSE still refreshes them on data changes). */
+export function refreshForCamera(map: maplibregl.Map, opts: LoadOpts) {
+	const key = viewKey(cameraView(map));
+	const due = LAYER_NAMES.filter(
+		(n) =>
+			opts.visible[n] && sliceState[n]?.truncated && sliceState[n].key !== key,
+	);
+	if (due.length) return loadAll(map, due, opts);
+}
+
+// ── area watches (ROADMAP P5) ───────────────────────────────────────────
+/** Event the page listens for to redraw watched areas after a change. */
+export const WATCH_AREAS_EVENT = "thoth:watch-areas";
+
+/** Watched areas as a dashed accent outline + faint wash. Not a data layer:
+ * never picked, never counted. */
+export function setWatchAreas(
+	map: maplibregl.Map,
+	areas: { id: string; label: string; geom: unknown }[],
+) {
+	const data = {
+		type: "FeatureCollection",
+		features: areas.map((a) => ({
+			type: "Feature",
+			geometry: a.geom,
+			properties: { id: a.id, label: a.label },
+		})),
+	};
+	const src = map.getSource("watch-areas") as
+		| maplibregl.GeoJSONSource
+		| undefined;
+	if (src) {
+		src.setData(data as never);
+		return;
+	}
+	map.addSource("watch-areas", { type: "geojson", data: data as never });
+	map.addLayer({
+		id: "watch-areas-fill",
+		type: "fill",
+		source: "watch-areas",
+		paint: { "fill-color": PALETTE.accent, "fill-opacity": 0.05 },
+	} as never);
+	map.addLayer({
+		id: "watch-areas",
+		type: "line",
+		source: "watch-areas",
+		paint: {
+			"line-color": PALETTE.accent,
+			"line-width": 1.5,
+			"line-opacity": 0.8,
+			"line-dasharray": [3, 2],
+		},
+	} as never);
+}
+
+// ── map notes (ROADMAP P5) ──────────────────────────────────────────────
+/** Event the page listens for to redraw map notes after a change. */
+export const MAP_NOTES_EVENT = "thoth:map-notes";
+
+/** Analyst notes pinned to a place: a small accent pin with its title. Not a
+ * data layer: never picked, never counted, not filtered by replay. */
+export function setMapNotes(
+	map: maplibregl.Map,
+	notes: { id: string; title: string; lat: number; lon: number }[],
+) {
+	const data = {
+		type: "FeatureCollection",
+		features: notes.map((n) => ({
+			type: "Feature",
+			geometry: { type: "Point", coordinates: [n.lon, n.lat] },
+			properties: { id: n.id, title: n.title.slice(0, 40) },
+		})),
+	};
+	const src = map.getSource("map-notes") as
+		| maplibregl.GeoJSONSource
+		| undefined;
+	if (src) {
+		src.setData(data as never);
+		raiseMapNotes(map);
+		return;
+	}
+	map.addSource("map-notes", { type: "geojson", data: data as never });
+	map.addLayer({
+		id: "map-notes",
+		type: "circle",
+		source: "map-notes",
+		paint: {
+			"circle-radius": 5,
+			"circle-color": PALETTE.accent,
+			"circle-stroke-color": PALETTE.txt,
+			"circle-stroke-width": 1.5,
+		},
+	} as never);
+	map.addLayer({
+		id: "map-notes-label",
+		type: "symbol",
+		source: "map-notes",
+		layout: {
+			"text-field": ["get", "title"],
+			"text-size": 11,
+			"text-offset": [0, 1.1],
+			"text-anchor": "top",
+			// The analyst's own words always show, over data labels.
+			"text-allow-overlap": true,
+			"text-ignore-placement": true,
+		},
+		paint: {
+			"text-color": PALETTE.txt,
+			"text-halo-color": PALETTE.bg,
+			"text-halo-width": 1.2,
+		},
+	} as never);
+}
+
+/** Notes stay above data layers added since (a layer shown late is
+ * created on top). */
+function raiseMapNotes(map: maplibregl.Map) {
+	for (const id of ["map-notes", "map-notes-label"])
+		if (map.getLayer(id)) map.moveLayer(id);
+}
+
+/** PNG of the map as drawn now. WebGL clears the buffer after each frame,
+ * so the capture happens inside the next render. */
+export function snapshotMap(map: maplibregl.Map): Promise<string | null> {
+	return new Promise((resolve) => {
+		const t = setTimeout(() => resolve(null), 5000);
+		map.once("render", () => {
+			clearTimeout(t);
+			try {
+				resolve(map.getCanvas().toDataURL("image/png"));
+			} catch {
+				resolve(null);
+			}
+		});
+		map.triggerRepaint();
+	});
+}
+
+// ── time replay (ROADMAP P5) ────────────────────────────────────────────
+// Every layer's last full slice is kept; during a replay each source shows
+// only features observed in the window ending at the replay clock. No
+// refetch per step: scrubbing is a local filter. Static catalogs and slow
+// layers (daily or rarer) are background and always shown.
+type FC = ReturnType<typeof toGeoJSON>;
+const fullData: Record<string, FC> = {};
+let replay: { t: number; windowMs: number } | null = null;
+
+function replayView(name: string): FC {
+	const fc = fullData[name];
+	if (!replay || !fc || (LAYERS[name]?.intervalSec ?? 0) >= 86400) return fc;
+	const hi = replay.t;
+	const lo = hi - replay.windowMs;
+	return {
+		...fc,
+		features: fc.features.filter((f) => {
+			if (f.properties.source === "static") return true;
+			const t = Date.parse(f.properties.ts);
+			return Number.isFinite(t) && t <= hi && t > lo;
+		}),
+	};
+}
+
+/** Enter/advance a replay (clock `t`, trailing `windowMs`), or leave it
+ * with null. Returns how many features are on the map. */
+export function setReplay(
+	map: maplibregl.Map,
+	r: { t: number; windowMs: number } | null,
+): number {
+	replay = r;
+	let shown = 0;
+	for (const name of Object.keys(fullData)) {
+		const v = replayView(name);
+		shown += v.features.length;
+		(map.getSource(name) as maplibregl.GeoJSONSource | undefined)?.setData(
+			v as never,
+		);
+	}
+	return shown;
+}
+
 /** Popups (hover/pin/picker) live in map-popups.ts — outside React.
  * This file owns layers: sources, paint, icons, overlays. */
 
@@ -91,6 +306,7 @@ export async function loadAll(
 			}
 		}),
 	);
+	raiseMapNotes(map);
 }
 
 export function setVis(
@@ -106,6 +322,8 @@ export function setVis(
 		`${n}-o-crit`,
 		`${n}-o-watch`,
 		`${n}-o-info`,
+		`${n}-p`,
+		`${n}-h`,
 	])
 		if (map.getLayer(id))
 			map.setLayoutProperty(id, "visibility", visible[n] ? "visible" : "none");
@@ -122,8 +340,11 @@ export async function loadLayer(
 		onFull: Props["onSelect"];
 	},
 ) {
-	const j = await api.layer(name, opts.since ?? undefined);
-	const data = toGeoJSON(j.items, opts.sev);
+	const view = cameraView(map);
+	const j = await api.layer(name, opts.since ?? undefined, view);
+	sliceState[name] = { truncated: !!j.truncated, key: viewKey(view) };
+	fullData[name] = toGeoJSON(j.items, opts.sev);
+	const data = replayView(name);
 	const src = map.getSource(name) as maplibregl.GeoJSONSource | undefined;
 	if (src) {
 		src.setData(data as never);
@@ -134,7 +355,7 @@ export async function loadLayer(
 		// composite) + severity-coded dashed outlines that stay legible when
 		// stacked. Fill sits below the route/terminator chrome via no extra
 		// ordering — fills were already added before symbols.
-		const tone = mutedTone(LAYERS[name].color);
+		const tone = SEV_INK.info;
 		map.addSource(name, { type: "geojson", data: data as never });
 		map.addLayer({
 			id: name,
@@ -169,7 +390,7 @@ export async function loadLayer(
 			{
 				id: `${name}-o-crit`,
 				sev: "critical",
-				color: "#ff6b6b",
+				color: PALETTE.critical,
 				width: 2,
 				dash: [],
 				opacity: 0.95,
@@ -177,7 +398,7 @@ export async function loadLayer(
 			{
 				id: `${name}-o-watch`,
 				sev: "watch",
-				color: "#ffa028",
+				color: PALETTE.watch,
 				width: 1.5,
 				dash: [5, 3],
 				opacity: 0.85,
@@ -205,6 +426,41 @@ export async function loadLayer(
 				},
 			} as never);
 		}
+		// Lines (cables, tracklines) are 1–2px: an invisible 12px band under
+		// them makes hover and tap forgiving. Only line geometries.
+		map.addLayer({
+			id: `${name}-h`,
+			type: "line",
+			source: name,
+			filter: [
+				"in",
+				["geometry-type"],
+				["literal", ["LineString", "MultiLineString"]],
+			],
+			paint: { "line-width": 12, "line-opacity": 0 },
+		} as never);
+		// Mixed-geometry layers (navwarn: a mine sighting is a position, not
+		// an area) — points render as severity-ringed dots, never dropped.
+		map.addLayer({
+			id: `${name}-p`,
+			type: "circle",
+			source: name,
+			filter: ["==", ["geometry-type"], "Point"],
+			paint: {
+				"circle-radius": 5,
+				"circle-color": PALETTE.raise,
+				"circle-stroke-width": 1.5,
+				"circle-stroke-color": [
+					"match",
+					["get", "severity"],
+					"critical",
+					PALETTE.critical,
+					"watch",
+					PALETTE.watch,
+					tone,
+				],
+			},
+		} as never);
 		setPickSinks(opts.onSelect, opts.onFull);
 		ensurePickHandler(map);
 		const phov = new maplibregl.Popup({
@@ -217,16 +473,19 @@ export async function loadLayer(
 			phov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
 			armThumb(phov, p);
 		});
-		map.on("mousemove", name, (e) => {
-			const f = e.features?.[0];
-			if (!f) return;
-			map.getCanvas().style.cursor = "pointer";
-			phovCtl.move(f.properties as unknown as ObjProps, name, e.lngLat);
-		});
-		map.on("mouseleave", name, () => {
-			phovCtl.leave();
-			map.getCanvas().style.cursor = "";
-		});
+		// Fill, points, and the line hit band (lines have no fill to hover).
+		for (const hoverId of [name, `${name}-p`, `${name}-h`]) {
+			map.on("mousemove", hoverId, (e) => {
+				const f = e.features?.[0];
+				if (!f) return;
+				map.getCanvas().style.cursor = "pointer";
+				phovCtl.move(f.properties as unknown as ObjProps, name, e.lngLat);
+			});
+			map.on("mouseleave", hoverId, () => {
+				phovCtl.leave();
+				map.getCanvas().style.cursor = "";
+			});
+		}
 	} else {
 		map.addSource(name, {
 			type: "geojson",
@@ -239,15 +498,30 @@ export async function loadLayer(
 				nw: ["+", ["case", ["==", ["get", "severity"], "watch"], 1, 0]],
 			},
 		});
-		const icon = await bakeIcon(name);
-		if (!map.hasImage(`th-${name}`)) map.addImage(`th-${name}`, icon);
+		// One sprite per severity: shape = layer, ink = severity.
+		for (const [suffix, ink] of [
+			["", SEV_INK.info],
+			["-watch", SEV_INK.watch],
+			["-crit", SEV_INK.critical],
+		] as const) {
+			const id = `th-${name}${suffix}`;
+			if (!map.hasImage(id)) map.addImage(id, await bakeIcon(name, ink));
+		}
 		map.addLayer({
 			id: name,
 			type: "symbol",
 			source: name,
 			filter: ["!", ["has", "point_count"]],
 			layout: {
-				"icon-image": `th-${name}`,
+				"icon-image": [
+					"match",
+					["get", "severity"],
+					"critical",
+					`th-${name}-crit`,
+					"watch",
+					`th-${name}-watch`,
+					`th-${name}`,
+				],
 				"icon-size": [
 					"case",
 					["==", ["get", "severity"], "critical"],
@@ -266,20 +540,35 @@ export async function loadLayer(
 			source: name,
 			filter: ["has", "point_count"],
 			paint: {
-				"circle-color": mutedTone(LAYERS[name].color),
-				"circle-opacity": 0.82,
-				"circle-stroke-width": 2,
-				"circle-stroke-color": "#000",
+				// Neutral disc; the ring carries the worst severity inside.
+				"circle-color": PALETTE.raise,
+				"circle-opacity": 0.92,
+				"circle-stroke-width": [
+					"case",
+					[">", ["get", "nc"], 0],
+					1.75,
+					[">", ["get", "nw"], 0],
+					1.5,
+					1,
+				],
+				"circle-stroke-color": [
+					"case",
+					[">", ["get", "nc"], 0],
+					PALETTE.critical,
+					[">", ["get", "nw"], 0],
+					PALETTE.watch,
+					PALETTE.dim,
+				],
 				"circle-radius": [
 					"step",
 					["get", "point_count"],
-					8,
+					9,
 					50,
-					11,
+					12,
 					200,
 					15,
 					1000,
-					20,
+					19,
 				],
 			} as never,
 		});
@@ -294,7 +583,7 @@ export async function loadLayer(
 				"text-allow-overlap": true,
 				"text-ignore-placement": true,
 			} as never,
-			paint: { "text-color": "#000" },
+			paint: { "text-color": PALETTE.txt },
 		});
 		map.on("click", `${name}-c`, (e) => {
 			// A picker just opened on this pixel — it owns the click, not zoom.
@@ -444,7 +733,7 @@ function addTerminator(map: maplibregl.Map) {
 				id: "terminator",
 				type: "fill",
 				source: "terminator",
-				paint: { "fill-color": "#000", "fill-opacity": 0.35 },
+				paint: { "fill-color": PALETTE.bg, "fill-opacity": 0.4 },
 			} as never);
 		}
 	}
@@ -518,9 +807,9 @@ function addRoutes(map: maplibregl.Map) {
 		type: "line",
 		source: "routes",
 		paint: {
-			"line-color": "#8f96ff",
-			"line-opacity": 0.28,
-			"line-width": 1.5,
+			"line-color": PALETTE.txt2,
+			"line-opacity": 0.22,
+			"line-width": 1,
 			"line-dasharray": [3, 3],
 		},
 	} as never);
@@ -539,6 +828,17 @@ const SAT_LAYER = {
 	type: "raster",
 	source: "sat",
 } as unknown as maplibregl.LayerSpecification;
+
+// The live map, for components that only need to move the camera (tabs,
+// lists) — no prop threading through the page.
+let liveMap: maplibregl.Map | null = null;
+export function flyTo(lat: number, lon: number, zoom = 5) {
+	liveMap?.flyTo({
+		center: [lon, lat],
+		zoom: Math.max(liveMap.getZoom(), zoom),
+		speed: 1.4,
+	});
+}
 
 export default function MapView(props: Props) {
 	const divRef = useRef<HTMLDivElement>(null);
@@ -570,6 +870,7 @@ export default function MapView(props: Props) {
 			attributionControl: { compact: true },
 		});
 		mapRef.current = map;
+		liveMap = map;
 		(window as unknown as { __thothMap?: maplibregl.Map }).__thothMap = map;
 		// right-click sets area dossier
 		map.on("contextmenu", (e) => {
@@ -585,6 +886,21 @@ export default function MapView(props: Props) {
 			addTerminator(map);
 			addRoutes(map);
 			props.mapCb(map);
+			// Camera settled → fill in truncated layers for the new view.
+			let settle: ReturnType<typeof setTimeout> | undefined;
+			map.on("moveend", () => {
+				clearTimeout(settle);
+				settle = setTimeout(() => {
+					const q = propsRef.current;
+					void refreshForCamera(map, {
+						sev: q.sev,
+						since: q.since,
+						visible: q.visible,
+						onSelect: q.onSelect,
+						onFull: q.onFull,
+					});
+				}, 400);
+			});
 			const p = propsRef.current;
 			await loadAll(map, LAYER_NAMES, {
 				sev: p.sev,
@@ -597,6 +913,7 @@ export default function MapView(props: Props) {
 		return () => {
 			map.remove();
 			mapRef.current = null;
+			liveMap = null;
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
@@ -644,6 +961,17 @@ export default function MapView(props: Props) {
 		const map = mapRef.current;
 		if (!map) return;
 		for (const n of LAYER_NAMES) setVis(map, n, props.visible);
+		// A layer switched on after the camera moved may hold another view's slice.
+		if (map.isStyleLoaded()) {
+			const q = propsRef.current;
+			void refreshForCamera(map, {
+				sev: q.sev,
+				since: q.since,
+				visible: props.visible,
+				onSelect: q.onSelect,
+				onFull: q.onFull,
+			});
+		}
 	}, [props.visible]);
 
 	return (

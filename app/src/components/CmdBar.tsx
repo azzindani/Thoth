@@ -14,6 +14,8 @@ export default function CmdBar({
 	onChangelog,
 	onFocus,
 	onTab,
+	onCountry,
+	onSitrep,
 }: {
 	onLayer: (l: string, st?: boolean) => void;
 	onMode: (m: string) => void;
@@ -24,6 +26,8 @@ export default function CmdBar({
 	onChangelog: () => void;
 	onFocus: () => void;
 	onTab: (t: string) => void;
+	onCountry?: (name: string) => void;
+	onSitrep?: () => void;
 }) {
 	const [val, setVal] = useState("");
 	const [out, setOut] = useState("");
@@ -99,12 +103,18 @@ export default function CmdBar({
 				);
 				onOut(`exporting ${L2}`);
 			} else onOut("export <layer> [csv|geojson]");
+		} else if (/^country$/i.test(c || "") && arg) {
+			onCountry?.(arg);
+			onOut(`country ${arg}`);
+		} else if (/^report$/i.test(c || "") && onSitrep) {
+			onSitrep();
+			onOut("sitrep report opened");
 		} else if (/^changelog$/i.test(c || "")) {
 			onChangelog();
 			onOut("changelog opened");
 		} else if (/^help$/i.test(c || "")) {
 			onOut(
-				"layers: name on|off · sat|dark|nvg|globe|cinema · dossier lat,lng · sdn q · alerts · pulse|portfolio|screen|monitor|notes · aircraft|airport|vessel|mitre|ip|ipwhois|geo|geocode|nominatim|omgeo|btc|token|cert|asn|cve|epss|osv|circl|mitre-cve|ghsa|company|fdic|ror|macro|macro-imf|ports|doh|doh-google|doh-cf|robtex|wikidata|wiki|books|stack|fda-drug|gene|ontology|protein|package|daylight|zip|transit|name|funder|museum|rxnorm|chembl|sbdb|deps|nasa-img|planespotter|dailymed|holidays|npm-dl|sirene|stealers|gravatar + arg · search q · watch add|list|matches|del + args · notify text · changelog · keys: / g s m f e i esc",
+				"layers: name on|off · sat|dark|nvg|globe|cinema · dossier lat,lng · sdn q · alerts · pulse|portfolio|screen|monitor|notes · aircraft|airport|vessel|mitre|ip|ipwhois|geo|geocode|nominatim|omgeo|btc|token|cert|asn|cve|epss|osv|circl|mitre-cve|ghsa|company|fdic|ror|macro|macro-imf|ports|doh|doh-google|doh-cf|robtex|wikidata|wiki|books|stack|fda-drug|gene|ontology|protein|package|daylight|zip|transit|name|funder|museum|rxnorm|chembl|sbdb|deps|nasa-img|planespotter|dailymed|holidays|npm-dl|sirene|stealers|gravatar + arg · search q · watch add|list|matches|del + args · country name · report (sitrep of this view) · notify text · changelog · keys: / g s m f e i esc",
 			);
 		} else onOut("? try help");
 		setVal("");

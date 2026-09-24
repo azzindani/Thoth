@@ -52,14 +52,16 @@ describe("sanctions collect()", () => {
 		const r = await sanctions();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 2);
-		const n = await query("SELECT COUNT(*)::int c FROM sanctions_entities");
+		const n = await query<{ c: number }>(
+			"SELECT COUNT(*)::int c FROM sanctions_entities",
+		);
 		assert.equal(n[0].c, 2);
-		const e = await query(
+		const e = await query<{ aliases: string[]; countries: string[] }>(
 			"SELECT aliases, countries FROM sanctions_entities WHERE id='ofac-1'",
 		);
 		assert.deepEqual(e[0].aliases, ["J. DOE", "JOHN DOE"]);
 		assert.deepEqual(e[0].countries, ["IR", "RU"]);
-		const m = await query(
+		const m = await query<{ value: string }>(
 			"SELECT value FROM sanctions_meta WHERE key='us_ofac_sdn_count'",
 		);
 		assert.equal(m[0].value, "2");
@@ -69,7 +71,7 @@ describe("sanctions collect()", () => {
 		const r = await sanctions();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 1);
-		const e = await query(
+		const e = await query<{ dataset: string }>(
 			"SELECT dataset FROM sanctions_entities WHERE id='ofac-9'",
 		);
 		assert.equal(e[0].dataset, "us_ofac_sdn");
@@ -84,7 +86,7 @@ describe("sanctions collect()", () => {
 		stub("down", 503);
 		const r = await sanctions();
 		assert.equal(r.ok, false);
-		const h = await query(
+		const h = await query<{ last_ok: string | null; error: string | null }>(
 			"SELECT last_ok, error FROM feed_health WHERE source='opensanctions'",
 		);
 		// freeze contract: failure keeps the last good timestamp, records error

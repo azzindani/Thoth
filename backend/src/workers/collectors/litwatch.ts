@@ -516,7 +516,8 @@ export async function collect() {
 	// company + location + category — the general-labor leg next to
 	// Arbeitnow/RemoteOK tech postings.
 	try {
-		const url = "https://www.themuse.com/api/public/jobs?page=1&descending=true";
+		const url =
+			"https://www.themuse.com/api/public/jobs?page=1&descending=true";
 		assertSafeUrl(url);
 		const res = await stealthFetch(url);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -539,7 +540,12 @@ export async function collect() {
 				ts: jb.publication_date ?? new Date().toISOString(),
 				source: "themuse",
 				layer,
-				title: `${jb.name.slice(0, 180)} @ ${jb.company?.name ?? "?"} (${(jb.locations ?? []).map((l) => l.name).slice(0, 2).join("/") || "?"})`,
+				title: `${jb.name.slice(0, 180)} @ ${jb.company?.name ?? "?"} (${
+					(jb.locations ?? [])
+						.map((l) => l.name)
+						.slice(0, 2)
+						.join("/") || "?"
+				})`,
 				url: jb.refs?.landing_page ?? undefined,
 				severity: "info",
 				confidence: 0.6,
@@ -558,7 +564,8 @@ export async function collect() {
 	// nutriscore + nova + additive count — the food-transparency heartbeat
 	// (proves the API leg; real lookups stay on-demand OSINT).
 	try {
-		const url = "https://world.openfoodfacts.org/api/v2/product/3017620422003.json";
+		const url =
+			"https://world.openfoodfacts.org/api/v2/product/3017620422003.json";
 		assertSafeUrl(url);
 		const res = await stealthFetch(url);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -584,7 +591,10 @@ export async function collect() {
 			severity: "info",
 			confidence: 0.85,
 			entities: {},
-			meta: { nutriscore: pr.nutriscore_grade ?? null, nova: pr.nova_group ?? null },
+			meta: {
+				nutriscore: pr.nutriscore_grade ?? null,
+				nova: pr.nova_group ?? null,
+			},
 		});
 		n++;
 		await markHealth("openfood", true);
@@ -596,7 +606,8 @@ export async function collect() {
 	// MusicBrainz release search (keyless, no key, polite UA): Nevermind
 	// sentinel + result count — the music-catalog heartbeat leg.
 	try {
-		const url = "https://musicbrainz.org/ws/2/release/?query=release:nevermind&fmt=json&limit=1";
+		const url =
+			"https://musicbrainz.org/ws/2/release/?query=release:nevermind&fmt=json&limit=1";
 		assertSafeUrl(url);
 		const res = await stealthFetch(url, {
 			headers: { "User-Agent": "Thoth/0.1 (+https://github.com/thoth)" },
