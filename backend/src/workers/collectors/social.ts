@@ -32,6 +32,30 @@ const Toot = z.object({
 		.optional(),
 });
 
+const REDDIT_LATEST_URL =
+	"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=worldnews&limit=100&sort=desc";
+/** Natural-hazard words matched in r/worldnews titles. */
+const HAZARD_TITLE =
+	/\b(earthquakes?|quakes?|floods?|flooding|tsunamis?|wildfires?|bushfires?|cyclones?|hurricanes?|typhoons?|eruptions?|volcano(es)?|landslides?)\b/i;
+
+type RedditPost = {
+	title?: string;
+	author?: string;
+	score?: number;
+	num_comments?: number;
+	created_utc?: number;
+	permalink?: string;
+};
+
+export function hazardPosts(
+	posts: RedditPost[],
+): Array<RedditPost & { title: string; permalink: string }> {
+	return posts.filter(
+		(p): p is RedditPost & { title: string; permalink: string } =>
+			!!p.title && !!p.permalink && HAZARD_TITLE.test(p.title),
+	);
+}
+
 export async function collect() {
 	const layer = "news";
 	let n = 0;
@@ -73,48 +97,43 @@ export async function collect() {
 	const mastoOk = !errors.some((e) => e.startsWith("masto/"));
 	await markHealth("masto", mastoOk, mastoOk ? undefined : errors.join("; "));
 
-	// ArcticShift Reddit search (Pushshift successor, keyless).
-	for (const q of ["earthquake", "flood"]) {
-		try {
-			const url = `https://arctic-shift.photon-reddit.com/api/posts/search?subreddit=worldnews&limit=3&query=${encodeURIComponent(q)}`;
-			assertSafeUrl(url);
-			const res = await stealthFetch(url);
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			const j = (await res.json()) as {
-				data?: {
-					title?: string;
-					author?: string;
-					score?: number;
-					num_comments?: number;
-					created_utc?: number;
-					permalink?: string;
-				}[];
-			};
-			const posts = j.data ?? [];
-			await storeRaw("reddit", layer, res.status, { q, n: posts.length });
-			for (const p of posts) {
-				if (!p.title || !p.permalink) continue;
-				const ts =
-					typeof p.created_utc === "number" ? p.created_utc * 1000 : NaN;
-				await storeNormalized({
-					id: `reddit:${createHash("md5").update(p.permalink).digest("hex")}`,
-					ts: Number.isNaN(ts)
-						? new Date().toISOString()
-						: new Date(ts).toISOString(),
-					source: "reddit",
-					layer,
-					title: p.title.slice(0, 280),
-					url: `https://www.reddit.com${p.permalink}`,
-					severity: "info",
-					confidence: 0.6,
-					entities: {},
-					meta: { author: p.author, score: p.score, comments: p.num_comments },
-				});
-				n++;
-			}
-		} catch (e: unknown) {
-			errors.push(`reddit/${q}: ${errMsg(e)}`);
+	// ArcticShift Reddit (Pushshift successor, keyless): r/worldnews posts
+	// about natural hazards. Its full-text search answers 422 "Timeout. Maybe
+	// slow down a bit" on a subreddit this size (and, when it does answer,
+	// ranks weeks-old posts first), so fetch the newest posts (100 ≈ 12 h,
+	// polled hourly) and match titles here.
+	try {
+		assertSafeUrl(REDDIT_LATEST_URL);
+		const res = await stealthFetch(REDDIT_LATEST_URL);
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const j = (await res.json()) as { data?: RedditPost[] };
+		if (!Array.isArray(j.data))
+			throw new Error("unexpected payload: no data[]");
+		const posts = hazardPosts(j.data);
+		await storeRaw("reddit", layer, res.status, {
+			scanned: j.data.length,
+			n: posts.length,
+		});
+		for (const p of posts) {
+			const ts = typeof p.created_utc === "number" ? p.created_utc * 1000 : NaN;
+			await storeNormalized({
+				id: `reddit:${createHash("md5").update(p.permalink).digest("hex")}`,
+				ts: Number.isNaN(ts)
+					? new Date().toISOString()
+					: new Date(ts).toISOString(),
+				source: "reddit",
+				layer,
+				title: p.title.slice(0, 280),
+				url: `https://www.reddit.com${p.permalink}`,
+				severity: "info",
+				confidence: 0.6,
+				entities: {},
+				meta: { author: p.author, score: p.score, comments: p.num_comments },
+			});
+			n++;
 		}
+	} catch (e: unknown) {
+		errors.push(`reddit/latest: ${errMsg(e)}`);
 	}
 	const redditOk = !errors.some((e) => e.startsWith("reddit/"));
 	await markHealth(

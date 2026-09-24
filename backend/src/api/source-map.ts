@@ -353,4 +353,7 @@ export const SOURCE_MAP: Record<
 	biwapp: { collector: "warnings", intervalSec: 900 },
 	"lhp-floods": { collector: "warnings", intervalSec: 900 },
 	"de-police": { collector: "warnings", intervalSec: 900 },
+	// Batch 36 (keyless loop-11).
+	pegelonline: { collector: "rivers", intervalSec: 3600 },
+	"hko-warn": { collector: "warnings", intervalSec: 900 },
 };

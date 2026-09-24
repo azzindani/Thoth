@@ -8,6 +8,8 @@
 //   katwarn, biwapp, lhp-floods, de-police
 //                the other warnung.bund.de providers — same record shape and
 //                footprint lookup as MoWaS (DWD weather is `dwd-warn`)
+//   hko-warn     Hong Kong Observatory warnings in force (typhoon signals,
+//                rainstorm, landslip, tsunami…) → `weather`
 // Area geometries become one marker each (lib/geo pointOf); area lookups are
 // cached in memory, since flood areas and warning footprints do not move.
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
@@ -49,6 +51,14 @@ export const BBK_PROVIDERS = [
 	{ provider: "police", source: "de-police", label: "Police" },
 ] as const;
 type BbkProvider = (typeof BBK_PROVIDERS)[number];
+// HKO open data "warnsum": `{}` when nothing is in force, else one entry per
+// warning type keyed by type (WTCSGNL, WRAIN, WFIRE, …) with the active
+// `code` (TC8NE, WRAINB, WFIRER, …). HK is one place: markers sit at the
+// Observatory.
+const HKO_WARN_URL =
+	"https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en";
+const HKO_PAGE = "https://www.hko.gov.hk/en/wxinfo/dailywx/wxwarntoday.htm";
+const HKO_AT = { lat: 22.3022, lon: 114.1741 };
 /** Per-run cap on uncached area lookups — a flood crisis can raise hundreds
  * of warnings; the rest get located on later runs as the cache fills. */
 const MAX_LOOKUPS_PER_RUN = 60;
@@ -214,6 +224,52 @@ export function bbkRows(
 	return rows;
 }
 
+/** HKO warning codes: No. 8+ typhoon signals, red/black rainstorm and
+ * tsunami are the critical tier; No. 3, amber rain, landslip, northern NT
+ * flooding and red fire danger are watch; the rest informational. */
+export function hkoSeverity(code: string): Sev {
+	const c = code.toUpperCase();
+	if (/^TC(8|9|10)/.test(c) || c === "WRAINR" || c === "WRAINB" || c === "WTMW")
+		return "critical";
+	if (/^TC3/.test(c) || ["WRAINA", "WL", "WFNTSA", "WFIRER"].includes(c))
+		return "watch";
+	return "info";
+}
+
+type HkoWarning = {
+	name?: string;
+	code?: string;
+	type?: string;
+	actionCode?: string;
+	issueTime?: string;
+	updateTime?: string;
+};
+
+export function hkoRows(sum: Record<string, HkoWarning>): Row[] {
+	const rows: Row[] = [];
+	for (const [kind, w] of Object.entries(sum)) {
+		if (!w || w.actionCode === "CANCEL") continue;
+		const code = w.code ?? kind;
+		rows.push({
+			id: `hko:${kind}`,
+			ts: new Date(
+				Date.parse(w.updateTime ?? w.issueTime ?? "") || Date.now(),
+			).toISOString(),
+			source: "hko-warn",
+			layer: "weather",
+			title: `HKO · ${w.name ?? kind}${w.type ? ` (${w.type})` : ""} — ${code}`,
+			url: HKO_PAGE,
+			severity: hkoSeverity(code),
+			confidence: 0.95,
+			lat: HKO_AT.lat,
+			lon: HKO_AT.lon,
+			entities: { agency: "Hong Kong Observatory" },
+			meta: { kind, code, action: w.actionCode ?? null },
+		});
+	}
+	return rows;
+}
+
 // Area/footprint caches survive across runs (the worker is long-lived).
 // null = looked up, has no usable geometry — don't ask again.
 const eaAreas = new Map<string, LonLat | null>();
@@ -293,6 +349,16 @@ const SOURCES: Array<{
 				.filter((x): x is string => !!x);
 			await locate(ids, eaAreas, eaAreaLookup);
 			return { status, rows: eaRows(items, (id) => eaAreas.get(id) ?? null) };
+		},
+	},
+	{
+		source: "hko-warn",
+		layer: "weather",
+		run: async () => {
+			const { status, json } = await fetchJson(HKO_WARN_URL);
+			if (!json || typeof json !== "object" || Array.isArray(json))
+				throw new Error("unexpected payload: not an object");
+			return { status, rows: hkoRows(json as Record<string, HkoWarning>) };
 		},
 	},
 	...BBK_PROVIDERS.map((p) => ({
