@@ -143,6 +143,18 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   ≈ 630): new `succeededWithin()` store helper, the leg skips when its
   latest run succeeded within 4.5 h (a failed latest run is retried at once).
   epmc left failing (upstream 503, see outages).
+- [x] Keyless loop-17 (2026-09-24): fix run — jtwc was "ok" but wrong. The
+  RSS moved to single-quoted links, so no system got its warning text (25W
+  Surigae unplaced); the last system of an item fell through to the next
+  item's ABPW advisory link and was drawn at another storm's position
+  (15E at Surigae's fix); hurricanes were not recognised. Now parsed per
+  RSS item, warning text only from the system's own `xx####web.txt`,
+  Hurricane/final warnings handled, East/Central Pacific skipped (NHC
+  carries them — no double storms), and systems that leave the feed are
+  pruned. bbc stays on the outage list (its Akamai edge fails ~5 of 6
+  connects; DNS just rotated to a working edge). JTWC queue row dropped:
+  warnings were already in `storms`; the ABPW/ABIO disturbance summaries
+  stay queued (none active to verify against today).
 - [x] Keyless loop-16 (2026-09-24): fix run. The Akamai edge path fault
   persisted (aljazeera failing, bbc/dw flapping): news RSS legs get one
   spaced retry on a connect-level failure, HTTP errors and read timeouts

@@ -38,7 +38,7 @@ loop by definition; they stay in DATA_SOURCES.md "Free-key".
 | JMA warnings, 2026 (r8) system (`jma.go.jp/bosai/warning/data/r8/map.json`) | weather | candidate | the old `data/warning/*.json` froze on 2026-05-28 when JMA revised its warnings. r8 `map.json` = one call, every forecast office (class10/class20 area codes, kinds[code,status]); names from `bosai/common/const/area.json`. Code → element/level table lives in the warning page's inline script: level 50 special warning (32/33/35–39, flood 51/53), 40 danger warning (43/48/49, flood 40/41), 30 warning (02/03/05–09, flood 30/31), 20 advisory (10, 12–17, 19–26, 29). Needs geometry: no coordinates in the feed — class10 polygons or office anchors first (2026-09-24) |
 | NCSC-UK feeds (`ncsc.gov.uk/api/1/services/v1/*-rss-feed.xml`) | cyber | parked | live, but news/reports/guidance only — no advisory feed to grade |
 | ACSC cyber.gov.au alerts/advisories RSS | cyber | blocked | HTTP/2 stream reset, then connect/read timeouts from this host (2026-09-24) — operator |
-| JTWC tropical cyclone warnings (`metoc.navy.mil/jtwc/rss/jtwc.rss`) | storms | check | West Pacific / Indian Ocean storms next to NHC; positions sit in the warning text — probe from the host before building |
+| JTWC disturbance summaries (ABPW10 / ABIO10 `metoc.navy.mil/jtwc/products/ab{pw,io}web.txt`) | disasters | candidate | invests with a development chance (LOW/MEDIUM/HIGH) and a position in free text; JTWC warnings already ship in `storms` — build when a disturbance is active to verify against (none on 2026-09-24) |
 
 When a source is live, move it to `ENDPOINTS.md` + `DATA_SOURCES.md` and drop
 its row here. Add new finds at the bottom with a one-line probe note.
