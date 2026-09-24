@@ -2,8 +2,10 @@
 // prices (DK1/DK2) + UK carbon intensity 48h history + EIA open-data QB
 // series index (coal series catalog — the QB host serves bulk JSON without a
 // key at the /qb.php path). All → `energy` layer.
+
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 const DkRow = z.object({
@@ -226,7 +228,7 @@ export async function collect() {
 		["lt", "LTU"],
 	] as const) {
 		try {
-			await new Promise((r) => setTimeout(r, 1500));
+			await sleep(1500);
 			const url = `https://api.energy-charts.info/public_power?country=${cc}`;
 			assertSafeUrl(url);
 			const res = await stealthFetch(url);

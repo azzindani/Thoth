@@ -68,7 +68,7 @@ describe("fxdepth", () => {
 		}) as typeof fetch;
 		const r = await fxdepth();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='bitfinex' ORDER BY id",
 		);
 		assert.equal(rows.length, 2);
@@ -106,7 +106,7 @@ describe("fxdepth", () => {
 		}) as typeof fetch;
 		const r = await fxdepth();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; source: string }[]>(
+		const rows = await query<{ id: string; source: string }>(
 			"SELECT id, source FROM events WHERE source IN ('ecb','nbp') ORDER BY source",
 		);
 		assert.ok(rows.length >= 2);
@@ -144,7 +144,7 @@ describe("fxdepth", () => {
 		}) as typeof fetch;
 		const r = await fxdepth();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source LIKE 'erapi%' ORDER BY id",
 		);
 		assert.ok(rows.length >= 2);
@@ -184,7 +184,7 @@ describe("fxdepth", () => {
 		}) as typeof fetch;
 		const r = await fxdepth();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('ecb','fxrates')",
 		);
 		assert.ok(rows.length >= 2);

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { telegramChannels } from "../../config.js";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // Keyless web-preview scrape (osiris pattern): https://t.me/s/<channel>, regex posts, no MTProto.
@@ -99,7 +100,7 @@ export async function collect() {
 				});
 				total++;
 			}
-			await new Promise((r) => setTimeout(r, 1500)); // be polite between channels
+			await sleep(1500); // be polite between channels
 		} catch (e: unknown) {
 			errors.push(`${ch}: ${errMsg(e)}`);
 		}

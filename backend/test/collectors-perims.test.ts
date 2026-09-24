@@ -50,7 +50,7 @@ describe("perims collect()", () => {
 		const r = await perims();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 1, "geometry-less feature skipped");
-		const rows = await query<{ id: string; severity: string; geom: unknown }[]>(
+		const rows = await query<{ id: string; severity: string; geom: unknown }>(
 			"SELECT id, severity, ST_AsGeoJSON(geom)::json AS geom FROM events WHERE layer='perims'",
 		);
 		assert.equal(rows.length, 1);

@@ -138,7 +138,8 @@ describe("pushTelegram", () => {
 		assert.match(String(r.error), /TELEGRAM_BOT_TOKEN/);
 	});
 	it("sendTelegram posts chat_id + truncated text", async () => {
-		let seen: { url: string; body: string } | null = null;
+		// Assigned inside the fake; `as` stops TS narrowing it to `null` forever.
+		let seen = null as { url: string; body: string } | null;
 		const fake = (async (url: unknown, init?: { body?: string }) => {
 			seen = { url: String(url), body: String(init?.body ?? "") };
 			return new Response(JSON.stringify({ ok: true }), { status: 200 });

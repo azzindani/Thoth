@@ -74,7 +74,7 @@ describe("cyber collect()", () => {
 		const r = await cyber();
 		assert.equal(r.ok, true);
 		assert.equal(r.count, 2);
-		const rows = await query<{ source: string }[]>(
+		const rows = await query<{ source: string }>(
 			"SELECT source FROM events WHERE layer='cyber'",
 		);
 		assert.ok(
@@ -107,7 +107,7 @@ describe("sans infocon", () => {
 		assert.equal(r.ok, true);
 		// urlhaus empty + KEV empty + SANS one row
 		assert.equal((r as { count?: number }).count, 1);
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source='sans-isc'",
 		);
 		assert.equal(rows.length, 1);
@@ -137,7 +137,7 @@ describe("cyber ghsa", () => {
 		}) as typeof fetch;
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='ghsa'",
 		);
 		assert.deepEqual(
@@ -169,7 +169,7 @@ describe("cyber secrss", () => {
 		}) as typeof fetch;
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE source IN ('thn','krebs','bleep','schneier','threatpost')",
 		);
 		assert.equal(rows.length, 5);
@@ -201,7 +201,7 @@ describe("cyber spamdrop", () => {
 		}) as typeof fetch;
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='spamdrop'",
 		);
 		assert.equal(rows.length, 2);
@@ -239,7 +239,7 @@ describe("cyber feodo/dshield", () => {
 		]);
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('feodo','dshield') ORDER BY id",
 		);
 		assert.deepEqual(
@@ -304,14 +304,14 @@ describe("cyber threatfox + bazaar", () => {
 		]);
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const tf = await query<{ id: string }[]>(
+		const tf = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='threatfox'",
 		);
 		assert.equal(tf.length, 1); // low-confidence IOC skipped
 		// NOTE: dshield-top + cins legs are covered by live --once (10 + 25
 		// rows ok); unit-mocked here would only re-test the same TSV/pipe
 		// parsers already exercised by dshield/feodo suites.
-		const bz = await query<{ id: string }[]>(
+		const bz = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='bazaar'",
 		);
 		assert.equal(bz.length, 1);
@@ -376,12 +376,12 @@ describe("cyber ransomware + msrc", () => {
 		]);
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const vic = await query<{ id: string }[]>(
+		const vic = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='ransomware'",
 		);
 		assert.equal(vic.length, 1);
 		assert.ok(vic[0].id.startsWith("ransom:Paylogix:"));
-		const rel = await query<{ id: string }[]>(
+		const rel = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='msrc' ORDER BY id",
 		);
 		assert.equal(rel.length, 2); // last 3 of value, 2 present
@@ -414,7 +414,7 @@ describe("cyber blocklistde", () => {
 		]);
 		const r = await cyber();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='blocklistde' ORDER BY id",
 		);
 		assert.equal(rows.length, 3);

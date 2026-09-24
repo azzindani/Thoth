@@ -49,7 +49,7 @@ describe("finnhub earnings (keyed)", () => {
 		assert.equal(r.ok, true);
 		assert.equal((r as { count?: number }).count, 2);
 		assert.match(seenUrl, /token=test-key-not-real/);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='finnhub' ORDER BY id",
 		);
 		assert.deepEqual(
@@ -83,7 +83,7 @@ describe("finnhub earnings", () => {
 			((r as { error?: string }).error ?? "").includes("FINNHUB_KEY"),
 			"key slot named",
 		);
-		const h = await query<{ error: string | null }[]>(
+		const h = await query<{ error: string | null }>(
 			"SELECT error FROM feed_health WHERE source='finnhub'",
 		);
 		assert.match(String(h[0]?.error), /FINNHUB_KEY/);
@@ -93,11 +93,11 @@ describe("finnhub earnings", () => {
 		// (The keyed suite above shares the table — assert the disabled run
 		// adds zero rows by comparing counts before/after. Same shared-table
 		// pattern as the quakes emsc scoping fix.)
-		const before = await query<{ n: string }[]>(
+		const before = await query<{ n: string }>(
 			"SELECT count(*) AS n FROM events WHERE source='finnhub'",
 		);
 		await finnhub();
-		const after = await query<{ n: string }[]>(
+		const after = await query<{ n: string }>(
 			"SELECT count(*) AS n FROM events WHERE source='finnhub'",
 		);
 		assert.equal(after[0]?.n, before[0]?.n);

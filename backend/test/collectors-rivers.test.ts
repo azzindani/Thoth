@@ -50,7 +50,7 @@ describe("rivers", () => {
 			)) as typeof fetch;
 		const r = await rivers();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='nwis'",
 		);
 		assert.equal(rows.length, 1);

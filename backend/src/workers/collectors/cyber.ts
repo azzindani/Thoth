@@ -433,8 +433,7 @@ export async function collect() {
 		for (const v of Object.values(j)) {
 			const r = v[0];
 			if (!r?.ioc_value) continue;
-			if (r.confidence_level !== undefined && r.confidence_level < 50)
-				continue;
+			if (r.confidence_level !== undefined && r.confidence_level < 50) continue;
 			rows.push({
 				ioc: r.ioc_value,
 				type: r.ioc_type ?? "?",

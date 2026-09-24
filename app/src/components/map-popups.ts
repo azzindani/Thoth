@@ -2,7 +2,8 @@
 // Map popups live outside React: rich hover/pin/picker cards rendered as
 // popup HTML, actions dispatched through one delegated document listener
 // against stored records (no per-button closures).
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { api } from "../lib/api";
 import { LAYERS } from "../lib/layer-catalog";
 import { ageStr } from "../lib/ui";
@@ -22,6 +23,18 @@ export interface ObjProps {
 }
 
 export type SelectFn = (p: ObjProps, ll: unknown) => void;
+
+/** Pinned card → floating window hand-off (popups live outside React). */
+export const POPOUT_EVENT = "thoth:popout";
+export type PopoutDetail = {
+	p: ObjProps;
+	layer: string;
+	/** screen box of the card being popped, so the window opens in place */
+	x: number | null;
+	y: number | null;
+	/** where the card pointed on the map (polygons have no single point) */
+	anchor: [number, number] | null;
+};
 
 /** Escape feed-supplied text before injecting into popup HTML. */
 export function esc(s: unknown): string {
@@ -55,7 +68,7 @@ export function hoverCard(
 	return (
 		`<div class="hov"><div class="hov-bar" style="background:${sevCol}"></div>` +
 		`<div class="hov-t">${esc(p.title || p.id || layer)}</div>` +
-		`<div class="hov-m"><span style="color:${sevCol}">● ${esc(sev[0].toUpperCase() + sev.slice(1))}</span>` +
+		`<div class="hov-m"><span class="sev-tag" style="color:${sevCol}">${esc(sev.toUpperCase())}</span>` +
 		` · ${esc(layer)}${p.airline ? ` · ${esc(p.airline)}` : ""}</div>` +
 		`<div class="hov-grid">` +
 		`<span>SRC</span><span>${esc(p.source || "?")}</span>` +
@@ -67,7 +80,8 @@ export function hoverCard(
 		(geo ? `<div class="hov-shot"><img data-hovimg alt="" /></div>` : "") +
 		(pinId != null
 			? `<div class="hov-act"><button class="primary" data-act="full:${pinId}">Full view</button>` +
-				`<button class="ghost" data-act="zoom:${pinId}">Zoom</button></div>`
+				`<button class="ghost" data-act="zoom:${pinId}">Zoom</button>` +
+				`<button class="ghost" data-act="pop:${pinId}" title="Keep this card open as a movable window">Pop out</button></div>`
 			: `<div class="hov-h">Click to pin preview</div>`) +
 		`</div>`
 	);
@@ -173,6 +187,25 @@ if (typeof document !== "undefined") {
 			pinStore.delete(Number(id));
 			rec.pop.remove();
 			rec.full(rec.p, null);
+		} else if (act === "pop") {
+			// Hand the record to the window manager (PopWindows, React side)
+			// with the card's screen box, so the window opens where the card
+			// was — then the pin stands down.
+			const box = rec.pop.getElement()?.getBoundingClientRect();
+			const ll = rec.pop.getLngLat();
+			window.dispatchEvent(
+				new CustomEvent<PopoutDetail>(POPOUT_EVENT, {
+					detail: {
+						p: rec.p,
+						layer: rec.p.layer || rec.key.split(":")[0],
+						x: box?.left ?? null,
+						y: box?.top ?? null,
+						anchor: ll ? [ll.lng, ll.lat] : null,
+					},
+				}),
+			);
+			pinStore.delete(Number(id));
+			rec.pop.remove();
 		} else if (act === "zoom") {
 			const lat = Number(rec.p.lat);
 			const lon = Number(rec.p.lon);
@@ -196,13 +229,15 @@ export function showPinned(
 	lngLat: unknown,
 	full: SelectFn,
 ): void {
+	// Claim the id first: the replaced pin's close handler must see that it
+	// is no longer the current card (and leave the click's mute alone).
+	const id = ++pinSeq;
 	for (const old of [...pinStore.keys()]) {
 		pinStore.get(old)?.pop.remove();
 		pinStore.delete(old);
 	}
 	// The pin replaces the hover, never joins it.
 	closeHovers();
-	const id = ++pinSeq;
 	const pop = new maplibregl.Popup({
 		closeButton: true,
 		closeOnClick: false,
@@ -219,11 +254,14 @@ export function showPinned(
 	});
 	pop.on("close", () => {
 		pinStore.delete(id);
+		// The current card was dismissed: hover is welcome again.
+		if (id === pinSeq) muted.clear();
 	});
 	pop
 		.setLngLat(lngLat as never)
 		.setHTML(hoverCard(p as ObjProps & { ts?: string }, layer, id))
 		.addTo(map);
+	fitAnchor(map, pop);
 	armThumb(pop, p);
 }
 
@@ -252,6 +290,64 @@ function closeHovers(): void {
 	openHovers.clear();
 }
 
+/** Hover rules that outlive a single controller:
+ * - `muted`: the features under the last click. A click answers "what is
+ *   this?" with a pin or picker; the hover must not come back for them
+ *   while the pointer stays on them (it used to re-attach on the next
+ *   mousemove — the double hover, and "clicking doesn't dismiss it" on
+ *   near-invisible polygon washes). Cleared once the pointer moves on.
+ * - `moving`: the camera is animating (drag, zoom, flyTo). Cards are
+ *   anchored to the globe and would drift away from the pointer; no
+ *   layer mouseleave fires during a move, so they'd strand. */
+let muted = new Set<string>();
+let moving = false;
+const hoverKey = (layer: string, p: ObjProps) =>
+	`${layer}:${String(p.id ?? p.title ?? "")}`;
+/** Keep a card inside the free map area. MapLibre's auto-anchor only knows
+ * the container edges, and the container is the whole screen under the
+ * floating panels — so near a panel a card used to open on top of it. The
+ * camera padding (page.tsx syncPadding) is exactly the free area; pick the
+ * anchor from it: above the point unless there's no room, then below;
+ * shift sideways when the card would cross the left/right panel. */
+export function fitAnchor(map: maplibregl.Map, pop: maplibregl.Popup): void {
+	const el = pop.getElement();
+	const ll = pop.getLngLat();
+	if (!el || !ll) return;
+	const p = map.getPadding();
+	const pad = {
+		top: p.top ?? 0,
+		bottom: p.bottom ?? 0,
+		left: p.left ?? 0,
+		right: p.right ?? 0,
+	};
+	const box = map.getContainer();
+	const W = box.clientWidth;
+	const H = box.clientHeight;
+	const pt = map.project(ll);
+	const w = el.offsetWidth;
+	const h = el.offsetHeight;
+	const off = 16;
+	const roomAbove = pt.y - pad.top;
+	const roomBelow = H - pad.bottom - pt.y;
+	const v = roomAbove >= h + off || roomAbove >= roomBelow ? "bottom" : "top";
+	const hz =
+		pt.x - w / 2 < pad.left
+			? "-left"
+			: pt.x + w / 2 > W - pad.right
+				? "-right"
+				: "";
+	const anchor = `${v}${hz}` as maplibregl.PositionAnchor;
+	if (pop.options.anchor === anchor) return;
+	pop.options.anchor = anchor;
+	pop.setLngLat(ll); // re-layout with the new anchor
+}
+
+/** An open stacked-items picker owns the pointer: no hover over it. */
+function pickerOpen(): boolean {
+	for (const r of pickStore.values()) if (r.pop.isOpen()) return true;
+	return false;
+}
+
 /** De-jittered hover: mousemove fires per pixel, but rebuilding popup HTML
  * per pixel is layout thrash (the visible stutter). Coalesce to one frame
  * and skip setHTML while the pointer stays on the same feature — the card
@@ -267,13 +363,21 @@ export function steadyHover(
 	let key = "";
 	let raf = 0;
 	let q: { p: ObjProps; layer: string; ll: unknown } | null = null;
-	const flush = () => {
+	const step = () => {
 		raf = 0;
 		const cur = q;
 		q = null;
-		if (!cur) return;
+		if (!cur || moving || pickerOpen()) return;
+		const k = hoverKey(cur.layer, cur.p);
+		if (muted.has(k)) {
+			// Still on what was just clicked: stay quiet, and remember it so
+			// moving within the same feature doesn't re-trigger a render.
+			key = k;
+			return;
+		}
+		// Pointer reached something else: the click's mute has done its job.
+		muted.clear();
 		pop.setLngLat(cur.ll as never);
-		const k = `${cur.layer}:${String(cur.p.id ?? cur.p.title ?? "")}`;
 		// The pinned feature needs no hover echo on top of its own card.
 		for (const [, r] of pinStore) if (r.key === k) return;
 		if (k === key) {
@@ -296,6 +400,11 @@ export function steadyHover(
 		render(cur.p, cur.layer);
 		openHovers.add(pop);
 	};
+	// Every frame the card is shown, keep it in the free area.
+	const flush = () => {
+		step();
+		if (pop.isOpen()) fitAnchor(map, pop);
+	};
 	return {
 		move(p: ObjProps, layer: string, ll: unknown) {
 			q = { p, layer, ll };
@@ -305,6 +414,9 @@ export function steadyHover(
 			if (raf) cancelAnimationFrame(raf);
 			raf = 0;
 			q = null;
+			// Leaving the clicked feature ends its mute: coming back is a
+			// fresh hover.
+			muted.delete(key);
 			key = "";
 			openHovers.delete(pop);
 			pop.remove();
@@ -317,7 +429,13 @@ function pickBase(layerId: string): string | null {
 	if (!layerId || layerId === "routes" || layerId === "terminator") return null;
 	if (layerId === "sat" || layerId.endsWith("-n") || layerId.endsWith("-c"))
 		return null;
-	const base = layerId.endsWith("-o") ? layerId.slice(0, -2) : layerId;
+	// Severity outlines (-o-crit/-o-watch/-o-info) carry line features
+	// (submarine cables, tracklines) that have no fill to pick.
+	const base = /-o-(crit|watch|info)$/.test(layerId)
+		? layerId.replace(/-o-(crit|watch|info)$/, "")
+		: layerId.endsWith("-o") || layerId.endsWith("-p") || layerId.endsWith("-h")
+			? layerId.slice(0, -2)
+			: layerId;
 	return LAYERS[base] ? base : null;
 }
 
@@ -332,10 +450,25 @@ export function ensurePickHandler(map: maplibregl.Map): void {
 	const m = map as maplibregl.Map & { __thothPickBound?: boolean };
 	if (m.__thothPickBound) return;
 	m.__thothPickBound = true;
+	// Grabbing, zooming or flying the globe drops every hover card; a new
+	// one appears on the next pointer move once the camera settles.
+	map.on("mousedown", closeHovers);
+	map.on("touchstart", closeHovers);
+	map.on("movestart", () => {
+		moving = true;
+		closeHovers();
+	});
+	map.on("moveend", () => {
+		moving = false;
+	});
+	// Pointer left the canvas (onto a floating panel): layer mouseleave
+	// never fires for that path, so the card would strand.
+	map.on("mouseout", closeHovers);
 	map.on("click", (e) => {
 		// Click decides what is shown: any hover in flight stands down so
 		// the picker/pin never renders on top of (or under) a hover card.
 		closeHovers();
+		muted = new Set();
 		const feats: ObjProps[] = [];
 		try {
 			// ±10px tap box: icons render small, fingers and test pixels
@@ -358,6 +491,8 @@ export function ensurePickHandler(map: maplibregl.Map): void {
 				if (seen.has(key)) continue;
 				seen.add(key);
 				feats.push({ ...p, layer: p.layer || base });
+				// Hover keys use the layer the handler was bound with.
+				muted.add(hoverKey(base, p));
 			}
 		} catch {
 			return;
@@ -397,6 +532,10 @@ function showPickCard(
 		maxWidth: "320px",
 	});
 	pickStore.set(id, { cands, preview, full, map, lngLat, pop });
+	pop.on("close", () => {
+		pickStore.delete(id);
+		if (id === pickSeq) muted.clear();
+	});
 	const rows = cands
 		.map(
 			(c, i) =>
@@ -414,4 +553,5 @@ function showPickCard(
 			`<div class="hov pick"><div class="hov-t">${total} stacked — pick one</div>${rows}${more}</div>`,
 		)
 		.addTo(map);
+	fitAnchor(map, pop);
 }

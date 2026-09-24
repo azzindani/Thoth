@@ -127,7 +127,7 @@ describe("kalshi", () => {
 		const r = await markets();
 		assert.equal(r.ok, true);
 		assert.equal((r as { count?: number }).count, 1);
-		const rows = await query<{ id: string; title: string }[]>(
+		const rows = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='kalshi'",
 		);
 		assert.equal(rows.length, 1);
@@ -183,7 +183,7 @@ describe("markets depth22", () => {
 		}) as typeof fetch;
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('cg-global','blockchair','goldapi','nyfed','fiscaldata')",
 		);
 		assert.equal(rows.length, 5);
@@ -222,7 +222,7 @@ describe("markets moex", () => {
 		}) as typeof fetch;
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='moex'",
 		);
 		assert.equal(rows.length, 1);
@@ -268,7 +268,7 @@ describe("markets npm/crates (batch29, 2 rows)", () => {
 		}) as typeof fetch;
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('npm-dl','crates-trend')",
 		);
 		assert.equal(rows.length, 2);
@@ -318,7 +318,7 @@ describe("markets npm/crates (batch30, 4 rows)", () => {
 		}) as typeof fetch;
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('npm-dl','crates-trend')",
 		);
 		assert.equal(rows.length, 4);
@@ -366,7 +366,7 @@ describe("markets defi/exchanges", () => {
 		}) as typeof fetch;
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('defi','cg-exchanges')",
 		);
 		assert.equal(rows.length, 2);
@@ -430,11 +430,11 @@ describe("markets nbp-pln + cbr", () => {
 		]);
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const pln = await query<{ id: string }[]>(
+		const pln = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='nbp-pln' ORDER BY id",
 		);
 		assert.equal(pln.length, 4);
-		const cbr = await query<{ id: string }[]>(
+		const cbr = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='cbr' ORDER BY id",
 		);
 		assert.equal(cbr.length, 3);
@@ -506,7 +506,7 @@ describe("markets pypi + rubygems + jsdelivr", () => {
 		]);
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('pypi-dl','rubygems','jsdelivr') ORDER BY id",
 		);
 		assert.equal(rows.length, 4); // 2 pypi + rails + express
@@ -584,7 +584,7 @@ describe("markets nasdaq-top", () => {
 		]);
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='nasdaq-top' ORDER BY id",
 		);
 		assert.equal(rows.length, 2); // bad row filtered
@@ -694,16 +694,16 @@ describe("markets cboe + fiscal-rates (batch61)", () => {
 		]);
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const us = await query<{ id: string }[]>(
+		const us = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='cboe' ORDER BY id",
 		);
 		assert.equal(us.length, 4);
 		assert.ok(us.some((x) => x.id.startsWith("cboe:^VIX:")));
-		const eu = await query<{ id: string }[]>(
+		const eu = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='cboe-eu' ORDER BY id",
 		);
 		assert.equal(eu.length, 2);
-		const rt = await query<{ id: string; title: string }[]>(
+		const rt = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='fiscal-rates' ORDER BY id",
 		);
 		assert.equal(rt.length, 2);
@@ -776,12 +776,12 @@ describe("markets cg-movers/trending", () => {
 		]);
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const mv = await query<{ id: string; title: string }[]>(
+		const mv = await query<{ id: string; title: string }>(
 			"SELECT id, title FROM events WHERE source='cg-movers' ORDER BY id",
 		);
 		assert.equal(mv.length, 2);
 		assert.ok(mv.some((x) => x.title.includes("BTC $77,707")));
-		const tr = await query<{ id: string }[]>(
+		const tr = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='cg-trending' ORDER BY id",
 		);
 		assert.equal(tr.length, 2);
@@ -841,7 +841,7 @@ describe("markets yahoo prev-close fallback", () => {
 		]);
 		const r = await markets();
 		assert.equal(r.ok, true);
-		const rows = await query<{ title: string }[]>(
+		const rows = await query<{ title: string }>(
 			"SELECT title FROM events WHERE source='yahoo' ORDER BY id LIMIT 1",
 		);
 		assert.ok(rows.length >= 1);

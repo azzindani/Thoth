@@ -59,11 +59,11 @@ describe("quakes collect()", () => {
 		const r = await quakes();
 		assert.equal(r.ok, true);
 		assert.ok((r.count ?? 0) >= 1, "count");
-		const rows = await query<{ title: string }[]>(
+		const rows = await query<{ title: string }>(
 			"SELECT title FROM events WHERE layer='quakes'",
 		);
 		assert.ok(rows.length >= 1 && rows[0].title.includes("5.2"), "row stored");
-		const h = await query<{ last_ok: string | null }[]>(
+		const h = await query<{ last_ok: string | null }>(
 			"SELECT last_ok FROM feed_health WHERE source='usgs'",
 		);
 		assert.ok(h[0]?.last_ok, "health ok");
@@ -100,9 +100,7 @@ describe("emsc fold-in", () => {
 		const r = await quakes();
 		assert.equal(r.ok, true);
 		assert.equal((r as { count?: number }).count, 1);
-		const rows = await query<
-			{ id: string; severity: string; source: string }[]
-		>(
+		const rows = await query<{ id: string; severity: string; source: string }>(
 			"SELECT id, severity, source FROM events WHERE layer='quakes' AND source='emsc'",
 		);
 		assert.deepEqual(

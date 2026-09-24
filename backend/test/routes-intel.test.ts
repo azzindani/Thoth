@@ -5,6 +5,7 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { liveFetch as fetch } from "./helpers/live-fetch.js";
 
 const API = process.env.API_URL ?? "http://localhost:4000";
 const LIVE_LAYERS = [
@@ -53,6 +54,7 @@ type Row = {
 	layer: string;
 	title?: string;
 	url?: string;
+	severity?: string;
 };
 
 async function get<T>(path: string): Promise<T> {
@@ -243,6 +245,73 @@ describe("new capability endpoints (search / watch / cert / asn)", () => {
 		});
 		assert.equal(del.status, 200);
 	});
+	it("area watch: a circle matches live events inside, never catalogs", async () => {
+		const put = await fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			// The fixture "Fixture Trench" quakes sit at 38.4, 142.4.
+			body: JSON.stringify({
+				kind: "area",
+				value: "e2e-probe-area",
+				lat: 38.4,
+				lon: 142.4,
+				radius_km: 120,
+			}),
+		});
+		assert.equal(put.status, 200);
+		try {
+			const list = await get<{
+				items: { id: string; geom: { type: string } | null }[];
+			}>("/api/watch");
+			const w = list.items.find((x) => x.id === "w:area:e2e-probe-area");
+			assert.equal(w?.geom?.type, "Polygon");
+			const m = await get<{ items: { layer: string; source: string }[] }>(
+				"/api/watch/matches?limit=200",
+			);
+			assert.ok(m.items.some((i) => i.layer === "quakes"));
+			assert.ok(m.items.every((i) => i.source !== "static"));
+		} finally {
+			await fetch(`${API}/api/watch/w:area:e2e-probe-area`, {
+				method: "DELETE",
+			});
+		}
+		const bad = await fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ kind: "area", value: "no-geometry" }),
+		});
+		assert.equal(bad.status, 400);
+	});
+	it("alerts widen with ?hours (since-you-looked window)", async () => {
+		const day = await get<{ total: number }>("/api/alerts?limit=500");
+		const week = await get<{ total: number }>(
+			"/api/alerts?limit=500&hours=168",
+		);
+		assert.ok(week.total >= day.total);
+	});
+	it("country page: advisories at the capital, events nearby", async () => {
+		const c = await get<{
+			country: { name: string };
+			advisories: { title: string; source: string }[];
+			counts: { layer: string; n: number }[];
+			items: unknown[];
+		}>("/api/country?q=Afghanistan");
+		assert.equal(c.country.name, "Afghanistan");
+		assert.ok(c.advisories.some((a) => /Afghanistan/.test(a.title)));
+		// One row per issuer, however many the store holds.
+		assert.equal(
+			c.advisories.length,
+			new Set(c.advisories.map((a) => a.source)).size,
+		);
+		const j = await get<{ counts: { layer: string }[] }>(
+			"/api/country?q=Japan&radius_km=800",
+		);
+		assert.ok(j.counts.some((x) => x.layer === "quakes"));
+		assert.equal((await fetch(`${API}/api/country?q=Atlantis`)).status, 404);
+		assert.equal((await fetch(`${API}/api/country`)).status, 400);
+		const list = await get<{ items: string[] }>("/api/country/list");
+		assert.ok(list.items.includes("Japan") && list.items.length > 150);
+	});
 	it("watch rejects bad kind", async () => {
 		const res = await fetch(`${API}/api/watch`, {
 			method: "POST",
@@ -411,6 +480,32 @@ describe("terminal pillar (portfolios / notes / screens)", () => {
 		await fetch(`${API}/api/notes/${encodeURIComponent(id)}`, {
 			method: "DELETE",
 		});
+	});
+	it("map notes keep their place; half a coordinate is rejected", async () => {
+		const put = await fetch(`${API}/api/notes`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ title: "E2E map note", lat: 59.9, lon: 24.9 }),
+		});
+		assert.equal(put.status, 200);
+		const { id } = (await put.json()) as { id: string };
+		try {
+			const q = await get<{
+				items: { id: string; lat: number; lon: number }[];
+			}>("/api/notes?q=e2e+map+note");
+			const n = q.items.find((x) => x.id === id);
+			assert.deepEqual([n?.lat, n?.lon], [59.9, 24.9]);
+		} finally {
+			await fetch(`${API}/api/notes/${encodeURIComponent(id)}`, {
+				method: "DELETE",
+			});
+		}
+		const half = await fetch(`${API}/api/notes`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ title: "half", lat: 10 }),
+		});
+		assert.equal(half.status, 400);
 	});
 	it("notes rejects empty title", async () => {
 		const res = await fetch(`${API}/api/notes`, {

@@ -62,7 +62,7 @@ describe("social radio", () => {
 		}) as typeof fetch;
 		const r = await social();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='radio'",
 		);
 		assert.deepEqual(
@@ -116,7 +116,7 @@ describe("social lobsters/devto", () => {
 		]);
 		const r = await social();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source IN ('lobsters','devto') ORDER BY id",
 		);
 		assert.deepEqual(

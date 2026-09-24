@@ -179,6 +179,48 @@ export const COLLECTORS = {
 		intervalSec: 1800,
 		ttlSec: 3600,
 	},
+	navwarn: {
+		module: "./collectors/navwarn.js",
+		intervalSec: 1800,
+		ttlSec: 3600,
+	},
+	gpsjam: { module: "./collectors/gpsjam.js", intervalSec: 1800, ttlSec: 3600 },
+	spc: { module: "./collectors/spc.js", intervalSec: 900, ttlSec: 1800 },
+	tsunami: {
+		module: "./collectors/tsunami.js",
+		intervalSec: 300,
+		ttlSec: 900,
+	},
+	advisories: {
+		module: "./collectors/advisories.js",
+		intervalSec: 21600,
+		ttlSec: 86400,
+	},
+	// Batch 32 (ROADMAP P3).
+	faa: { module: "./collectors/faa.js", intervalSec: 300, ttlSec: 900 },
+	ems: { module: "./collectors/ems.js", intervalSec: 3600, ttlSec: 7200 },
+	vessels: {
+		module: "./collectors/vessels.js",
+		intervalSec: 600,
+		ttlSec: 1800,
+	},
+	unhcr: {
+		module: "./collectors/unhcr.js",
+		intervalSec: 86400,
+		ttlSec: 172800,
+	},
+	cables: {
+		module: "./collectors/cables.js",
+		intervalSec: 86400,
+		ttlSec: 172800,
+	},
+	euvd: { module: "./collectors/euvd.js", intervalSec: 3600, ttlSec: 7200 },
+	torexits: {
+		module: "./collectors/torexits.js",
+		intervalSec: 3600,
+		ttlSec: 7200,
+	},
+	fcdo: { module: "./collectors/fcdo.js", intervalSec: 21600, ttlSec: 86400 },
 	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
 } as const;
 

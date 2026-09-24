@@ -65,9 +65,8 @@ test("click dot selects object, right-click London loads area", async ({
 	await page.screenshot({ path: "test/e2e/shots/03-area.png" });
 });
 
-test("alerts tab + sdn search work inline", { timeout: 180000 }, async ({
-	page,
-}) => {
+test("alerts tab + sdn search work inline", async ({ page }) => {
+	test.setTimeout(180000);
 	await page.goto("/");
 	await expect(page.locator("#counts")).toContainText("quakes", {
 		timeout: 30000,

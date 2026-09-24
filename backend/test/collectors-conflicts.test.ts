@@ -83,7 +83,7 @@ describe("conflicts zones", () => {
 		]);
 		const r = await conflicts();
 		assert.equal(r.ok, true, "zone errors collected, run stays ok");
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE layer='conflicts' ORDER BY id",
 		);
 		assert.deepEqual(
@@ -93,7 +93,7 @@ describe("conflicts zones", () => {
 				["blast:us2", "watch"],
 			],
 		);
-		const h = await query<{ error: string | null }[]>(
+		const h = await query<{ error: string | null }>(
 			"SELECT error FROM feed_health WHERE source='usgs-blast'",
 		);
 		assert.match(String(h[0]?.error), /quarry_blast/);

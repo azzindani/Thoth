@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
 import { Field, ItemRow } from "../lib/ui";
+import { MAP_NOTES_EVENT, WATCH_AREAS_EVENT } from "./MapView";
 
 export function FeedTab({ layer, title }: { layer: string; title: string }) {
 	const [items, setItems] = useState<LayerItem[] | null>(null);
@@ -186,22 +187,126 @@ export function BriefBlock() {
 	return (
 		<>
 			<h3>Brief · {String(b.generated_at).slice(11, 16)}Z</h3>
-			{b.critical.slice(0, 5).map((a) => (
-				<ItemRow key={a.id}>
-					<span className="sev-critical">●</span> <b>{a.layer}</b> · {a.title}
-				</ItemRow>
-			))}
-			{b.watch.slice(0, 5).map((a) => (
-				<ItemRow key={a.id}>
-					<span className="sev-watch">●</span> <b>{a.layer}</b> · {a.title}
-				</ItemRow>
+			{[
+				...b.critical.slice(0, 5).map((a) => ({ a, sev: "critical" })),
+				...b.watch.slice(0, 5).map((a) => ({ a, sev: "watch" })),
+			].map(({ a, sev }) => (
+				<div key={a.id} className="item sev-row" data-sev={sev}>
+					<span className="lyr">{a.layer}</span>
+					{a.title}
+				</div>
 			))}
 			{b.gaps.length > 0 && (
-				<div style={{ color: "var(--dim)" }}>
-					GAPS: {b.gaps.map((g) => g.source).join(", ")}
-				</div>
+				<details className="gaps">
+					<summary>{b.gaps.length} feeds without fresh data</summary>
+					<div className="gaps-list">
+						{b.gaps.map((g) => g.source).join(" · ")}
+					</div>
+				</details>
 			)}
 		</>
+	);
+}
+
+/** "Watch this area" (P5): saves the dossier circle as an area watch;
+ * anything live that later lands inside raises a WATCH toast. */
+function WatchArea({
+	area,
+}: {
+	area: { lat: string; lng: string; r: string; label: string };
+}) {
+	const [label, setLabel] = useState(area.label || `${area.lat},${area.lng}`);
+	const [state, setState] = useState<"idle" | "busy" | "on" | "err">("idle");
+	return (
+		<div className="row2 watch-area" style={{ margin: "8px 0" }}>
+			<Field
+				value={label}
+				aria-label="watch name"
+				onChange={(e) => {
+					setLabel(e.target.value);
+					setState("idle");
+				}}
+			/>
+			<button
+				type="button"
+				className="ghost-btn"
+				id="watch-area"
+				disabled={state === "busy" || !label.trim()}
+				onClick={async () => {
+					setState("busy");
+					try {
+						const r = await api.watchArea(
+							label.trim(),
+							Number(area.lat),
+							Number(area.lng),
+							Number(area.r),
+						);
+						setState(r.ok ? "on" : "err");
+						if (r.ok) window.dispatchEvent(new Event(WATCH_AREAS_EVENT));
+					} catch {
+						setState("err");
+					}
+				}}
+			>
+				{state === "on"
+					? "WATCHING"
+					: state === "err"
+						? "RETRY"
+						: `WATCH ${area.r} KM`}
+			</button>
+		</div>
+	);
+}
+
+/** Map note (P5): a note pinned to this spot; drawn on the map and carried
+ * into the sitrep. */
+function NoteHere({ area }: { area: { lat: string; lng: string } }) {
+	const [text, setText] = useState("");
+	const [state, setState] = useState<"idle" | "busy" | "on" | "err">("idle");
+	const save = async () => {
+		const title = text.trim();
+		if (!title) return;
+		setState("busy");
+		try {
+			const r = await api.noteAdd({
+				title: title.slice(0, 200),
+				category: "place",
+				lat: Number(area.lat),
+				lon: Number(area.lng),
+			});
+			setState(r.ok ? "on" : "err");
+			if (r.ok) {
+				setText("");
+				window.dispatchEvent(new Event(MAP_NOTES_EVENT));
+			}
+		} catch {
+			setState("err");
+		}
+	};
+	return (
+		<div className="row2 note-here" style={{ margin: "8px 0" }}>
+			<Field
+				value={text}
+				placeholder="note at this spot…"
+				aria-label="map note"
+				onChange={(e) => {
+					setText(e.target.value);
+					setState("idle");
+				}}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") void save();
+				}}
+			/>
+			<button
+				type="button"
+				className="ghost-btn"
+				id="note-here"
+				disabled={state === "busy" || !text.trim()}
+				onClick={() => void save()}
+			>
+				{state === "on" ? "NOTED" : state === "err" ? "RETRY" : "NOTE HERE"}
+			</button>
+		</div>
 	);
 }
 
@@ -270,6 +375,8 @@ export function AreaTab({
 					{area.label}
 				</div>
 			)}
+			<WatchArea area={area} />
+			<NoteHere area={area} />
 			<div>
 				{area.counts.length === 0 && "nothing in window"}
 				{area.counts.map((c) => (

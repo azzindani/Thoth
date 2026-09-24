@@ -7,6 +7,10 @@ async function get<T>(path: string): Promise<T> {
 	return (await r.json()) as T;
 }
 
+/** Map camera for viewport-aware layer slices: zoom, and a bbox
+ * [w, s, e, n] (w > e crosses the antimeridian) once zoomed in. */
+export type CameraView = { z: number; bbox?: [number, number, number, number] };
+
 export interface LayerItem {
 	id: string;
 	ts: string;
@@ -19,6 +23,104 @@ export interface LayerItem {
 	meta?: Record<string, unknown>;
 	geom?: { type: string; coordinates?: number[] } | null;
 }
+
+// ── monitor (ROADMAP P1) ──────────────────────────────────────────────────
+export type SourceState = "ok" | "failing" | "frozen" | "stale" | "warming";
+export interface MonSummary {
+	worker: {
+		alive: boolean;
+		beat_at: string | null;
+		started_at: string | null;
+		collectors: number | null;
+	};
+	sources: Record<"total" | SourceState, number>;
+	collectors: number;
+	alerts: Record<string, number>;
+	db: { size_bytes: number; events_est: number; raw_events_est: number };
+	retention: { monitor_days: number; raw_days: number; events_days: number };
+	alert_fail_streak: number;
+}
+export interface MonSource {
+	source: string;
+	collector: string | null;
+	interval_sec: number | null;
+	state: SourceState;
+	last_ok: string | null;
+	last_attempt: string | null;
+	content_ts: string | null;
+	first_ok_at: string | null;
+	error: string | null;
+	runs24: number;
+	ok24: number;
+	runs7: number;
+	ok7: number;
+	fail_streak: number;
+	strip: string;
+	next_due: string | null;
+	running: boolean;
+}
+export interface MonCollector {
+	collector: string;
+	interval_sec: number;
+	sources: string[];
+	next_due: string | null;
+	running: boolean;
+	runs24: number;
+	ok24: number;
+	p50_ms: number | null;
+	p95_ms: number | null;
+	last_run_at: string | null;
+	last_ok: boolean | null;
+	last_ms: number | null;
+	last_count: number | null;
+	last_error: string | null;
+	queued: boolean;
+}
+export interface MonEndpoint {
+	host: string;
+	calls: number;
+	errors: number;
+	p50_ms: number | null;
+	p95_ms: number | null;
+	last_ts: string;
+	last_status: number | null;
+	last_error: string | null;
+	collectors: string[] | null;
+}
+export interface MonSourceDetail {
+	source: string;
+	row: MonSource | null;
+	collector: { collector: string; intervalSec: number } | null;
+	runs: { ts: string; ok: boolean; error: string | null }[];
+	errors: { error: string; n: number; last: string }[];
+	events: { id: string; ts: string; layer: string; title: string | null }[];
+	hosts: {
+		host: string;
+		path: string;
+		calls: number;
+		errors: number;
+		p95_ms: number | null;
+		last_status: number | null;
+	}[];
+}
+
+export const monitor = {
+	summary: () => get<MonSummary>("/api/monitor/summary"),
+	sources: () => get<{ items: MonSource[] }>("/api/monitor/sources"),
+	source: (s: string) =>
+		get<MonSourceDetail>(`/api/monitor/sources/${encodeURIComponent(s)}`),
+	collectors: () => get<{ items: MonCollector[] }>("/api/monitor/collectors"),
+	endpoints: () => get<{ items: MonEndpoint[] }>("/api/monitor/endpoints"),
+	/** Queue a run (write key is injected server-side by the app proxy). */
+	runNow: async (collector: string) => {
+		const r = await fetch(
+			`${API}/api/monitor/run/${encodeURIComponent(collector)}`,
+			{ method: "POST" },
+		);
+		if (!r.ok && r.status !== 202) throw new Error(`HTTP ${r.status}`);
+		return (await r.json()) as { queued: boolean; pending: boolean };
+	},
+};
 
 export const api = {
 	stats: () => get<{ items: { layer: string; count: string }[] }>("/api/stats"),
@@ -39,12 +141,25 @@ export const api = {
 		}>("/api/health"),
 	versions: () =>
 		get<{ versions: { layer: string; version: string }[] }>("/api/versions"),
-	layer: (name: string, since?: string) =>
-		get<{ items: LayerItem[]; total: number }>(
-			`/api/layers/${name}${since ? `?since=${encodeURIComponent(since)}` : ""}`,
-		),
+	/** Without `view`: the newest 500 rows. With a camera view: a slice
+	 * sampled across the view (see getLayerView on the API). */
+	layer: (name: string, since?: string, view?: CameraView) => {
+		const q = new URLSearchParams();
+		if (since) q.set("since", since);
+		if (view) {
+			q.set("z", String(view.z));
+			if (view.bbox) q.set("bbox", view.bbox.join(","));
+		}
+		const qs = q.toString();
+		return get<{
+			items: LayerItem[];
+			total: number;
+			matched?: number;
+			truncated?: boolean;
+		}>(`/api/layers/${name}${qs ? `?${qs}` : ""}`);
+	},
 	layerHistory: (name: string) =>
-		get<{ buckets: { bucket: string; n: number }[] }>(
+		get<{ buckets: { bucket: string; count: string; n?: number }[] }>(
 			`/api/layers/${name}/history?bucket=day`,
 		),
 	dossier: (lat: string, lng: string, radius = 300) =>
@@ -53,8 +168,8 @@ export const api = {
 			items: LayerItem[];
 			threat?: { score: number; level: string };
 		}>(`/api/dossier?lat=${lat}&lng=${lng}&radius_km=${radius}`),
-	alerts: (limit = 50) =>
-		get<{ items: LayerItem[] }>(`/api/alerts?limit=${limit}`),
+	alerts: (limit = 50, hours = 24) =>
+		get<{ items: LayerItem[] }>(`/api/alerts?limit=${limit}&hours=${hours}`),
 	brief: () =>
 		get<{
 			generated_at: string;
@@ -214,8 +329,44 @@ export const api = {
 	watchList: () =>
 		get<{
 			ok: boolean;
-			items: { id: string; kind: string; value: string; note: string }[];
+			items: {
+				id: string;
+				kind: string;
+				value: string;
+				note: string;
+				geom?: { type: string; coordinates: unknown } | null;
+			}[];
 		}>("/api/watch"),
+	/** Country page (P5): anchored on the capital, events within radius. */
+	country: (q: string, radius_km = 500) =>
+		get<{
+			ok: boolean;
+			country: { name: string; lat: number; lon: number };
+			radius_km: number;
+			advisories: {
+				source: string;
+				title: string;
+				severity: string;
+				ts: string;
+				url: string | null;
+			}[];
+			displacement: { title: string; severity: string } | null;
+			counts: { layer: string; n: number; critical: number; watch: number }[];
+			items: LayerItem[];
+			mentions: LayerItem[];
+		}>(`/api/country?q=${encodeURIComponent(q)}&radius_km=${radius_km}`),
+	countryList: () => get<{ items: string[] }>("/api/country/list"),
+	/** Area watch (P5): a circle; anything live that lands inside matches. */
+	watchArea: (label: string, lat: number, lon: number, radius_km: number) =>
+		fetch(`${API}/api/watch`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ kind: "area", value: label, lat, lon, radius_km }),
+		}).then((r) => r.json()) as Promise<{
+			ok: boolean;
+			id?: string;
+			error?: string;
+		}>,
 	watchAdd: (kind: string, value: string) =>
 		fetch(`${API}/api/watch`, {
 			method: "POST",
@@ -291,6 +442,9 @@ export const api = {
 				tickers: string;
 				sentiment: string;
 				favorite: boolean;
+				lat: number | null;
+				lon: number | null;
+				updated_at?: string;
 			}[];
 		}>(`/api/notes${q ? `?q=${encodeURIComponent(q)}` : ""}`),
 	noteAdd: (note: {
@@ -299,6 +453,9 @@ export const api = {
 		category?: string;
 		tickers?: string;
 		sentiment?: string;
+		/** Map note (P5): pinned to a place. */
+		lat?: number;
+		lon?: number;
 	}) =>
 		fetch(`${API}/api/notes`, {
 			method: "POST",

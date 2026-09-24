@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
+import { LAYER_NAMES } from "../lib/layer-catalog";
+import { PALETTE } from "../lib/palette";
 
 export default function Timeline({
 	since,
@@ -33,13 +34,25 @@ export default function Timeline({
 				const W = cv.width;
 				const H = cv.height;
 				ctx.clearRect(0, 0, W, H);
-				const max = Math.max(1, ...bs.map((b) => b.n));
+				// The API serves {bucket, count} (count as a string); the old code
+				// read b.n, so every bar was NaN tall and the strip drew nothing.
+				const n = (b: { n?: number; count?: string | number }) =>
+					Number(b.count ?? b.n ?? 0) || 0;
+				const max = Math.max(1, ...bs.map(n));
 				const w = W / Math.max(1, bs.length);
-				ctx.fillStyle = LAYERS[layer]?.color ?? "#ffa028";
+				ctx.fillStyle = PALETTE.txt2;
+				ctx.globalAlpha = 0.55;
+				// Bars cap at 12px: three buckets read as bars, not slabs; a year of
+				// daily buckets still fills the strip edge to edge.
+				const bw = Math.max(1, Math.min(w - 2, 12));
 				bs.forEach((b, i) => {
-					const h = Math.max(2, (b.n / max) * 40);
-					ctx.fillRect(i * w + 1, 44 - h, w - 2, h);
+					const h = Math.max(2, (n(b) / max) * 38);
+					ctx.fillRect(i * w + (w - bw) / 2, 44 - h, bw, h);
 				});
+				ctx.globalAlpha = 1;
+				// baseline hairline: bars stand on something
+				ctx.fillStyle = PALETTE.faint;
+				ctx.fillRect(0, 43, W, 1);
 				(cv as HTMLCanvasElement & { __buckets?: typeof bs }).__buckets = bs;
 			} catch {
 				/* keep */

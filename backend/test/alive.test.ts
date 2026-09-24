@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { COLLECTORS } from "../src/workers/registry.js";
+import { liveFetch as fetch } from "./helpers/live-fetch.js";
 
 const API = process.env.API_URL ?? "http://localhost:4000";
 async function get<T>(path: string): Promise<T> {
@@ -34,15 +35,21 @@ describe("alive: collectors", () => {
 	it("no collector is silently missing from health", async () => {
 		const h = await get<{ feeds: { source: string }[] }>("/api/health");
 		const sources = new Set(h.feeds.map((f) => f.source));
-		for (const must of [
-			"usgs",
-			"firms",
-			"nifc",
-			"awc",
-			"tle-mirror",
-			"opensanctions",
+		// Each entry: sources a leg may report under. The satellites TLE leg
+		// reports "celestrak" when the primary serves (or both fail) and
+		// "tle-mirror" only when the fallback served — either proves it ran.
+		for (const any of [
+			["usgs"],
+			["firms"],
+			["nifc"],
+			["awc"],
+			["celestrak", "tle-mirror"],
+			["opensanctions"],
 		]) {
-			assert.ok(sources.has(must), `${must} reports health`);
+			assert.ok(
+				any.some((s) => sources.has(s)),
+				`${any.join("|")} reports health`,
+			);
 		}
 	});
 });

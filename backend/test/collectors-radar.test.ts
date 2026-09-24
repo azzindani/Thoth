@@ -28,7 +28,7 @@ describe("radar", () => {
 			)) as typeof fetch;
 		const r = await radar();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='rainviewer'",
 		);
 		assert.equal(rows.length, 1);
@@ -48,7 +48,7 @@ describe("radar", () => {
 			)) as typeof fetch;
 		const r = await radar();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='rainviewer-ir'",
 		);
 		assert.equal(rows.length, 1);

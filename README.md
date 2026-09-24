@@ -2,46 +2,64 @@
 
 **Verbose global intelligence terminal — Palantir Maven meets Bloomberg, open and agent-ready.**
 
-Thoth fuses live OSINT streams (flights, ships, sats, quakes, fires, weather, news, Telegram, markets, cyber, sanctions, crypto, CCTV) into **one PostgreSQL database**, serves them live over WebSocket + REST, and exposes them to **AI agents** via a single signed command channel + MCP.
+Thoth fuses live OSINT streams (flights, sats, quakes, fires, weather, news,
+Telegram, markets, cyber, sanctions, crypto, CCTV, …) from ~300 keyless
+public sources into **one PostgreSQL database**, serves them over REST + SSE,
+and renders them on a MapLibre globe terminal.
 
-Learned from: `worldmonitor` (risk scoring, seeder/reader, MCP/CLI parity, bootstrap tiers), `osiris` (RECON toolkit, CCTV mesh, Telegram geoparse, crypto/OFAC), `shadowbroker` (AI command channel, two-tier poll, pins/TTL), `ironsight` (theater toggle, 15s-10m polling), `globenewslive` (free brief API), `global-monitor` (ws-per-layer + health), `world-dashboard` (COLLECTORS registry). Sources in `/workspace/.tmp/`.
+Learned from: `worldmonitor` (risk scoring, seeder/reader, bootstrap tiers),
+`osiris` (RECON toolkit, CCTV mesh, Telegram geoparse, crypto/OFAC),
+`shadowbroker` (command channel, two-tier poll, pins/TTL), `ironsight`
+(theater toggle), `globenewslive` (free brief API), `global-monitor`
+(per-layer streams + health), `world-dashboard` (COLLECTORS registry).
+Per-project digests: `docs/PORT-*.md`.
 
 ## Why Thoth
 
-All seven references serve from memory/Redis/JSON. None keep verbose history. None prove provenance per dot. None let agents query the past.
+The references serve from memory/Redis/JSON: no verbose history, no
+per-dot provenance, no way for agents to query the past. Thoth:
 
-Thoth does:
-1. Store raw + normalized + lineage — every dot is citable
-2. Stream live (WS + SSE versions) and replay history (SQL + timeline)
-3. Let humans use a Bloomberg terminal and agents use the same surface
+1. Stores raw + normalized + lineage — every dot is citable
+2. Streams live (SSE) and replays history (SQL + timeline)
+3. Is honest about freshness — stale, frozen and warming feeds are shown, never hidden
 
-## Stack (production grade)
-
-- **Language:** TypeScript throughout (Next.js App Router frontend + Node ingestion workers)
-- **DB:** PostgreSQL 16 + TimescaleDB + PostGIS — single source of truth
-- **Map:** MapLibre GL (2D) + globe.gl (3D), shared layer catalog
-- **API:** Next.js Route Handlers + `POST /api/ai/channel/command` + MCP at `/mcp`
-- **Ingest:** TypeScript workers (`tsx`), APScheduler-style registry, `stealthFetch` + SSRF guard + per-source rate limit
-- **Deploy:** Docker Compose (web + worker + db), GHCR images, non-root
-
-## Repo layout (target)
+## What's in the repo
 
 ```
-thoth/
-  src/app/api/        # REST + WS proxy + ai/channel + mcp
-  src/lib/layers/     # layer catalog (renderer, interval, premium, i18n)
-  src/components/     # Panel base, Map, Dossier, Terminal bar
-  workers/collectors/ # one file per source: flights.ts, quakes.ts, ...
-  workers/lib/        # fetch, normalize, store, health
-  db/migrations/      # SQL: hypertables, indexes, retention
-  sdk/ts/ sdk/py/     # agent clients
-  docker-compose.yml
+backend/   Express API (:4000) + collector worker, TypeScript, pg, zod
+           56 collectors · 107 routes · migrations · vendored static datasets
+app/       Next.js 16 terminal (:3000): globe, inspector, tabs, command bar
+docs/      architecture, schema, sources, production + hosting runbooks
 ```
+
+Stack: TypeScript throughout · PostgreSQL 16 + TimescaleDB + PostGIS ·
+Express 5 · Next.js 16 / React 19 · MapLibre GL 6 · Docker Compose · GitHub Actions.
+
+## Quick start
+
+```bash
+# backend (needs Postgres 16 + PostGIS locally, or use compose below)
+cd backend && cp .env.example .env && npm ci
+npm run db:migrate && npm run db:seed && npm run db:seed:fixtures
+npm run dev:api & npm run dev:worker &
+# app
+cd ../app && npm ci && npm run dev      # http://localhost:3000
+```
+
+Production (Docker Compose, auth, secrets, probes, upgrades): **`docs/PRODUCTION.md`**.
 
 ## Docs
 
-- `ARCHITECTURE.md` — system, tiers, cache, stream protocol
+- `docs/PRODUCTION.md` — security model, config reference, deploy checklist, operations, upgrade notes
+- `docs/HOSTING.md` — host handover runbook · `docs/BACKUP.md` — backup/restore
+- `ARCHITECTURE.md` — system, tiers, stream protocol
 - `DATABASE.md` — Postgres schema, Timescale, PostGIS, retention
-- `DATA_SOURCES.md` — verbose catalog, keyless / free-key / paid, polling
-- `AI_AGENTS.md` — command channel, MCP, tools, auth, skills
-- `ROADMAP.md` — Phase 0-3 to production
+- `DATA_SOURCES.md` — source catalog (keyless / free-key / paid)
+- `docs/CONVENTIONS.md` — the bar every change is judged against
+- `docs/PHASES.md` / `docs/OUTSTANDING.md` — progress ledger and open work
+- `AI_AGENTS.md` + `ROADMAP.md` — **planned** agent surface (HMAC command
+  channel, MCP, SDKs); not built yet — see ROADMAP Phase 3
+
+## License
+
+MIT — see `LICENSE`.

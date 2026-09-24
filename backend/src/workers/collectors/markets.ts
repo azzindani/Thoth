@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
+import { sleep } from "../lib/sleep.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // Keyless market pulse: Polymarket Gamma (prediction leading indicators) + CoinGecko free (crypto)
@@ -70,7 +71,7 @@ export async function collect() {
 	// CoinGecko (respect free rate limits: single call, all three coins)
 	try {
 		assertSafeUrl(CG_URL);
-		await new Promise((r) => setTimeout(r, 2000));
+		await sleep(2000);
 		const res = await stealthFetch(CG_URL);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const prices = (await res.json()) as Record<
@@ -231,7 +232,7 @@ export async function collect() {
 		const mUrl =
 			"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=3&page=1";
 		assertSafeUrl(mUrl);
-		await new Promise((r) => setTimeout(r, 2000));
+		await sleep(2000);
 		const mRes = await stealthFetch(mUrl);
 		if (!mRes.ok) throw new Error(`HTTP ${mRes.status} cg-movers`);
 		const coins = (await mRes.json()) as {
@@ -275,7 +276,7 @@ export async function collect() {
 	try {
 		const tUrl = "https://api.coingecko.com/api/v3/search/trending";
 		assertSafeUrl(tUrl);
-		await new Promise((r) => setTimeout(r, 2000));
+		await sleep(2000);
 		const tRes = await stealthFetch(tUrl);
 		if (!tRes.ok) throw new Error(`HTTP ${tRes.status} cg-trending`);
 		const tj = (await tRes.json()) as {
@@ -311,7 +312,7 @@ export async function collect() {
 	try {
 		const url = "https://api.coingecko.com/api/v3/global";
 		assertSafeUrl(url);
-		await new Promise((r) => setTimeout(r, 2000));
+		await sleep(2000);
 		const res = await stealthFetch(url);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const j = (await res.json()) as {
@@ -641,7 +642,7 @@ export async function collect() {
 	try {
 		const url = "https://api.coingecko.com/api/v3/exchanges?per_page=2";
 		assertSafeUrl(url);
-		await new Promise((r) => setTimeout(r, 2000));
+		await sleep(2000);
 		const res = await stealthFetch(url);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const rows = (await res.json()) as {

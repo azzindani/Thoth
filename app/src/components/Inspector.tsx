@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
 import { ageStr, Glyph, ItemRow, KV } from "../lib/ui";
+import { CountryTab } from "./CountryTab";
+import { IncidentsTab } from "./IncidentsTab";
 import {
 	AreaTab,
 	BriefBlock,
@@ -19,8 +21,10 @@ import { NotesTab, PortfolioTab, PulseTab, ScreenerTab } from "./TerminalTabs";
 export type Tab =
 	| "object"
 	| "area"
+	| "country"
 	| "sdn"
 	| "alerts"
+	| "incidents"
 	| "video"
 	| "news"
 	| "markets"
@@ -44,6 +48,7 @@ export default function Inspector({
 	osint,
 	onClose,
 	onOsint,
+	country,
 }: {
 	tab: Tab;
 	setTab: (t: Tab) => void;
@@ -51,6 +56,8 @@ export default function Inspector({
 	osint: { kind: string; arg: string } | null;
 	onClose: () => void;
 	onOsint?: (kind: string, arg: string) => void;
+	/** Country the command line / palette asked for (country tab). */
+	country?: string;
 }) {
 	const [area, setArea] = useState<{
 		lat: string;
@@ -126,20 +133,16 @@ export default function Inspector({
 
 	return (
 		<div className="inspector" id="inspector">
-			<div
-				style={{
-					display: "flex",
-					alignItems: "stretch",
-					borderBottom: "1px solid var(--line)",
-				}}
-			>
-				<div className="tabs" id="tabs" style={{ flex: 1 }}>
+			<div className="insp-head">
+				<div className="tabs" id="tabs">
 					{(
 						[
 							"object",
 							"area",
+							"country",
 							"sdn",
 							"alerts",
+							"incidents",
 							"news",
 							"markets",
 							"cyber",
@@ -174,8 +177,13 @@ export default function Inspector({
 					<OsintView kind={osint.kind} arg={osint.arg} />
 				)}
 				{tab === "object" && !osint && !sel && (
-					<div style={{ color: "var(--dim)" }}>
-						click a dot · right-click sets area
+					<div className="empty">
+						<h3>No object selected</h3>
+						<p>
+							Tap or click a dot on the map to inspect it. Right-click a spot
+							for its area dossier, or type <code>help</code> in the command
+							line.
+						</p>
 					</div>
 				)}
 				{tab === "object" && sel && (
@@ -255,6 +263,8 @@ export default function Inspector({
 				{tab === "pulse" && <PulseTab />}
 				{tab === "portfolio" && <PortfolioTab />}
 				{tab === "screen" && <ScreenerTab />}
+				{tab === "incidents" && <IncidentsTab />}
+				{tab === "country" && <CountryTab key={country} initial={country} />}
 				{tab === "monitor" && <MonitorTab />}
 				{tab === "notes" && <NotesTab />}
 			</div>

@@ -10,7 +10,8 @@ Scheduling belongs to host cron, not the worker — one file, two jobs:
 ```sh
 # /etc/cron.d/thoth
 # 00:05 UTC — archive today's sitrep (feeds /api/analytics/trend history)
-5 0 * * * thoth curl -s -X POST http://localhost:4000/api/sitrep -o /dev/null
+# (writes need the key; keep it in a root-only env file, not in the crontab)
+5 0 * * * thoth . /etc/thoth/env && curl -s -X POST -H "X-Thoth-Key: $API_WRITE_KEY" http://localhost:4000/api/sitrep -o /dev/null
 # 03:00 UTC — full dump, keep 7 days
 0 3 * * * postgres pg_dump -Fc -d "postgres://thoth:$POSTGRES_PASSWORD@localhost:5432/thoth" \
   -f /var/backups/thoth/thoth-$(date +\%F).dump \
@@ -22,7 +23,7 @@ Verify the dump is restorable (a backup you never restored is a rumor):
 ```sh
 createdb thoth_restore_test
 pg_restore -d thoth_restore_test /var/backups/thoth/thoth-<date>.dump
-psql thoth_restore_test -c 'select count(*) from items;'
+psql thoth_restore_test -c 'select count(*) from events;'
 dropdb thoth_restore_test
 ```
 
@@ -30,7 +31,7 @@ dropdb thoth_restore_test
 
 ```sh
 # 1. postgres + postgis up (see docker-compose.yml)
-# 2. schema
+# 2. schema (tracked: re-running is safe, applied files are skipped)
 npm run db:migrate
 # 3a. fast path — re-seed vendored statics, let collectors refill live layers
 node dist/scripts/seed-statics.js

@@ -93,6 +93,9 @@ New collectors (`src/workers/collectors/*.ts`, registry + tests each):
 - [x] CI: typecheck + lint + unit + e2e + breakpoint screenshots as gates (.github/workflows/ci.yml)
 - [~] Deploy to permanent host + uptime/health dashboards + backup/restore drills — DEFERRED to production move (tunnel is temporary; HOSTING.md is the runbook)
 - [x] Dead-code audits per phase (LOC is a capability ratio, not a trophy)
+- [x] Production hardening (2026-09-23): security model + write auth, probes, graceful
+  shutdown, tracked migrations, deterministic CI on fixtures, compose/image fixes —
+  receipts in OUTSTANDING.md D, runbook in PRODUCTION.md
 
 ## Capabilities ledger (update every phase — THIS is the scoreboard)
 

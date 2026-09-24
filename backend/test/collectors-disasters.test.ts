@@ -66,7 +66,7 @@ describe("disasters collect()", () => {
 		]);
 		const r = await disasters();
 		assert.equal(r.ok, true);
-		const rows = await query<{ title: string }[]>(
+		const rows = await query<{ title: string }>(
 			"SELECT title FROM events WHERE layer='disasters'",
 		);
 		assert.ok(
@@ -135,7 +135,7 @@ describe("disasters geometry branches", () => {
 		]);
 		const r = await disasters();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string; severity: string }[]>(
+		const rows = await query<{ id: string; severity: string }>(
 			"SELECT id, severity FROM events WHERE layer='disasters' ORDER BY id",
 		);
 		assert.ok(rows.some((x) => x.id === "eonet:p1" && x.severity === "watch"));
@@ -155,7 +155,7 @@ describe("disasters honest failure", () => {
 		const r = await disasters();
 		assert.equal(r.ok, false);
 		assert.match(String((r as { error?: string }).error), /502/);
-		const h = await query<{ error: string | null }[]>(
+		const h = await query<{ error: string | null }>(
 			"SELECT error FROM feed_health WHERE source='eonet'",
 		);
 		assert.match(String(h[0]?.error), /502/);
@@ -186,7 +186,7 @@ describe("disasters sentry", () => {
 		}) as typeof fetch;
 		const r = await disasters();
 		assert.equal(r.ok, true);
-		const rows = await query<{ id: string }[]>(
+		const rows = await query<{ id: string }>(
 			"SELECT id FROM events WHERE source='sentry'",
 		);
 		assert.deepEqual(

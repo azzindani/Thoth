@@ -1,6 +1,9 @@
 node_modules
 dist
-.env
+test-results
+playwright-report
+test/e2e/shots
 *.log
+.env*
 .git
 .vscode
