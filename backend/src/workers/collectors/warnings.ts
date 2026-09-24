@@ -5,6 +5,9 @@
 //   ea-floods    Environment Agency flood warnings, England → `disasters`
 //   mowas        German federal warning system (MoWaS via warnung.bund.de,
 //                the NINA app's feed): civil-protection alerts → `disasters`
+//   katwarn, biwapp, lhp-floods, de-police
+//                the other warnung.bund.de providers — same record shape and
+//                footprint lookup as MoWaS (DWD weather is `dwd-warn`)
 // Area geometries become one marker each (lib/geo pointOf); area lookups are
 // cached in memory, since flood areas and warning footprints do not move.
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
@@ -29,10 +32,23 @@ const EA_FLOODS_URL =
 const EA_AREA_URL = (id: string) =>
 	`https://environment.data.gov.uk/flood-monitoring/id/floodAreas/${encodeURIComponent(id)}`;
 const EA_PAGE = "https://check-for-flooding.service.gov.uk/";
-const MOWAS_URL = "https://warnung.bund.de/api31/mowas/mapData.json";
-const MOWAS_GEO_URL = (id: string) =>
+const BBK_LIST_URL = (provider: string) =>
+	`https://warnung.bund.de/api31/${provider}/mapData.json`;
+const BBK_GEO_URL = (id: string) =>
 	`https://warnung.bund.de/api31/warnings/${encodeURIComponent(id)}.geojson`;
-const MOWAS_PAGE = "https://warnung.bund.de/meldungen";
+const BBK_PAGE = "https://warnung.bund.de/meldungen";
+// warnung.bund.de usually answers in <1 s but stalls now and then (5 s, and
+// one >15 s abort in a live run, 2026-09-24) — shared by all five providers.
+const BBK_TIMEOUT_MS = 30_000;
+/** warnung.bund.de providers → our source name + title label. */
+export const BBK_PROVIDERS = [
+	{ provider: "mowas", source: "mowas", label: "MoWaS" },
+	{ provider: "katwarn", source: "katwarn", label: "KATWARN" },
+	{ provider: "biwapp", source: "biwapp", label: "BIWAPP" },
+	{ provider: "lhp", source: "lhp-floods", label: "LHP flood" },
+	{ provider: "police", source: "de-police", label: "Police" },
+] as const;
+type BbkProvider = (typeof BBK_PROVIDERS)[number];
 /** Per-run cap on uncached area lookups — a flood crisis can raise hundreds
  * of warnings; the rest get located on later runs as the cache fills. */
 const MAX_LOOKUPS_PER_RUN = 60;
@@ -154,7 +170,7 @@ export function eaRows(
 	return rows;
 }
 
-type MowasWarning = {
+type BbkWarning = {
 	id?: string;
 	version?: number;
 	startDate?: string;
@@ -163,8 +179,9 @@ type MowasWarning = {
 	i18nTitle?: Record<string, string>;
 };
 
-export function mowasRows(
-	list: MowasWarning[],
+export function bbkRows(
+	p: BbkProvider,
+	list: BbkWarning[],
 	footprint: (id: string) => LonLat | null,
 ): Row[] {
 	const rows: Row[] = [];
@@ -175,18 +192,18 @@ export function mowasRows(
 		const de = w.i18nTitle?.de ?? "";
 		const at = footprint(w.id);
 		rows.push({
-			id: `mowas:${w.id}`,
+			id: `${p.source}:${w.id}`,
 			ts: new Date(Date.parse(w.startDate ?? "") || Date.now()).toISOString(),
-			source: "mowas",
+			source: p.source,
 			layer: "disasters",
-			title: `MoWaS · ${en || de || "Warning"}`,
+			title: `${p.label} · ${en || de || "Warning"}`,
 			body: de && de !== en ? de : undefined,
-			url: MOWAS_PAGE,
+			url: BBK_PAGE,
 			severity: capSeverity(w.severity ?? ""),
 			confidence: 0.95,
 			lat: at?.lat,
 			lon: at?.lon,
-			entities: { agency: "BBK (MoWaS)" },
+			entities: { agency: `BBK (${p.label})` },
 			meta: {
 				cap_severity: w.severity ?? null,
 				msg_type: w.type ?? null,
@@ -200,7 +217,8 @@ export function mowasRows(
 // Area/footprint caches survive across runs (the worker is long-lived).
 // null = looked up, has no usable geometry — don't ask again.
 const eaAreas = new Map<string, LonLat | null>();
-const mowasFootprints = new Map<string, LonLat | null>();
+// Warning ids are unique across providers, so one footprint cache serves all.
+const bbkFootprints = new Map<string, LonLat | null>();
 
 async function fetchJson(
 	url: string,
@@ -238,8 +256,8 @@ async function eaAreaLookup(id: string): Promise<LonLat | null> {
 	return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 }
 
-async function mowasLookup(id: string): Promise<LonLat | null> {
-	const { json } = await fetchJson(MOWAS_GEO_URL(id));
+async function bbkLookup(id: string): Promise<LonLat | null> {
+	const { json } = await fetchJson(BBK_GEO_URL(id), BBK_TIMEOUT_MS);
 	const first = (json as { features?: Feature[] })?.features?.[0];
 	return pointOf(first?.geometry);
 }
@@ -277,23 +295,26 @@ const SOURCES: Array<{
 			return { status, rows: eaRows(items, (id) => eaAreas.get(id) ?? null) };
 		},
 	},
-	{
-		source: "mowas",
+	...BBK_PROVIDERS.map((p) => ({
+		source: p.source,
 		layer: "disasters",
 		run: async () => {
-			const { status, json } = await fetchJson(MOWAS_URL);
-			const list = listOf<MowasWarning>(json);
+			const { status, json } = await fetchJson(
+				BBK_LIST_URL(p.provider),
+				BBK_TIMEOUT_MS,
+			);
+			const list = listOf<BbkWarning>(json);
 			const ids = list
 				.filter((w) => w.type !== "Cancel")
 				.map((w) => w.id)
 				.filter((x): x is string => !!x);
-			await locate(ids, mowasFootprints, mowasLookup);
+			await locate(ids, bbkFootprints, bbkLookup);
 			return {
 				status,
-				rows: mowasRows(list, (id) => mowasFootprints.get(id) ?? null),
+				rows: bbkRows(p, list, (id) => bbkFootprints.get(id) ?? null),
 			};
 		},
-	},
+	})),
 ];
 
 export async function collect() {

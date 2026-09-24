@@ -53,6 +53,8 @@ Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch
 | fires | CAL FIRE incidents API + NSW RFS majorIncidents GeoJSON + Emergency Management Victoria events GeoJSON | 15m | named agency incidents next to FIRMS hotspots; current picture, pruned |
 | weather | Environment Canada alerts (MSC GeoMet OGC API `weather-alerts`, Open Government Licence – Canada) | 15m | slow upstream (~25s), 60s timeout; one marker per alerted region |
 | disasters | Environment Agency flood warnings (England, OGL v3) + MoWaS via warnung.bund.de (BBK) | 15m | flood levels 1–3; civil-protection CAP alerts; current picture, pruned |
+| fires | Queensland Fire Department bushfire alerts GeoJSON + WA DFES `/v1/incidents` + `/v1/warnings` + ACT ESA current-incidents GeoRSS | 15m | AU warning levels; WA/ACT filtered to fire items; current picture, pruned |
+| disasters | warnung.bund.de KATWARN, BIWAPP, LHP (cross-state flood portal), police | 15m | same CAP shape + footprint lookup as MoWaS; often empty (honest) |
 
 ## Free-key (depth / limits)
 
