@@ -345,4 +345,12 @@ export const SOURCE_MAP: Record<
 	"eccc-alerts": { collector: "warnings", intervalSec: 900 },
 	"ea-floods": { collector: "warnings", intervalSec: 900 },
 	mowas: { collector: "warnings", intervalSec: 900 },
+	// Batch 35 (keyless loop-10).
+	"qld-fire": { collector: "wildfires", intervalSec: 900 },
+	"wa-dfes": { collector: "wildfires", intervalSec: 900 },
+	"act-esa": { collector: "wildfires", intervalSec: 900 },
+	katwarn: { collector: "warnings", intervalSec: 900 },
+	biwapp: { collector: "warnings", intervalSec: 900 },
+	"lhp-floods": { collector: "warnings", intervalSec: 900 },
+	"de-police": { collector: "warnings", intervalSec: 900 },
 };

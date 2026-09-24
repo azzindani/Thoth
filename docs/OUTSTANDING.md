@@ -134,6 +134,9 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   production host before shipping — CAL FIRE, NSW RFS, VIC EMV → `fires`; ECCC
   alerts → `weather`; EA floods, MoWaS → `disasters`. Loop recipe + candidate
   queue: ADDING_ENDPOINTS.md.
+- [x] Keyless loop-10 / batch35 (2026-09-24): QLD Fire, WA DFES, ACT ESA →
+  `fires`; KATWARN, BIWAPP, LHP floods, police (warnung.bund.de) →
+  `disasters`. Probed live on the production host before shipping.
 - [x] Fix-or-drop pass #1 (2026-09-24), from the monitor's 26 failing sources:
   - **Network (7 recovered):** Node's happy-eyeballs gave each address 250 ms;
     this VPS needs 260–460 ms to reach US hosts, so eonet/fiscaldata/

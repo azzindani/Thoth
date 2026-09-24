@@ -31,11 +31,10 @@ loop by definition; they stay in DATA_SOURCES.md "Free-key".
 
 | Source | Layer | Status | Notes |
 |---|---|---|---|
-| warnung.bund.de KATWARN + BIWAPP + LHP floods (`/api31/{katwarn,biwapp,lhp}/mapData.json`) | disasters | next | same shape as MoWaS (batch34) — extend `warnings` |
 | Pegelonline German river gauges (`/webservices/rest-api/v2/stations.json`) | oceans | next | probed 200, ~620KB with current levels; pick flood-relevant gauges |
 | Vigicrues France flood vigilance (`vigicrues.gouv.fr/services/1/InfoVigiCru.jsonld`) | disasters | candidate | keyless per docs; probe |
 | waterlevel.ie (OPW Ireland) GeoJSON | oceans | candidate | keyless; probe |
-| Queensland / WA / SA / TAS bushfire alert feeds | fires | candidate | same AU warning levels as NSW/VIC — extend `wildfires` |
+| SA CFS / TAS TFS / NT PFES bushfire feeds | fires | blocked | old paths moved (2026-09-24: SA `data.eso.sa.gov.au` 197B HTML, TAS 410, NT 404) — find current ones, then extend `wildfires` |
 | Canada CWFIS active fires | fires | blocked | old CSV path 404s (2026-09-24); find the current one |
 | JMA warnings (`jma.go.jp/bosai/warning/data/…`) + HKO warning summary (`warnsum`) | weather | candidate | keyless JSON |
 | abuse.ch SSLBL + CERT-FR / NCSC-UK / JPCERT advisories | cyber | candidate | CSV / RSS |
