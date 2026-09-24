@@ -129,6 +129,7 @@ New collectors (`src/workers/collectors/*.ts`, registry + tests each):
 | Keyless expansion batch31/loop-6 (2026-09-16) | health+fda-510k/ndc, transit+mbta-Boston, markets+defi-llama/cg-exchanges, batch31 tests 3/3 | done |
 | Keyless expansion batch32/loop-7 (2026-09-16) | satellites+amsat-tle/amsat-status (Look4Sat-digested, Maidenhead geocode), batch32 tests 3/3 | done |
 | Keyless expansion batch33/loop-8 (2026-09-16) | civic+sf311 (data.sf.gov 311 cases, geo), batch33 tests 1/1 | done |
+| Keyless loop-18 (2026-09-24) | ship: weather+jma-warn (JMA r8 warnings per class10 sub-area, 24 live), volcanoes+jma-volcano (JMA eruption warnings, 14 volcanoes); JMA river floods queued; warnings/hans tests +6 | done |
 | Keyless loop-17 (2026-09-24) | fix: jtwc — single-quoted RSS links (no positions), cross-item link bleed (15E drawn at 25W's fix), hurricanes unrecognised; per-item parse, own warning text only, final warnings info, E/C basins left to NHC, pruned current picture; storms tests +2 | done |
 | Keyless loop-16 (2026-09-24) | fix: bbc/aljazeera/dw — one spaced retry on connect-level failures (Akamai edge dropping ~half the connects from this host); news contract tests 3/3 | done |
 | Keyless loop-15 (2026-09-24) | no fixable failures; ship: disasters+ifrc-go (new `emergencies`: IFRC GO events of the last 90 days + active appeals joined, 71 placed); ReliefWeb → free-key (approved appname); JTWC queued; bbc/aljazeera = Akamai edge path fault (recorded); unit 51, collectors 293/293 | done |

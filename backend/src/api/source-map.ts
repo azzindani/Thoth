@@ -157,6 +157,7 @@ export const SOURCE_MAP: Record<
 	guardian: { collector: "news", intervalSec: 300 },
 	hal: { collector: "research", intervalSec: 21600 },
 	hans: { collector: "hans", intervalSec: 3600 },
+	"jma-volcano": { collector: "hans", intervalSec: 3600 },
 	"hdx-idmc": { collector: "hdx", intervalSec: 86400 },
 	hko: { collector: "weather", intervalSec: 300 },
 	hn: { collector: "litwatch", intervalSec: 21600 },
@@ -355,6 +356,7 @@ export const SOURCE_MAP: Record<
 	"lhp-floods": { collector: "warnings", intervalSec: 900 },
 	"de-police": { collector: "warnings", intervalSec: 900 },
 	"hko-warn": { collector: "warnings", intervalSec: 900 },
+	"jma-warn": { collector: "warnings", intervalSec: 900 },
 	// rivers: Pegelonline gauges (NWIS and om-flood are listed above).
 	pegelonline: { collector: "rivers", intervalSec: 3600 },
 	// certs: national CERT advisories.
