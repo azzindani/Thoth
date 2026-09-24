@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: backend } }
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -58,7 +58,7 @@ jobs:
           --health-cmd "pg_isready -U thoth"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -114,7 +114,7 @@ jobs:
           --health-cmd "pg_isready -U thoth"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -170,7 +170,7 @@ jobs:
     timeout-minutes: 20
     needs: backend-static
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Compose file is valid
         run: POSTGRES_PASSWORD=x API_WRITE_KEY=x docker compose -f backend/docker-compose.yml config -q
       - name: Build backend image
