@@ -92,7 +92,7 @@ jobs:
       - if: failure()
         run: tail -n 200 api.log
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-e2e
           path: backend/test-results
@@ -156,7 +156,7 @@ jobs:
       - if: failure()
         run: tail -n 200 backend/api.log app/app.log
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-e2e
           path: |
