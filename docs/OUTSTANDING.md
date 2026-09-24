@@ -134,12 +134,37 @@ deferred, and leave with a date + commit when shipped. Nothing here is forgotten
   production host before shipping — CAL FIRE, NSW RFS, VIC EMV → `fires`; ECCC
   alerts → `weather`; EA floods, MoWaS → `disasters`. Loop recipe + candidate
   queue: ADDING_ENDPOINTS.md.
-- [ ] Batch 31/32 feeds shipped "contract-tested, not probed live" are now live on
-  the production host; failing there (2026-09-24 snapshot, 44/328 sources):
-  enisa-euvd 403, copernicus-ems RSS 404, nga-msi 503, tor-onionoo fetch-failed,
-  plus older ones (energy-charts 429/404 per country, fiscaldata/govtrack/hans/
-  eonet/firms "fetch failed" — likely egress from this VPS, to confirm). Owner:
-  keyless loop, fix-or-drop pass. Due 2026-10-08.
+- [x] Fix-or-drop pass #1 (2026-09-24), from the monitor's 26 failing sources:
+  - **Network (7 recovered):** Node's happy-eyeballs gave each address 250 ms;
+    this VPS needs 260–460 ms to reach US hosts, so eonet/fiscaldata/
+    fiscal-rates/hans/tor-onionoo/reliefweb/firms died as "fetch failed".
+    `lib/net.ts` sets 2.5 s per attempt in worker + API.
+  - **Fixed in code:** energy-charts ×11 (48 h window + newest filled slot —
+    today's window 404s while ENTSO-E lags; 6 s spacing vs 429; 24 h freeze
+    budget; one 30 s retry on 429), copernicus-ems (list moved to
+    `public-activations-info/`; EMS portal list replaces the retired RSS
+    fallback), adsb.lol (`/v2/states/all` retired → `/v2/point`; accept
+    `alt_baro: "ground"`), ocha (406 without a feed `Accept`; one AWS LB node
+    also 406s and keep-alive pins the connection to it → `Connection: close`
+    + 3 spaced retries), coops-pressure (sparse like wind),
+    epa-ie (newest page takes ~28 s → 60 s timeout), crossref (1 req/s pool →
+    1.5 s spacing), openalex (spaced), arxiv (`sortBy=submitted` is invalid →
+    `submittedDate`), fiscaldata/fiscal-rates (recovered into "frozen": daily
+    statement lags 1–3 business days, rates are monthly → 5 d / 40 d budgets).
+  - **Upstream outage, left failing:** metrotransit (NexTrip answers 500 on
+    every endpoint, 2026-09-24).
+  - **Dropped:** goldapi (its DNS answers NXDOMAIN for AAAA; musl takes that
+    as no-such-host; Yahoo carries gold), on511 (now "Invalid Key").
+- [ ] Blocked from this host — needs an operator decision (2026-09-24). Owner:
+  operator. Due 2026-10-08. celestrak (no TCP connect), smithsonian (reset
+  after handshake), nga-msi (Akamai 503), enisa-euvd (Azure WAF 403), gdelt
+  (429 on every call, one per 30 s still refused), binance + kalshi
+  (resolver 153.92.2.6 answers with the Indonesian content-filter page), govtrack
+  (closes the connection), medrxiv (timeouts). Options: leave them honestly
+  failing, drop them, or route those hosts through an egress elsewhere.
+- [ ] 51 sources "frozen" (succeeding, newest item older than budget) —
+  mostly low-volume blogs/digests on the 4 h default. Budget review. Owner:
+  keyless loop. Due 2026-10-08.
 - [x] Access gate (2026-09-24, PRODUCTION.md §1): Folio's token model replaces
   APP_BASIC_AUTH — ?token= swapped for a 30-day sliding HS256 session cookie,
   Bearer for scripts, named revocable keys. Compose project named `thoth`, app

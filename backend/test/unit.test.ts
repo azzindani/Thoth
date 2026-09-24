@@ -1,11 +1,15 @@
 // Thoth unit tests — pure parsers only, no network, no DB.
 
 import assert from "node:assert/strict";
+import { getDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
 import { describe, it } from "node:test";
+import { frozenBudget } from "../src/api/freeze.js";
+import { CONNECT_ATTEMPT_MS, configureNetwork } from "../src/lib/net.js";
 import { pickAirports } from "../src/scripts/build-airports.js";
 import { pickFacilities } from "../src/scripts/build-datacenters.js";
 import { kevSeverity, parseUrlhaus } from "../src/workers/collectors/cyber.js";
 import { threatSeverity } from "../src/workers/collectors/drones.js";
+import { latestFilledSlot } from "../src/workers/collectors/energy-eu.js";
 import { alertToSeverity, pointOf } from "../src/workers/collectors/gdacs.js";
 import { parseSeen } from "../src/workers/collectors/gdelt.js";
 import { parseRSS } from "../src/workers/collectors/news.js";
@@ -416,5 +420,47 @@ describe("pure helpers (batch21)", () => {
 		assert.equal(rows.length, 1);
 		assert.equal(rows[0].name, "ERIC BADEGE");
 		assert.deepEqual(rows[0].aliases, ["Eric B"]);
+	});
+});
+
+describe("configureNetwork", () => {
+	it("gives each address long enough for a far-away TCP handshake", () => {
+		configureNetwork();
+		assert.equal(
+			getDefaultAutoSelectFamilyAttemptTimeout(),
+			CONNECT_ATTEMPT_MS,
+		);
+		assert.ok(
+			CONNECT_ATTEMPT_MS >= 1000,
+			"250ms default failed US hosts from this VPS",
+		);
+	});
+});
+
+describe("energy-charts slots", () => {
+	it("reads the newest slot that has data, not the trailing empty ones", () => {
+		const j = {
+			unix_seconds: [1, 2, 3, 4],
+			production_types: [
+				{ name: "Wind", data: [5, 6, null, null] },
+				{ name: "Solar", data: [0, null, 7, null] },
+			],
+		};
+		assert.equal(latestFilledSlot(j), 2);
+		assert.equal(
+			latestFilledSlot({ unix_seconds: [1], production_types: [] }),
+			-1,
+		);
+	});
+});
+
+describe("freeze budgets", () => {
+	it("gives lagging ENTSO-E country legs a day, sparse feeds none", () => {
+		assert.equal(frozenBudget("energy-charts-gr"), 86400);
+		assert.equal(frozenBudget("fiscaldata"), 5 * 86400);
+		assert.equal(frozenBudget("fiscal-rates"), 40 * 86400);
+		assert.equal(frozenBudget("usgs"), 7200);
+		assert.equal(frozenBudget("calfire"), null);
+		assert.equal(frozenBudget("brand-new-source"), 14400);
 	});
 });

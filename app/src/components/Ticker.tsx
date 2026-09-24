@@ -5,7 +5,7 @@ import { Btn } from "../lib/ui";
 
 /** Market-tape sources: prices, rates, odds (not package downloads). */
 const TAPE_SOURCES =
-	/^(yahoo|cboe|cboe-eu|coingecko|cg-global|binance|coinbase|kraken|bitstamp|deribit|frankfurter|fxrates|ecb|nbp|boc-fx|cbr|moex|polymarket|kalshi|manifold|goldapi|nyfed|fiscaldata|fng)$/;
+	/^(yahoo|cboe|cboe-eu|coingecko|cg-global|binance|coinbase|kraken|bitstamp|deribit|frankfurter|fxrates|ecb|nbp|boc-fx|cbr|moex|polymarket|kalshi|manifold|nyfed|fiscaldata|fng)$/;
 const SEP = "   ·   ";
 
 interface Feed {

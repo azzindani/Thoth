@@ -114,6 +114,10 @@ Keep the three secrets in the host's secret store, not in shell history.
   advisory lock, and warns if an applied file was edited. Never edit an
   applied migration — add a new numbered file. First line
   `-- migrate:no-transaction` opts a file out of the transaction.
+- **Outbound connects:** worker and API give each resolved address 2.5 s to
+  finish the TCP handshake (`src/lib/net.ts`). Node's 250 ms default failed
+  every US upstream from a far-away host as "fetch failed"; if a new host
+  shows that error, check `err.cause.code` before blaming the upstream.
 - **One-off collector runs:** `node dist/workers/run.js --once <name>`, or
   `--all-once [width]` for a full pass (backfill after downtime).
 - **Monitoring (Monitor tab, `/api/monitor/*`):** the worker records every

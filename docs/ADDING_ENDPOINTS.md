@@ -47,8 +47,30 @@ its row here. Add new finds at the bottom with a one-line probe note.
 
 ## Keyless loop (the recurring shipping job)
 
-One run ships one small batch (2–6 sources). Every step is on the real host,
-in one checkout on `main` — no subagents, no worktrees, no branches.
+**Fix first, then ship.** Each run starts from the monitor
+(`curl -s localhost:4000/api/monitor/sources`, state `failing`). While any
+fixable keyless source is failing, the run is a fix-or-drop pass; only when
+none is left does it ship one small batch (2–6 new sources). Every step is on
+the real host, in one checkout on `main` — no subagents, no worktrees, no
+branches.
+
+### Fix-or-drop pass
+
+1. **Diagnose inside the worker container** (`docker compose exec -T worker
+   node -`): print the HTTP status or `err.cause.code`. "fetch failed" hides
+   the real error. Compare with `curl` from the host and with `dig @1.1.1.1`
+   (this host's resolver sometimes filters).
+2. **Fix** the request (moved URL, parameters, `Accept`, spacing for 429s,
+   timeout for slow-but-working upstreams), the parser, or the health rule.
+   The cause goes in a comment next to the constant that fixes it.
+3. **Drop** only when the upstream now needs a key, is gone, or is redundant
+   and unfixable: remove the leg, its `source-map.ts`/`freeze.ts` entries and
+   test stubs, then delete its `feed_health` row in production — the one
+   production write allowed.
+4. **Host-blocked** (IP/geo/WAF/DNS filtering, confirmed from the host too):
+   don't route around it — list it in OUTSTANDING.md for the operator.
+
+### Shipping a batch
 
 1. **Pick** from the candidate queue (or find new ones). Grep `backend/src`
    for the upstream host first — 300+ sources exist and duplicates waste a run.
@@ -77,5 +99,3 @@ in one checkout on `main` — no subagents, no worktrees, no branches.
 7. **Commit on `main` and push.** A source that fails in production gets fixed
    or reverted before the push — never push red.
 
-Out of candidates for a run? Spend it on the fix-or-drop list of failing
-keyless feeds in OUTSTANDING.md instead.

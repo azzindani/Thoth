@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import { closePool } from "../db/client.js";
 import { log } from "../lib/logger.js";
+import { configureNetwork } from "../lib/net.js";
 import { intelPass } from "./intel.js";
 import { errMsg, flushVersions } from "./lib/store.js";
 import { instrumentFetch, withRun } from "./lib/telemetry.js";
@@ -124,6 +125,7 @@ async function runAllOnce(width: number) {
 }
 
 async function main() {
+	configureNetwork();
 	instrumentFetch();
 	const all = process.argv.indexOf("--all-once");
 	if (all >= 0) {

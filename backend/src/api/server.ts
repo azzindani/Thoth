@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import { closePool } from "../db/client.js";
 import { log } from "../lib/logger.js";
+import { configureNetwork } from "../lib/net.js";
 import { createApp } from "./app.js";
 import { VERSION } from "./shared.js";
 import { closeAllStreams } from "./stream.js";
@@ -8,6 +9,7 @@ import { closeAllStreams } from "./stream.js";
 // Process entrypoint: listen, tune socket timeouts, shut down gracefully.
 const SHUTDOWN_GRACE_MS = 10_000;
 
+configureNetwork();
 const server = createApp().listen(config.PORT, () =>
 	log.info("thoth api up", {
 		port: config.PORT,

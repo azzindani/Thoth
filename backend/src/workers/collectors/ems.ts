@@ -1,17 +1,21 @@
 // Copernicus Emergency Management Service — rapid mapping activations
-// (keyless). The dashboard API is not formally documented, so parsing is
-// tolerant (code/name/category/time/centroid under a few spellings) and the
-// legacy RSS feed is the fallback. Open activations are watch, closed info;
-// on the disasters layer at the activation centroid.
+// (keyless). Neither API is formally documented, so parsing is tolerant
+// (code/name/category/time/centroid under a few spellings). The rapid-mapping
+// dashboard list is primary; the EMS portal's activation list (a separate
+// service, same fields) is the fallback — the legacy RSS feed was retired
+// (404 since 2026-09). Open activations are watch, closed info; on the
+// disasters layer at the activation centroid.
 
 import { locateCountry } from "../lib/countries.js";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
+// `public-activations/` now demands an activation code (2026-09-24); the
+// list moved to `public-activations-info/`.
 const URL_API =
-	"https://rapidmapping.emergency.copernicus.eu/backend/dashboard-api/public-activations/?limit=50";
-const URL_RSS =
-	"https://emergency.copernicus.eu/mapping/activations-rapid/feed";
+	"https://rapidmapping.emergency.copernicus.eu/backend/dashboard-api/public-activations-info/?limit=50";
+const URL_FALLBACK =
+	"https://mapping.emergency.copernicus.eu/activations/api/activations/?limit=50";
 const SOURCE = "copernicus-ems";
 
 export type Activation = {
@@ -54,7 +58,11 @@ function countriesOf(v: unknown): string[] {
 			.filter(Boolean);
 	if (Array.isArray(v))
 		return v
-			.map((x) => (typeof x === "string" ? x : str((x as J)?.name)))
+			.map((x) =>
+				typeof x === "string"
+					? x
+					: str((x as J)?.name) || str((x as J)?.short_name),
+			)
 			.filter(Boolean);
 	return [];
 }
@@ -90,59 +98,28 @@ export function parseEmsApi(j: unknown): Activation[] {
 	return out;
 }
 
-/** Legacy RSS: "EMSR123: Flood in Somewhere" + optional georss:point. */
-export function parseEmsRss(xml: string): Activation[] {
-	const out: Activation[] = [];
-	for (const m of xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)) {
-		const b = m[0];
-		const t = (x: string) =>
-			(b.match(new RegExp(`<${x}[^>]*>([\\s\\S]*?)</${x}>`))?.[1] ?? "")
-				.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-				.trim();
-		const title = t("title");
-		const code = title.match(/EMSR\d+/i)?.[0]?.toUpperCase();
-		if (!code) continue;
-		const pt = t("georss:point").split(/\s+/).map(Number);
-		out.push({
-			code,
-			name: title.replace(/^\s*EMSR\d+\s*[:\-–]\s*/i, "") || code,
-			category: t("category"),
-			ts: t("pubDate") || null,
-			closed: false,
-			countries: [],
-			lat: pt.length === 2 && Number.isFinite(pt[0]) ? pt[0] : null,
-			lon: pt.length === 2 && Number.isFinite(pt[1]) ? pt[1] : null,
-		});
-	}
-	return out;
-}
-
 async function fetchActivations(): Promise<{
 	via: string;
 	rows: Activation[];
 }> {
-	try {
-		assertSafeUrl(URL_API);
-		const res = await stealthFetch(URL_API, {}, 30000);
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		const rows = parseEmsApi(await res.json());
-		await storeRaw(SOURCE, "disasters", res.status, {
-			via: "api",
-			n: rows.length,
-		});
-		if (rows.length) return { via: "api", rows };
-		throw new Error("api: no activations parsed");
-	} catch (e: unknown) {
-		assertSafeUrl(URL_RSS);
-		const res = await stealthFetch(URL_RSS, {}, 30000);
-		if (!res.ok) throw new Error(`${errMsg(e)}; rss HTTP ${res.status}`);
-		const rows = parseEmsRss(await res.text());
-		await storeRaw(SOURCE, "disasters", res.status, {
-			via: "rss",
-			n: rows.length,
-		});
-		return { via: "rss", rows };
+	const errors: string[] = [];
+	for (const [via, url] of [
+		["api", URL_API],
+		["portal", URL_FALLBACK],
+	] as const) {
+		try {
+			assertSafeUrl(url);
+			const res = await stealthFetch(url, {}, 30000);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const rows = parseEmsApi(await res.json());
+			await storeRaw(SOURCE, "disasters", res.status, { via, n: rows.length });
+			if (rows.length) return { via, rows };
+			throw new Error("no activations parsed");
+		} catch (e: unknown) {
+			errors.push(`${via}: ${errMsg(e)}`);
+		}
 	}
+	throw new Error(errors.join("; "));
 }
 
 export async function collect() {

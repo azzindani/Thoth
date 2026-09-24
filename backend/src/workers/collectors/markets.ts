@@ -307,8 +307,10 @@ export async function collect() {
 		await markHealth("cg-trending", false, errors[errors.length - 1]);
 	}
 
-	// CoinGecko global + Blockchair chain stats + gold spot: market-wide
-	// context in three calls. BlockCypher/Gate.io stay as OSINT fallbacks.
+	// CoinGecko global + Blockchair chain stats: market-wide context in two
+	// calls (gold spot comes from the Yahoo leg; gold-api.com was dropped
+	// 2026-09-24 — its DNS answers NXDOMAIN for AAAA, which musl resolvers take
+	// as "no such host"). BlockCypher/Gate.io stay as OSINT fallbacks.
 	try {
 		const url = "https://api.coingecko.com/api/v3/global";
 		assertSafeUrl(url);
@@ -383,33 +385,6 @@ export async function collect() {
 	} catch (e: unknown) {
 		errors.push(`blockchair: ${errMsg(e)}`);
 		await markHealth("blockchair", false, errors[errors.length - 1]);
-	}
-	try {
-		const url = "https://api.gold-api.com/price/XAU";
-		assertSafeUrl(url);
-		const res = await stealthFetch(url);
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		const j = (await res.json()) as { price?: unknown; updatedAt?: string };
-		const px = Number(j.price ?? NaN);
-		await storeRaw("goldapi", layer, res.status, { px });
-		if (Number.isFinite(px)) {
-			await storeNormalized({
-				id: `goldapi:${new Date().toISOString().slice(0, 13)}`,
-				ts: new Date().toISOString(),
-				source: "goldapi",
-				layer,
-				title: `Gold $${px.toLocaleString()}/oz`,
-				severity: "info",
-				confidence: 0.85,
-				entities: {},
-				meta: { px, metal: "XAU" },
-			});
-			n++;
-		}
-		await markHealth("goldapi", true);
-	} catch (e: unknown) {
-		errors.push(`goldapi: ${errMsg(e)}`);
-		await markHealth("goldapi", false, errors[errors.length - 1]);
 	}
 	// NY Fed reference rates (SOFR/EFFR): the risk-free pulse.
 	try {
