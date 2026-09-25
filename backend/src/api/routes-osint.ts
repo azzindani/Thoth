@@ -141,7 +141,7 @@ export function registerOsint(app: express.Express): void {
 		}
 	});
 
-	// Static registry lookups (vendored PORT-*.md intel, in-memory lazy maps).
+	// Static registry lookups (vendored static/*.json datasets, in-memory lazy maps).
 	const staticCache = new Map<string, unknown>();
 	async function loadStatic<T>(file: string): Promise<T | null> {
 		if (!staticCache.has(file)) {

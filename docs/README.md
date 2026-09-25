@@ -51,5 +51,3 @@ Pages are grouped by what you are trying to do.
 - [Roadmap](roadmap.md): planned and open work.
 - [Changelog](../CHANGELOG.md): notable changes by release.
 - [Proposals](proposals/): designs that are not built yet.
-- [Archive](archive/): past build ledgers and research notes, kept for
-  reference and no longer updated.
