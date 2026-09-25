@@ -9,7 +9,7 @@
 #   sh boot-host.sh
 #
 # Prints a https://<name>.trycloudflare.com link at the end. Tunnel is
-# temporary by nature — see docs/HOSTING.md for the DNS cutover path.
+# temporary by nature — see docs/operations/deployment.md for a permanent setup.
 set -e
 
 command -v docker >/dev/null || { echo "need docker"; exit 1; }
@@ -69,4 +69,4 @@ if [ -z "$LINK" ]; then
 fi
 echo ""
 echo "THOTH LIVE AT: $LINK${APP_ACCESS_KEY:+/?token=<APP_ACCESS_KEY>}"
-echo "(tunnel dies with the shell session — run under tmux/nohup on the host; DNS cutover per docs/HOSTING.md)"
+echo "(tunnel dies with the shell session — run under tmux/nohup on the host; permanent setup per docs/operations/deployment.md)"

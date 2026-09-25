@@ -2,7 +2,7 @@
 // (MapLibre paint, canvas, baked sprites, inline SVG). Mirrors the :root
 // tokens in app/globals.css — test/palette.test.ts fails if they drift.
 //
-// Rules (docs/UI_PRIMITIVES.md §0):
+// Rules (docs/development/ui-design-system.md §0):
 // - Warm black + bone. No pure #000 / #fff anywhere.
 // - ONE accent (faience): selection, focus, the primary action. Never data.
 // - Colour on data means severity: critical red, watch amber. Everything

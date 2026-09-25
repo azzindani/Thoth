@@ -1,6 +1,18 @@
-# Thoth — AI Agents (single surface for any agent)
+# Proposal: AI agent surface
 
-Goal: any compatible agent (OpenClaw reference, Claude Code, GPT, LangChain, custom TS/Py) sees what the operator sees and can act on the map. Thoth ships the surface, not the model.
+| | |
+|---|---|
+| **Status** | Proposed. **Not implemented.** |
+| **Tracking** | [Roadmap › Platform and integrations](../roadmap.md#platform-and-integrations) |
+| **Already in place** | Read-only REST API, SSE stream, the deterministic `/api/brief`, and the `pins` and `entity_links` tables (unused so far) |
+
+Nothing described below exists in the codebase yet. The routes, headers
+and SDK paths are a design sketch, and they may change before
+implementation.
+
+## Goal
+
+Any compatible agent (OpenClaw reference, Claude Code, GPT, LangChain, custom TS/Py) sees what the operator sees and can act on the map. Thoth ships the surface, not the model.
 
 ## Transports
 

@@ -708,7 +708,7 @@ export function registerOsint(app: express.Express): void {
 
 	// Sitrep: deterministic markdown snapshot of the brief, archived by day.
 	// The archive IS the history clock future analytics (market HUD etc.) read from.
-	// treemap still needs a company dataset (OUTSTANDING.md C).
+	// treemap still needs a company dataset (docs/roadmap.md).
 	app.get("/api/osint/company", async (req, res) => {
 		const q = String(req.query.query ?? req.query.q ?? "")
 			.trim()

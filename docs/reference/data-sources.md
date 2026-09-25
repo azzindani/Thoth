@@ -1,79 +1,145 @@
-# Thoth — Data Sources (verbose catalog)
+# Data sources
 
-Rule: keyless first, free-key for depth, paid only with budget caps. Every fetch stores raw + normalized + health. Attribution kept per row.
+Thoth collects data from 300+ public upstream sources through about 75
+collectors. This page summarizes them by map layer. **The authoritative
+list is the running system itself:**
 
-## Keyless (core works with $0)
+- `GET /api/monitor/catalog`: every source with its upstream hosts,
+  collector, layer, cadence and whether it needs a key;
+- `GET /api/health`: live freshness for each source;
+- the Monitor tab in the UI.
 
-| Layer | Source | Poll | Notes |
-|---|---|---|---|
-| flights | adsb.lol → OpenSky fallback | 60s | adsb 503s from cloud IPs; OpenSky public absorbs. Status = live 2026-09-08 |
-| sats | CelesTrak TLE + satellite.js SGP4 | 60s | propagate client or worker |
-| quakes | USGS Earthquake API | 60s | M2.5+, unlimited |
-| fires | NASA FIRMS CSV | 10m | keyless CSV; API needs key |
-| weather | NWS active alerts GeoJSON | 5m | live 2026-09-08: 200 alerts, polygon-centroid geom (US-only; global via EONET) |
-| disasters | EONET open events | 10m | live: 50 events |
-| spacewx | NOAA SWPC K-index + alerts | 5m | live: 21 rows, K≥5 watch |
-| gdelt | GDELT DOC artlist | 5m | degraded from sandbox IP (HTTP 429, 3× backoff); honest health, fills on clean IP |
-| news | RSS (Reuters/BBC/AP/AJ/Guardian/DefenseOne) via rss-parser | 90s | relevance filter, drop sports |
-| telegram | `t.me/s/<channel>` HTML scrape + geoparse | 60s | `OSIRIS_TELEGRAM_CHANNELS` override, EN+RU/UA+AR/FA dict |
-| gdelt | GDELT GEO 2.0 | 5m | protests/unrest, Haversine dedup 0.1° |
-| markets | Yahoo chart JSON, CoinGecko free, Polymarket Gamma | 5-10m | stagger 150ms, volume filter |
-| cyber | NVD, URLhaus, Shodan internetdb, XposedOrNot, HudsonRock Cavalier, crt.sh, RIPEstat | 5m | all keyless picks from osiris |
-| crypto | mempool.space, Blockscout, Solana RPC | on-demand | + 0xB10C SDN address list for SANCTIONED badge |
-| sanctions | OpenSanctions OFAC SDN mirror | daily | live 2026-09-08: 20,234 entities in `sanctions_entities`, `/api/osint/sanctions` live |
-| cctv | SG LTA traffic-images + TfL JamCams (890) | 10m | live-verified 2026-09-08, 408 rows; rotating HEAD probe sample; registry grows via cctv-seeds pattern |
-| infra | Cloudflare Radar (needs free token for full), gpsjam H3, PortWatch static | 5m | outages vs jamming split |
-| geo | OSM Nominatim, CARTO dark tiles, Natural Earth borders | on-demand | cache |
-| metar | NOAA Aviation Weather Center METAR+TAF JSON (44 world stations) | 15m | point obs + terminal forecast, LIFR→critical |
-| forecast | Open-Meteo forecast + marine APIs (24 cities/coasts) | 3h | conditions + seas, CC BY 4.0 |
-| markets | Fear & Greed Index (alternative.me) | daily | contrarian sentiment, sparse, never frozen |
-| research | OpenAlex + Crossref + Europe PMC + arXiv ATOM | daily | scholarly intel, ts = pub date (arXiv 429s, backoff-honest) |
-| health | WHO GHO OData (6 indicators × 25 countries) | weekly | annual data, ts = latest year, never frozen |
-| disasters | IDMC internal displacement via HDX CKAN (25 countries) | daily | conflict+disaster CSVs, never frozen |
-| policy | US Federal Register documents.json (PRESDOCU + security search) | daily | ts = publication date |
-| energy | WRI Global Power Plant DB v1.3.0 (CC BY 4.0) | static | build-powerplants.ts, ≥1000MW, idempotent |
-| ports | Natural Earth 10m ports (public domain) | static | build-ports-wpi.ts, 52→1104 |
-| markets | Binance 24h + Coinbase rates + Manifold predictions + ECB/fxratesapi FX + IMF growth | 30m–daily | crypto/prediction/FX depth, all keyless |
-| spacewx | SWPC Ovation aurora + GOES X-ray + F10.7 flux | 1h | solar depth behind kp |
-| quakes | GeoNet NZ GeoJSON (MMI≥3) | 5m | South-Pacific second opinion |
-| disasters | NHC 3-basin tropical wallets (RSS) | 30m | quiet-season heartbeats honest-ok |
-| weather | RainViewer global radar index | 30m | past+nowcast frame freshness |
-| energy | UK Carbon Intensity (National Grid ESO) | 1h | live grid CO₂, regional |
-| oceans | USGS NWIS river gauges (8 stations, flow+stage) | 1h | flood/water signal |
-| research | ClinicalTrials.gov v2 + PubMed counts + HN Algolia | daily | trials/literature/mindshare |
-| flights | VATSIM live traffic (virtual ATC network) | 5m | airborne sample, human air picture |
-| volcanoes | USGS HANS alerts (alert_level + color_code) | 1h | live restlessness, static cones stay |
-| disasters | German Autobahn roadworks API (7 corridors) | 6h | closures + coords |
-| markets | Kraken + Bitstamp + mempool.space + NBP FX | 30m–daily | exchange/chain/FX opinions |
-| cyber | GitHub Security Advisories (GHSA→CVE) | 15m | advisory feed |
-| satellites | SpaceDevs launches + SatNOGS transmitters | 10m–1h | manifest + ground-station catalog |
-| research | DOAJ articles + DataCite datasets | daily | open-access + data legs |
-| sanctions | UN Security Council consolidated XML | static | build-unsanctions.ts, 1,011 rows dataset='unsc' |
-| conflicts | UCDP GED v26.1 per-conflict aggregates (free research use) | static | build-ucdp.ts, 10→70 (downloads path, API needs token — not used) |
-| fires | CAL FIRE incidents API + NSW RFS majorIncidents GeoJSON + Emergency Management Victoria events GeoJSON | 15m | named agency incidents next to FIRMS hotspots; current picture, pruned |
-| weather | Environment Canada alerts (MSC GeoMet OGC API `weather-alerts`, Open Government Licence – Canada) | 15m | slow upstream (~25s), 60s timeout; one marker per alerted region |
-| disasters | Environment Agency flood warnings (England, OGL v3) + MoWaS via warnung.bund.de (BBK) | 15m | flood levels 1–3; civil-protection CAP alerts; current picture, pruned |
-| fires | Queensland Fire Department bushfire alerts GeoJSON + WA DFES `/v1/incidents` + `/v1/warnings` + ACT ESA current-incidents GeoRSS | 15m | AU warning levels; WA/ACT filtered to fire items; current picture, pruned |
-| disasters | warnung.bund.de KATWARN, BIWAPP, LHP (cross-state flood portal), police | 15m | same CAP shape + footprint lookup as MoWaS; often empty (honest) |
-| oceans | Pegelonline (WSV) federal waterway gauges, DL-DE/Zero | 1h | reference gauges + anything above mean high water; state vs MNW/MHW/HSW |
-| weather | Hong Kong Observatory open data `warnsum` | 15m | warnings in force, `{}` when quiet |
-| radiation | BfS ODL (Bundesamt für Strahlenschutz) `odlinfo_odl_1h_latest` WFS, DL-DE/BY-2.0 | 15m (hourly data) | ~1,600 German gamma dose-rate stations; ≥0.3 µSv/h watch, ≥1 critical; current picture, pruned. Replaces EPA Ireland radmon (dropped 2026-09-24) |
-| cyber | National CERT advisories: CERT-FR avis + alertes RSS, CERT-EU security advisories RSS, Canadian Centre for Cyber Security (CCCS) alerts & advisories Atom, JPCERT/CC English RDF | 30m | exploitation named in the text → critical, alerts → watch, vendor advisories → info; rolling windows, rows kept |
-| health | WHO Disease Outbreak News (who.int OData `diseaseoutbreaknews`) | 3h | newest 30 DON reports at the first named country's capital; Ebola/Marburg/Nipah/MERS/avian flu etc. critical; kept after they scroll off |
-| cyber | abuse.ch SSLBL SSL certificate blacklist (CSV, CC0) | 1h | malware C2 TLS certificate SHA-1s listed in the last 7 days, by family; older listings pruned |
-| disasters | IFRC GO emergencies (`goadmin.ifrc.org/api/v2/event/`) + active appeals (`/appeal/?status=0`) | 3h | Red Cross/Red Crescent emergencies of the last 90 days at the affected country's capital; IFRC Red/Orange/Yellow → critical/watch/info, Emergency Appeal lifts Yellow; appeal funding joined; pruned past the window |
-| weather | JMA warnings, 2026 "r8" system (`bosai/warning/data/r8/map.json` + sub-area polygons `bosai/common/const/geojson/class10s.json`) | 15m | one marker per forecast sub-area with anything in force, worst level wins: special/danger warning critical, warning watch, advisory info; current picture, pruned |
-| volcanoes | JMA eruption warnings (`bosai/volcano/data/warning.json` + summits `bosai/volcano/const/volcano_list.json`) | 1h | every Japanese volcano above normal: Level 4–5 / residential critical, Level 2–3, near-crater and sea-area warnings watch, Level 1 info; current picture, pruned |
+## Sourcing principles
 
-## Free-key (depth / limits)
+1. **Keyless first.** Everything below works with no account and no key.
+   A keyed source is only added when a keyless alternative exists or the
+   feature is optional, and it ships disabled until a key is configured.
+2. **Provenance on every row.** Each event keeps its `source`, a link to
+   the original (`url`), and the raw payload in `raw_events`.
+3. **Respect the upstream.** Collectors send a User-Agent, stay within
+   published rate limits, pace requests where needed, and poll no faster
+   than the upstream publishes.
+4. **Honest freshness.** See the
+   [freshness contract](../architecture/overview.md#freshness-contract).
 
-- `FIRMS_MAP_KEY` (email, 5k/10min), `OPENSKY_CLIENT_ID/SECRET` (OAuth2, higher limits), `N2YO_API_KEY` (1k/hr), `AIS_API_KEY` (aisstream.io WS live ships), `CLOUDFLARE_API_TOKEN` (Radar Read), `ETHERSCAN_API_KEY` + `HELIUS_API_KEY` (ETH internal + SOL parses), `GEMINI_API_KEY` (AI briefs only)
-- ReliefWeb API v2: needs an approved `appname` (request form at apidoc.reliefweb.int; v1 decommissioned, unapproved names answer 403 — 2026-09-24). OCHA/IFRC headlines already arrive via the `relief` RSS legs.
+## Live layers
 
-## Paid / gated (avoid until traction)
+The cadence is the collector's poll interval, before jitter.
 
-AviationStack (per-airport per-tick — cap with monthly budget like worldmonitor), CoinGecko Pro, Exa/Firecrawl/Brave (search/scrape), full Shodan, HudsonRock commercial, Telegram MTProto at scale (fragile/IP-ban — stay on web preview), commercial AIS.
+### Hazards
 
-## Freshness contract
+| Layer | Main upstreams | Cadence |
+|---|---|---|
+| `quakes` | USGS (M2.5+), EMSC, GFZ GEOFON, INGV, GeoNet NZ (incl. volcano alert levels), JMA, BMKG, Kandilli, AFAD | 60 s – 5 min |
+| `fires` | NASA FIRMS VIIRS (NOAA-20, NOAA-21, Suomi-NPP) CSV; agency incidents: CAL FIRE, NSW RFS, VIC EMV, QLD Fire, WA DFES, ACT ESA | 10–15 min |
+| `perims` | NIFC WFIGS current fire perimeters | 30 min |
+| `weather` | US NWS alerts, MET Norway MetAlerts, DWD, FMI, Environment Canada, Hong Kong Observatory, JMA warnings, RainViewer radar and IR frames | 5–30 min |
+| `disasters` | NASA EONET, GDACS, FEMA declarations, NHC tropical outlooks, JTWC, IFRC GO emergencies, IDMC displacement (HDX), UK Environment Agency floods, German civil-protection warnings (MoWaS, KATWARN, BIWAPP, LHP), Copernicus EMS, JPL CNEOS close approaches, Autobahn closures | 5 min – daily |
+| `volcanoes` | Smithsonian GVP, USGS HANS alert levels, JMA eruption warnings | 1 h – daily |
+| `oceans` | NOAA NDBC buoys, NOAA CO-OPS tide, wind and pressure gauges, USGS NWIS rivers, Pegelonline (German waterways), Open-Meteo flood discharge | 10 min – 1 h |
+| `radiation` | BfS ODL German gamma dose-rate network, Safecast | 15 min |
+| `spacewx` | NOAA SWPC (Kp, alerts, scales, aurora, GOES X-ray, F10.7), SILSO sunspots | 5 min – 1 h |
+| `airquality` | Open-Meteo air quality, Sensor.Community, Singapore PSI | 30 min |
+| `airwx` | Aviation Weather Center SIGMETs, international SIGMETs, G-AIRMETs | 15 min |
+| `metar` | Aviation Weather Center METAR and TAF, 44 world stations | 15 min |
+| `forecast` | Open-Meteo forecast and marine, MET Norway, BrightSky (DWD), IPMA, BOM, NASA POWER | 3 h |
 
-Each collector writes `feed_health`. UI shows intelligence-gap badge when `lag_sec > 2×interval`. Stale → serve last-good + `STALE` flag, never silent empty. UCDP-style annual+monthly merge pattern for any lagging annual source.
+### Movement and infrastructure
+
+| Layer | Main upstreams | Cadence |
+|---|---|---|
+| `flights` | adsb.lol → OpenSky (fallback, several regional boxes), adsb.fi, VATSIM, IVAO | 5–15 min |
+| `vessels` | Digitraffic Finnish AIS (Baltic) | 10 min |
+| `satellites` | CelesTrak TLE → TLE mirror fallback, AMSAT, ISS position, SpaceDevs launches, SatNOGS | 10 min – 6 h |
+| `transit` | TfL (arrivals, line status, roads, bikes), Swiss transport, SNCF, iRail, Digitraffic rail, MBTA, SEPTA, GBFS bike share | 30 min |
+| `navwarn` | NGA MSI broadcast navigation warnings | 30 min |
+| `gpsjam` | GNSS interference cells derived from ADS-B | 30 min |
+| `cctv` | Singapore LTA traffic cameras, TfL JamCams, Caltrans, 511 Alberta, Rijkswaterstaat | 10 min |
+| `energy` | UK Carbon Intensity, Energy-Charts (25 European countries), Danish spot prices | 1 h |
+| `cables` | Submarine cable map | daily |
+
+### Security and conflict
+
+| Layer | Main upstreams | Cadence |
+|---|---|---|
+| `conflicts` | USGS explosion events, FIRMS anomalies in conflict zones | 10 min |
+| `drones` | Ukrainian air-raid alerts | 2 min |
+| `telegram` | Public channel previews (`t.me/s/…`) with place-name geoparsing | 1 min |
+| `cyber` | CISA KEV, NVD, GitHub advisories, ENISA EUVD, national CERTs (CERT-FR, CERT-EU, CCCS, JPCERT/CC), IODA outages, OONI censorship, abuse.ch (URLhaus, Feodo, ThreatFox, MalwareBazaar, SSLBL), DShield, Spamhaus DROP, CINS, blocklist.de, Tor exits, ransomware.live, security press RSS | 15 min – 1 h |
+| `advisories` | US State Department and UK FCDO travel advisories | 6 h |
+| `displacement` | UNHCR Refugee Data Finder | daily |
+
+### Information
+
+These layers are mostly non-geographic. They appear in the ticker, tabs,
+timeline and alerts rather than as map points.
+
+| Layer | Main upstreams | Cadence |
+|---|---|---|
+| `news` | BBC, DW, France 24, Al Jazeera, Guardian, NYT, defence press, Google News search, GDELT, WHO, OCHA/IFRC (ReliefWeb RSS), Spaceflight News, Mastodon, Lemmy, Reddit | 5 min – 1 h |
+| `markets` | Yahoo Finance, CBOE delayed indices, CoinGecko, Binance, Coinbase, Kraken, Bitstamp, Deribit, mempool.space, Polymarket, Manifold, Kalshi, ECB/Frankfurter/NBP/BoC FX, US Treasury FiscalData, NY Fed, BLS, IMF, World Bank, DBnomics, Fear & Greed | 10 min – weekly |
+| `research` | OpenAlex, Crossref, Europe PMC, arXiv, ClinicalTrials.gov, PubMed, DOAJ, DataCite, Zenodo, HAL, INSPIRE-HEP | 6 h |
+| `health` | WHO Disease Outbreak News, WHO GHO indicators, openFDA recalls and adverse events, UNESCO | 3 h – weekly |
+| `policy` | US Federal Register, GovTrack, UK Parliament bills | daily |
+
+### Derived layers
+
+| Layer | Source |
+|---|---|
+| `incidents` | Worker intelligence pass: corroborated clusters across layers |
+| `anomalies` | Worker intelligence pass: activity against a 7-day baseline |
+| `ops` | Worker monitor: feed failure and freeze alerts |
+
+## Static datasets
+
+Vendored in `backend/static/`. Loaded by `npm run db:seed` and by the
+compose `seed` service. Rebuilt with the `src/scripts/build-*.ts` scripts.
+
+| Layer / use | Dataset | Licence |
+|---|---|---|
+| `bases`, `chokepoints`, `conflicts` | Curated military bases and chokepoints; UCDP GED v26.1 conflict aggregates | UCDP: free for research use |
+| `ports` | Natural Earth 10m ports | Public domain |
+| `airports` | OurAirports | Public domain |
+| `datacenters` | Curated list, PeeringDB facilities | PeeringDB guest data |
+| `energy` | WRI Global Power Plant Database v1.3.0 (≥1000 MW); OWID/Ember electricity mix | CC BY 4.0 |
+| `signals`, `theaters` | Curated monitoring stations and theatre presets | — |
+| Sanctions search | OpenSanctions OFAC SDN mirror (refreshed daily), UN Security Council consolidated list | See the publishers |
+| Cyber context | MITRE ATT&CK enterprise techniques | CC BY-SA (MITRE) |
+| Aircraft enrichment | plane-alert-db, airline codes | See the upstream repository |
+| Symbol lookup | NasdaqTrader symbol directory | — |
+| Space weather history | SILSO monthly sunspot numbers | CC BY-NC |
+
+## Optional keyed sources
+
+| Variable | Adds |
+|---|---|
+| `OTX_API_KEY` | AlienVault OTX pulses → `cyber` |
+| `FINNHUB_KEY` | Earnings calendar → `markets` |
+| `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | Outbound alert delivery (not a data source) |
+
+For setup details, see [Configuration › Optional keys](../operations/configuration.md#optional-keys).
+
+## Not supported
+
+These sources need paid plans, approved applications or keys that have no
+keyless alternative. They are left out on purpose:
+
+- Global live AIS (AISStream, commercial AIS). Only the Baltic is covered,
+  keyless, through Digitraffic.
+- ACLED conflict events (researcher token).
+- ReliefWeb API v2 (needs an approved `appname`). OCHA and IFRC headlines
+  arrive by RSS instead.
+- AviationStack, CoinGecko Pro, full Shodan, commercial search and scrape
+  APIs.
+- Telegram MTProto at scale. The public web preview is used instead.
+
+## Attribution and terms
+
+Upstream data belongs to its publishers. Thoth stores the original link
+and source id with every record so it can be attributed. If you run Thoth
+publicly or redistribute its data, check each upstream's terms. Some,
+such as UCDP, SILSO and some national open-data licences, restrict
+commercial use or require specific attribution. The licence for a source
+is noted in its collector next to the upstream URL.
+
+To propose a new source, see [Adding data sources](../development/adding-data-sources.md).

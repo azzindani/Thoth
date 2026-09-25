@@ -1,6 +1,11 @@
-# Thoth UI — responsive contract + primitive catalog
+# UI design system
 
-## 0. Visual language (2026-09-23 redesign: "instrument on warm black")
+Visual language, responsive contract and primitive catalog for the web
+terminal (`app/`). New UI work starts here.
+
+## 0. Visual language
+
+The design direction is "instrument on warm black".
 
 Tokens live in `app/src/app/globals.css` `:root`; `app/src/lib/palette.ts`
 mirrors the hex values for map/canvas/SVG code (`test/palette.test.ts` fails
@@ -33,7 +38,7 @@ if they drift). The rules, in priority order:
    half-pixel one-offs.
 7. **Severity rows** (`.sev-row[data-sev]`) carry severity on a 2px left
    edge with a mono layer label — not coloured bullets.
-8. **Floating panels over a full-bleed map** (modern pass, 2026-09-23).
+8. **Floating panels over a full-bleed map.**
    The map fills the viewport; status bar, explorer, inspector and dock are
    glass panels (`--glass` + `--blur`, hairline border, `--hl` top
    highlight, `--shadow-panel`) inset by `--inset` from the edges and each
@@ -113,33 +118,29 @@ Rules:
   camera; chrome hidden at a breakpoint is not mounted (a second WebGL
   map costs even at `display: none`); panel scrollers use
   `overscroll-behavior: contain`.
-- `body[data-bp]` mirrors the active class for JS (`desk|tab|phone`), set by `UI.breakpoint()` on resize.
+- `body[data-bp]` mirrors the active class for JS (`desk|tab|phone`), set by `page.tsx` on resize.
 
 ## 2. Primitive catalog (use these, nothing else)
 
-| Primitive | Builder | Notes |
+React primitives live in `app/src/lib/ui.tsx` unless noted.
+
+| Primitive | Component | Notes |
 |---|---|---|
-| Button | `UI.btn(label, opts)` | `.tbtn` / `.go` / `.chips button` skins via `opts.skin` |
-| Chip (filter) | `UI.chip(label, active, onClick)` | severity chips, tab buttons |
-| Layer row | `UI.layerRow(name, count, visible, onToggle)` | explorer rows: glyph + name + count |
-| Badge | `UI.badge(text, kind)` | `critical|watch|info|stale|live` → color only, never new hues |
-| Panel sheet | `UI.sheet(side)` | inspector/explorer containers; overlay behavior on `tab`/`phone` comes free |
-| Popup | `UI.popup(html, lngLat)` | map hover/click cards; single instance, escaped content |
-| KV grid | `UI.kv([[k,v]…])` | dossier/object detail |
-| Item row | `UI.item(html, onClick)` | alerts/inspector lists |
-| Field | `UI.field(placeholder)` | cmdbar + inspector inputs |
+| Glyph | `<Glyph layer size?>` | The layer's Lucide icon from the catalog, `currentColor` |
+| Button | `<Btn>` | Skins via props (`.tbtn`, `.go` primary, `.ghost-btn`) |
+| Chip (filter) | `<Chip>` | Severity chips, segmented cells, tab buttons |
+| Layer row | `<LayerRow>` | Explorer rows: glyph + name + count + visibility |
+| Badge | `<Badge text kind>` | `critical\|watch\|info\|stale\|live` → colour only, never new hues |
+| KV grid | `<KV pairs>` | Dossier / object detail |
+| Item row | `<ItemRow>` | Alerts and inspector lists |
+| Field | `<Field>` | Command bar and inspector inputs (16px on phone) |
+| Popup | `components/map-popups.ts` | Map hover/click cards; one delegated listener, escaped content |
 | Command palette | `<CommandPalette actions>` (`components/Palette.tsx`) | Ctrl/⌘+K; actions are `{group, label, hint?, run}` built from page state; ranked subsequence match; Enter ranks the live input value |
-| Data table | `<DataTable rows cols rowKey …>` (`components/DataTable.tsx`) | any tabular view: sticky header, sortable columns (`aria-sort`), `num` columns right-aligned mono, `wide` columns only on a wide panel, optional expandable detail row; compact panels scroll sideways |
+| Data table | `<DataTable rows cols rowKey …>` (`components/DataTable.tsx`) | Any tabular view: sticky header, sortable columns (`aria-sort`), `num` columns right-aligned mono, `wide` columns only on a wide panel, optional expandable detail row; compact panels scroll sideways |
+| Formatting | `ageStr()`, `fmtCadence()` | Relative ages and cadences, one wording everywhere |
 
 Rules:
-- Glyphs: Lucide SVG paths from the `LAYERS` table only (ISC). No emoji, no new icon sets.
-- Colors: CSS tokens only (`--amber --cyan --red --grn --dim --txt --panel --line`). Severity color is data, not decoration.
-- Text escaping: every builder escapes via `esc()`; raw HTML is a review-flag.
-- e2e-pinned selectors (`#map #tape-txt .lrow #cmd #tabs #tl-canvas #insp-body #feeds #health-pill`) MUST survive any refactor — tests assert on them.
-
-## 3. Build order (agreed)
-
-1. Primitives + responsive shell (this doc; desktop pixel-identical).
-2. Map-first reflow (edge rails, status strip) composed from primitives.
-3. Missions (layer/theater presets) — presets only, no new components.
-4. Light paper mode — token swap, zero structural change.
+- Glyphs: Lucide SVG paths from the `LAYERS` table in `lib/layer-catalog.ts` only (ISC). No emoji, no new icon sets.
+- Colors: CSS tokens from `:root` in `app/src/app/globals.css` only (mirrored in `lib/palette.ts` for map code; see §0). Severity colour is data, not decoration.
+- Text escaping: React escapes by default; the map popups escape via `esc()`. Raw HTML (`dangerouslySetInnerHTML`, `setHTML` with unescaped input) is a review flag.
+- e2e-pinned selectors (`#map #tape-txt .lrow #cmd #tabs #tl-canvas #insp-body #health-pill`) MUST survive any refactor — tests assert on them.

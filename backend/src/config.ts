@@ -30,7 +30,7 @@ const Env = z.object({
 		.default("osintdefender,war_monitor,clashreport"),
 	// Keyed slots (all free-signup, all honest-disabled when unset — never
 	// crash, never fake data). OTX was first (Phase 1); Finnhub earnings and
-	// Telegram push followed the same contract. Documented in OUTSTANDING.md A.
+	// Telegram push followed the same contract. Documented in docs/operations/configuration.md.
 	OTX_API_KEY: z.string().default(""),
 	FINNHUB_KEY: z.string().default(""),
 	TELEGRAM_BOT_TOKEN: z.string().default(""),

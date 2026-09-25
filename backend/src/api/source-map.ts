@@ -3,7 +3,7 @@
 // 317/317 against live /api/health. frankfurter canonically belongs to fx
 // (fxdepth only mirrors the same feed). If a source is missing here the
 // monitor shows it ungrouped — fail honest, never silently dropped.
-// Regen: see docs/OUTSTANDING.md "server monitor" receipt for the script.
+// Every new source id needs an entry (docs/development/adding-data-sources.md).
 export const SOURCE_MAP: Record<
 	string,
 	{ collector: string; intervalSec: number }

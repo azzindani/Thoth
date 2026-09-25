@@ -2,7 +2,7 @@ import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
 import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // Aviation Weather Center active SIGMETs as GeoJSON (keyless). Replaces the dead
-// FAA ASWS plan (soa.smext.faa.gov is NXDOMAIN globally). See docs/PORT-newsources.md.
+// FAA ASWS plan (soa.smext.faa.gov is NXDOMAIN globally). See docs/archive/research/PORT-newsources.md.
 const URL = "https://aviationweather.gov/api/data/airsigmet?format=geojson";
 
 interface SigFeature {

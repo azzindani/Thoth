@@ -1,6 +1,9 @@
-# Thoth conventions — the bar every change is judged against
+# Conventions
 
-## Size & shape
+The bar every change is reviewed against. For the workflow around it
+(branches, gates, pull requests), see [Contributing](../../CONTRIBUTING.md).
+
+## Size and shape
 
 - One file, one job. Cap: **700 LOC**. Past that a file is hiding a
   second module — split by responsibility, never by length alone.
@@ -32,20 +35,22 @@
   Tests assert outcomes (one pinned card, 200 with rows), not internals.
 - Green gates per merge: typecheck + lint + unit + collectors + e2e.
   Main is always shippable.
-- Receipts: PHASES.md ledger + OUTSTANDING.md updated with the change,
-  not after. No TODO without an owner and a date.
+- Docs ship with the change, not after: `CHANGELOG.md`, and the reference
+  pages the change touches (API, data sources, configuration, upgrading).
+  No TODO without an owner and a date; longer-lived work goes on the
+  [roadmap](../roadmap.md).
 
 ## Readability
 
 - Names say what it is (`content_ts`, not `ts2`). Comments say *why*.
 - Files, tests and code comments are named by function, never by the batch
   or loop that added them (`collectors-wildfires.test.ts`, not
-  `collectors-batch34.test.ts`). Batch numbers live in the PHASES ledger only.
+  `collectors-batch34.test.ts`).
 - Boring patterns. Frameworks over hand-rolls; services over scripts.
 - UI: IBM Plex Sans for chrome, Plex Mono for every number; ONE accent
   (faience) for selection/focus/primary action only; colour on data means
   severity, healthy stays neutral; square hairline controls, no pills.
-  Full rules: UI_PRIMITIVES.md §0. New colours go in the :root tokens (and
+  Full rules: [UI design system §0](ui-design-system.md#0-visual-language). New colours go in the :root tokens (and
   palette.ts for map code), never inline.
 
 ## Frontend specifics

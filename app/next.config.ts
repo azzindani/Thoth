@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 // Baseline browser hardening for every page. No CSP yet: the terminal pulls
 // map tiles, fonts and 24/7 video embeds from several third-party origins —
-// an enforced policy needs that allowlist audited first (docs/OUTSTANDING.md).
+// an enforced policy needs that allowlist audited first (SECURITY.md, known limitations).
 const SECURITY_HEADERS = [
 	{ key: "X-Content-Type-Options", value: "nosniff" },
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
