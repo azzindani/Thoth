@@ -249,7 +249,7 @@ export const COLLECTORS = {
 		intervalSec: 10800,
 		ttlSec: 21600,
 	},
-	// Add more open-source endpoints here (see docs/ADDING_ENDPOINTS.md):
+	// Add more open-source endpoints here (see docs/development/adding-data-sources.md):
 } as const;
 
 export type CollectorName = keyof typeof COLLECTORS;

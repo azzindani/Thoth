@@ -7,7 +7,7 @@
 # on the internal network and injects API_WRITE_KEY server-side. The API port
 # binds to localhost for host cron + debugging only.
 #
-# Behind a shared reverse proxy (docs/HOSTING.md §6): the proxy joins the
+# Behind a shared reverse proxy (docs/operations/deployment.md, reverse proxy): the proxy joins the
 # `thoth_edge` network, which holds the app and nothing else — it can reach
 # thoth-app-1:3000 but not the API or the database.
 

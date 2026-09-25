@@ -3,7 +3,7 @@
    Tokens here are the source of truth; src/lib/palette.ts mirrors the hex
    values for map/canvas code (test/palette.test.ts keeps them in sync).
 
-   Principles (docs/UI_PRIMITIVES.md §0):
+   Principles (docs/development/ui-design-system.md §0):
    1. The map is the canvas: full-bleed, edge to edge. Chrome floats above
       it on glass panels with a consistent inset, radius and elevation.
    2. Warm black + bone text. Hierarchy by luminance, not hue.
