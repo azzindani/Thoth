@@ -1,156 +1,79 @@
-# Thoth — Roadmap (2026-09-23)
+# Roadmap
 
-Everything agreed after the floating-UI pass, in shipping order. Each phase
-lands as its own commits with CI green before the next starts; each item
-names what "done" means. Status: `[ ]` open · `[~]` in progress · `[x]` shipped.
+This page lists open and planned work, grouped by theme and roughly in
+priority order within each group. Shipped work is recorded in the
+[Changelog](../CHANGELOG.md).
 
-Principles that apply to every phase:
-- Free and keyless first; a keyed source ships disabled-honest.
-- A source isn't "live" until the monitor has seen it succeed on a
-  networked host (this build sandbox has no egress — contract tests only).
-- No feature without tests; no UI without the three breakpoints checked.
+Status: `[ ]` open · `[~]` in progress
 
-## P1 — Monitoring you can operate from `[x]`
+## Guiding principles
 
-The monitor shows *now*; it must also show *history*, *cadence* and *why*.
+- Free and keyless first. A keyed integration ships disabled until it is
+  configured.
+- A source is not "live" until the monitor has seen it succeed from a
+  production network. Contract tests alone are not enough.
+- No feature ships without tests. No UI ships without checks at desk,
+  tablet and phone.
 
-- [x] **Run log**: every collector run (duration, outcome, rows stored,
-      error) and every source outcome recorded; 14-day retention.
-- [x] **Endpoint log**: every upstream HTTP call (host, path, status,
-      latency, bytes) captured at the fetch layer — per-endpoint health,
-      not just per-source.
-- [x] **Per-source stats**: success rate 24h / 7d, consecutive failures,
-      p50 / p95 latency, rows per run, last HTTP status.
-- [x] **Schedule**: next run due / overdue per collector.
-- [x] **Worker heartbeat**: "worker down" is visible, not silent staleness.
-- [x] **Source catalog**: upstream hosts (observed), collector, layer,
-      cadence, key requirement — `/api/monitor/catalog`.
-- [x] **Alerts**: source failing 3× in a row, or frozen → an `ops` alert
-      (toast + alerts tab), cleared on recovery; Telegram push when a bot
-      token is configured.
-- [x] **Run now**: per collector, write-key protected, picked up by the
-      worker within seconds.
-- [x] **`/metrics`**: Prometheus text format for Grafana / uptime tools.
-- [x] **Retention**: run/endpoint logs 14 d, raw fetch log 14 d, events
-      configurable (default 180 d, 0 = forever); database size shown in the monitor.
-- [x] **Monitor v2 UI**: summary header, 48-run strip per source, stats
-      columns, next-due, run-now, per-source detail, endpoints view —
-      as sortable data tables (DataTable primitive); the panel widens on
-      desk while the monitor is open (EXPAND / COMPACT).
-- [x] **Mass failure**: ≥ 25 % of feeds failing (min 10) collapses into
-      one critical `ops:mass` alert; individual pushes are suppressed.
+## Platform and integrations
 
-## P2 — Scale the map past 500 rows per layer `[x]`
+- [ ] **OpenAPI specification** generated from the zod schemas and
+      published with the docs.
+- [ ] **Reader API keys** with per-key rate limits, separate from the
+      write key.
+- [ ] **Outbound webhooks** for alerts and watch matches.
+- [ ] **Agent surface.** An MCP server and a command channel so an
+      assistant can query layers, incidents and alerts and place pins. See
+      the [AI agents proposal](proposals/ai-agents.md).
 
-- [x] Layer slices become viewport-aware: `bbox` + zoom-aware limits, with
-      spatial sampling at world zoom so every region is represented.
-- [x] Client reloads layers on camera settle (debounced), keeps clustering.
-- [x] Static catalogs (airports 5,280, bases, ports…) fully reachable when
-      zoomed in.
-      *Shipped:* `?z=&bbox=` on `/api/layers/:layer`; the client asks with
-      the padded, grid-snapped view and re-slices only visible layers whose
-      last slice was truncated — complete layers never reload on pans.
+## Security and operations
 
-## P3 — Source batches `[~]`
+- [ ] **Content-Security-Policy** for the app, with an audited allowlist
+      for tiles, fonts and video embeds.
+- [ ] **Per-user identity and an audit trail** for writes. Today there is a
+      single shared write key.
+- [ ] **Shared rate-limit and SSE state** (for example Redis) so that more
+      than one API replica can run.
+- [ ] **End-to-end backup drill** on the production host, repeated each
+      quarter.
+- [ ] **Freeze-budget review** for low-volume digest sources that show as
+      frozen.
+- [ ] **Telegram alert delivery under Compose:** pass the bot variables to
+      the `worker` service by default (see
+      [Configuration](operations/configuration.md#how-variables-reach-the-containers)).
 
-Each batch 8–10 keyless sources, contract-tested, fixtures, monitor-visible.
-- [x] Batch 32: Copernicus EMS activations, FAA airport status, Finnish
-      AIS (Digitraffic marine), UNHCR displacement, submarine cables,
-      ENISA EUVD, Tor exits, UK FCDO advisories — new `vessels`,
-      `displacement`, `cables` layers.
-- [ ] Deferred from batch 32: FEWS NET IPC phases (keyless API shape
-      unconfirmed — verify from a networked host first), RIPE RIS Live
-      (websocket stream; needs a streaming worker, not a poll collector).
-- [ ] Following batches: largest remaining keyless feeds per uncovered
-      theme (see ENDPOINTS.md "NOT free" list for what stays out).
+## Data coverage
 
-## P4 — Intelligence layer (no LLM) `[x]`
+- [~] **Keyless source batches**, worked from the
+      [candidate queue](development/source-maintenance.md#candidate-queue).
+- [ ] **Streaming sources** such as RIPE RIS Live. These need a streaming
+      worker next to the poll scheduler.
+- [ ] **Operator decision on host-blocked sources**: leave, drop, or
+      re-route egress (see
+      [Source maintenance](development/source-maintenance.md#host-blocked-operator-decision)).
+- [ ] **Keyed integrations**, once keys are available: global AIS
+      (AISStream), ACLED conflict events.
 
-- [x] **Incidents**: space-time clustering across layers into one incident
-      card with a timeline; cross-source duplicate merge (USGS/EMSC).
-      *Shipped:* the worker's intel pass (every 5 min) marks duplicate
-      quakes (same quake within 2 min / 100 km / 0.5 M across agencies,
-      USGS > EMSC > GFZ > INGV… as primary; readers hide the rest) and
-      clusters critical/watch events of the last 48 h (PostGIS DBSCAN,
-      ~110 km) that are corroborated by ≥ 2 layers or sources into the
-      `incidents` layer (timeline, reports incl. duplicates, spread).
-- [x] **Anomalies**: per-region/per-layer baselines; flags for sudden drops
-      or spikes (airspace emptying, jamming spike, news volume surge).
-      *Shipped:* hourly rolling counts per layer and 5° cell
-      (`layer_samples`), robust median/MAD over 7 days (≥ 24 samples);
-      drops for flights/vessels (skipped when the whole layer is down — a
-      dead feed is not an empty sky), spikes for jamming, news, quakes,
-      fires, conflicts, cyber → the `anomalies` layer. Incidents tab lists
-      both as data tables; rows fly the map.
-- [ ] Remaining: explicit cross-layer rules (e.g. internet outage near a
-      cable landing), and per-hour-of-week baselines once history exists.
+## Intelligence
 
-## P5 — Analyst workflow `[x]`
+- [ ] Explicit cross-layer rules, for example an internet outage near a
+      cable landing, or airspace emptying near a conflict event.
+- [ ] Hour-of-week anomaly baselines, once enough history has built up.
+- [ ] Market analytics HUD and backtesting. This needs several months of
+      archived sitrep history first (earliest Q1 2027).
+- [ ] Company exposure view. This needs a company-exposure dataset. The
+      identity lookup (GLEIF) already ships.
 
-- [x] **Time replay**: scrub/play the last 24–72 h on the map.
-      *Shipped:* REPLAY in the dock (and the palette): 72 h slider in
-      15-min steps, trailing window 1/6/24 h, play at 1/3/6 h per second.
-      A local filter over each layer's last slice — no refetch while
-      scrubbing; static catalogs and daily layers stay as background;
-      LIVE restores the live picture.
-- [x] **Area watches**: draw a circle/polygon; alert when anything enters.
-      *Shipped:* watch kind `area` (migration 009: geometry column) —
-      circle via lat/lon/radius_km or a GeoJSON polygon over the API; in
-      the app, Area tab → name → WATCH saves the dossier circle. Live
-      events inside match (catalogs never) and raise the existing WATCH
-      toasts; watched areas draw as a dashed accent outline.
-- [x] **Since you last looked**: new / escalated / resolved digest.
-      *Shipped:* the browser snapshots the critical/watch items it showed
-      and diffs the 72 h alert window on return (after ≥ 10 min away):
-      new, escalated (watch → critical), resolved (gone while still in
-      the window). A dismissible card lists them as a data table; rows
-      fly the map. `/api/alerts?hours=` (1–168).
-- [x] **Country pages**: advisories, conflicts, hazards, outages,
-      sanctions, markets, news per country.
-      *Shipped:* Country tab / `country <name>` / palette: US + UK travel
-      advice and UNHCR displacement (anchored on the capital), per-layer
-      counts and critical/watch items within 250–2000 km of the capital
-      (7 d), and wire stories that name the country (3 d) — as tables.
-      `/api/country?q=&radius_km=`, `/api/country/list`. Not yet:
-      sanctions and markets per country (needs ISO codes per row).
-- [x] **Saved workspaces**: layers + camera + windows + filters, named and
-      shareable by link.
-      *Shipped:* palette → save (named, this browser), open, delete, or
-      copy a link: `#ws=` carries hidden layers, camera, mission,
-      severity filter, map mode, tab and panel layout in the URL itself.
-      Pop-out windows are not part of a workspace yet.
-- [x] **Map notes** → sitrep export with map snapshot / PDF.
-      *Shipped:* notes gain an optional place (migration 010: lat/lon,
-      both or neither). Area tab → NOTE HERE pins a note to the dossier
-      point; pinned notes draw as labelled accent pins above the data
-      (never picked or counted); the Notes tab flies to them. Palette →
-      *Sitrep report of this view* (or `report` in the command line):
-      a snapshot of the map as drawn, then critical and watch items
-      (24 h), the top incidents and the map notes, limited to the view
-      (the world below zoom 3), plus feed gaps. PRINT / PDF uses the
-      browser's print dialog with a print stylesheet; .MD downloads the
-      same report as Markdown tables. The daily archived `sitrep`
-      command is unchanged.
-- [x] **Command palette** (Ctrl+K) and `?` shortcut sheet.
-      *Shipped:* every tab, layer (show/hide reflects live state), map
-      mode, mission, theater fly-to and panel action, fuzzy-ranked;
-      ↑/↓/Enter/Esc. `/` no longer steals the slash while typing.
+## Analyst workflow
 
-## P6 — Thoth as a platform `[ ]`
+- [ ] Country pages: sanctions and markets per country (needs ISO codes on
+      each row).
+- [ ] Pop-out windows saved as part of workspaces.
 
-- [ ] OpenAPI spec generated from the zod schemas; reader API keys with
-      rate limits; outbound webhooks for alerts.
-- [ ] MCP server so an assistant can query layers, incidents and alerts.
+## Frontend
 
-## P7 — Production polish `[ ]`
-
-- [ ] Self-hosted vector basemap (PMTiles, keyless) + the warm style.
-- [ ] Installable PWA; push notifications for critical alerts.
-- [ ] Content-Security-Policy with an audited allowlist.
-- [ ] Backups verified end to end (BACKUP.md drill).
-
-## Already shipped (2026-09-23)
-
-Production hardening, CI, design system, floating panels, collapsible
-chrome + clear view, pop-out windows, panel-aware cards, hover fixes,
-sources batch 31 (navwarn, gpsjam, advisories, SPC, tsunami, JTWC).
+- [ ] Self-hosted vector basemap (PMTiles, keyless) in the warm style.
+- [ ] Installable PWA with push notifications for critical alerts.
+- [ ] Light "paper" theme, as a token swap only with no structural change.
+- [ ] Remove the deprecated single-file terminal (`backend/public/index.html`)
+      and its e2e suite. It is scheduled for after 2026-10-09.

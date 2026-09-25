@@ -12,7 +12,7 @@
     --bg:#000; --panel:#0a0a0a; --panel2:#111; --line:#2a2a2a; --line2:#3a3a3a;
     --amber:#ffa028; --txt:#e8e8e8; --dim:#8a8a8a; --cyan:#4dd2ff; --red:#ff5d5d; --grn:#35d07f;
     --mono:ui-monospace,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
-    /* primitive tokens — layout + touch (see docs/UI_PRIMITIVES.md) */
+    /* primitive tokens — layout + touch (see docs/development/ui-design-system.md) */
     --rail:56px; --expl:232px; --insp:330px; --tap:44px; --gap:8px; --pad:10px;
   }
   *{box-sizing:border-box}
@@ -77,7 +77,7 @@
   .maplibregl-popup-content a{color:var(--cyan)}
   body.nvg #map canvas{filter:grayscale(1) sepia(1) hue-rotate(70deg) saturate(3) brightness(.9)}
   #counts{display:none}
-  /* ── responsive shell (docs/UI_PRIMITIVES.md §1). Desktop (≥1200px) unchanged. ── */
+  /* ── responsive shell (docs/development/ui-design-system.md §1). Desktop (≥1200px) unchanged. ── */
   #sheet-toggle,#insp-close{display:none}
   @media (max-width:1199px){
     #main{grid-template-columns:var(--rail) 1fr}
@@ -235,7 +235,7 @@ async function ensureIcon(name){
 }
 const state = { visible:Object.fromEntries(Object.keys(LAYERS).map(k=>[k,true])), sev:'', since:null, cinema:false, spin:null, globe:true, tab:'object', sel:null };
 const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-/* ── UI primitives (docs/UI_PRIMITIVES.md §2): every builder escapes; skins via tokens. ── */
+/* ── UI primitives (docs/development/ui-design-system.md §2): every builder escapes; skins via tokens. ── */
 const UI = {
   el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!=null) d.innerHTML=html; return d; },
   btn(label, {skin='tbtn', onClick=null}={}){ const b=UI.el('button',skin,esc(label)); if(onClick) b.onclick=onClick; return b; },

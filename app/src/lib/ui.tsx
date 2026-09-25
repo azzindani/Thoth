@@ -1,4 +1,4 @@
-// UI primitives — React port of docs/UI_PRIMITIVES.md §2.
+// UI primitives — React port of docs/development/ui-design-system.md §2.
 // Tokens-only colors, Lucide glyphs only, escaped by construction (React).
 import type { ReactNode } from "react";
 import { LAYERS } from "./layer-catalog";
