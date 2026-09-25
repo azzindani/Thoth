@@ -8,6 +8,9 @@ operator action are also listed in
 
 ## [Unreleased]
 
+### Removed
+- Dependabot version-update configuration (`.github/dependabot.yml`).
+
 ### Changed
 - Reorganized the documentation into a structured `docs/` tree
   (architecture, operations, reference, development). Added `CONTRIBUTING.md`,

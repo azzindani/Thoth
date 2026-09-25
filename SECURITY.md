@@ -85,8 +85,8 @@ a password prompt.
 - Non-root, multi-stage container images with healthchecks and memory
   limits.
 - Upstream secrets in URL paths are masked in the call log.
-- Dependabot for npm, GitHub Actions and Docker images, plus
-  `npm audit --audit-level=high` in CI.
+- `npm audit --omit=dev --audit-level=high` in CI. Automated dependency
+  update PRs are turned off; update dependencies deliberately.
 
 ### Known limitations
 
