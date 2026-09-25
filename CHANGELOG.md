@@ -11,8 +11,8 @@ operator action are also listed in
 ### Changed
 - Reorganized the documentation into a structured `docs/` tree
   (architecture, operations, reference, development). Added `CONTRIBUTING.md`,
-  `SECURITY.md` and this changelog. The build ledgers and research notes
-  moved to `docs/archive/`.
+  `SECURITY.md` and this changelog. Removed the build ledgers, the
+  per-batch endpoint log and the upstream-project research notes.
 
 ## 2026-09-24
 

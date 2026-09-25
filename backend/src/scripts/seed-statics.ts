@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { pool } from "../db/client.js";
 
-// Idempotent seed of static intel layers (vendored PORT-*.md statics).
+// Idempotent seed of static intel layers (vendored static/*.json datasets).
 // Re-run anytime; stable ids refresh in place via ON CONFLICT.
 const LAYERS: {
 	file: string;

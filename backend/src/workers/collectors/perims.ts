@@ -3,7 +3,7 @@ import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 
 // NIFC WFIGS current interagency fire perimeters (ArcGIS FeatureServer, keyless).
 // Org ID migrated 2024-25: T4QMspbfLg3qTGWY (old ...V5aH is dead). Polygon twin
-// to the FIRMS hotspot dots. See docs/archive/research/PORT-newsources.md.
+// to the FIRMS hotspot dots.
 const URL =
 	"https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query";
 

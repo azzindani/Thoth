@@ -94,8 +94,8 @@ canvas (see `firstPoint` in `breakpoints.spec.ts`, `pointOn` in
 
 Binding rule: the terminal MUST be usable on any screen width — phone, tablet,
 laptop, ultrawide. New UI work starts from primitives, never from one-off markup.
-Globe + flat map (osiris-style) is the agreed renderer; everything around it is
-composed from the catalog below.
+A single MapLibre map (globe and flat projections) is the renderer; everything
+around it is composed from the catalog below.
 
 ## 1. Breakpoints (width-based, device-agnostic)
 
