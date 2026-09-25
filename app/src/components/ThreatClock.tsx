@@ -41,7 +41,7 @@ export default function ThreatClock() {
 		};
 	}, []);
 	// Only an elevated state earns colour (critical ≤2, watch 3); 4–5 stay
-	// neutral — "healthy is quiet" (docs/UI_PRIMITIVES.md §0).
+	// neutral — "healthy is quiet" (docs/development/ui-design-system.md §0).
 	const col =
 		defcon <= 2 ? "var(--red)" : defcon === 3 ? "var(--amber)" : "var(--txt2)";
 	// Five cells, DEFCON 5 → 1 left to right; cells up to the level light up.

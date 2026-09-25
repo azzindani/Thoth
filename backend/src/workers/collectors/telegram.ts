@@ -7,7 +7,7 @@ import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
 // Keyless web-preview scrape (osiris pattern): https://t.me/s/<channel>, regex posts, no MTProto.
 const CHANNELS = telegramChannels();
 
-// Tiny multilingual place dictionary for v0 geoparsing (expand in docs/ADDING_ENDPOINTS.md)
+// Tiny multilingual place dictionary for v0 geoparsing (extend the table below as channels need it)
 const PLACES: Array<{ name: string; lon: number; lat: number }> = [
 	{ name: "kyiv", lon: 30.523, lat: 50.45 },
 	{ name: "kharkiv", lon: 36.23, lat: 49.99 },

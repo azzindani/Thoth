@@ -37,7 +37,7 @@ describe("recon kinds", () => {
 		it(`${kind} answers honestly (200+ok:true, or honest 502/429/503)`, async () => {
 			const res = await fetch(`${API}/api/osint/${kind}${q}`);
 			// Upstream-backed routes fail honest (502/429/503) when the source
-			// flakes — that is the CONVENTIONS.md contract, not a test failure.
+			// flakes — that is the docs/development/conventions.md contract, not a test failure.
 			// Shape-only kinds (sanctions geo/ip) answer 200 with bare arrays.
 			assert.ok(
 				[200, 400, 429, 502, 503].includes(res.status),

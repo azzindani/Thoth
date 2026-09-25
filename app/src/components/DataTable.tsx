@@ -1,5 +1,5 @@
 "use client";
-// DataTable: the one tabular primitive (docs/UI_PRIMITIVES.md §2).
+// DataTable: the one tabular primitive (docs/development/ui-design-system.md §2).
 // Sticky header, sortable columns (header buttons with aria-sort), numeric
 // columns right-aligned in the mono voice, optional expandable rows. Rows
 // stay real <tr>s so the table reads correctly to assistive tech; on
