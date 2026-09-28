@@ -401,7 +401,9 @@ function revealUnderCard(map: maplibregl.Map, pop: maplibregl.Popup): void {
 	const pt = map.project(ll);
 	const y = pt.y + mapBox.top;
 	const x = pt.x + mapBox.left;
-	const bottom = window.innerHeight - 80; // above the command pill
+	// above the bottom navigation (and the command pill when shown)
+	const nav = document.getElementById("phone-nav");
+	const bottom = (nav?.offsetTop ?? window.innerHeight - 80) - 16;
 	const want = box.bottom + (bottom - box.bottom) / 2;
 	if (y > box.bottom + 24 && y < bottom && x > 0 && x < window.innerWidth)
 		return;

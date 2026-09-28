@@ -56,6 +56,7 @@ export default function Ticker({
 	onClear,
 	sse,
 	sseLast,
+	onPalette,
 }: {
 	mode: string;
 	setMode: (m: string) => void;
@@ -70,6 +71,8 @@ export default function Ticker({
 	sse?: { ok: boolean; n: number };
 	/** Time of the last stream message (a ref: heartbeats never re-render). */
 	sseLast?: { current: number };
+	/** opens the command palette (the only way in used to be Ctrl+K) */
+	onPalette?: () => void;
 }) {
 	const [tape, setTape] = useState("booting…");
 	const [pill, setPill] = useState(<span>···</span>);
@@ -204,17 +207,6 @@ export default function Ticker({
 
 	return (
 		<div className="ticker" id="ticker">
-			{/* Mobile nav: ☰ opens the layer sheet (like a navigation pane —
-			tap a layer directly there). Desktop keeps the icon rail. */}
-			<button
-				className="sheet-toggle"
-				aria-label="layers"
-				onClick={() =>
-					document.getElementById("explorer")?.classList.toggle("open")
-				}
-			>
-				LAYERS
-			</button>
 			<span className="logo">THOTH</span>
 			<Clock />
 			<div className="tape">
@@ -287,6 +279,27 @@ export default function Ticker({
 					CLEAR
 				</Btn>
 			</fieldset>
+			{/* Tablet has no inspector edge tab: the sheet opens from here. */}
+			<button
+				type="button"
+				className="tbtn tab-only"
+				id="intel-btn"
+				onClick={() =>
+					document.getElementById("inspector")?.classList.toggle("open")
+				}
+				title="open or close the inspector (i)"
+			>
+				INTEL
+			</button>
+			<button
+				type="button"
+				className="tbtn"
+				id="palette-btn"
+				onClick={onPalette}
+				title="every command, layer, view and saved workspace (Ctrl+K)"
+			>
+				⌘K
+			</button>
 		</div>
 	);
 }

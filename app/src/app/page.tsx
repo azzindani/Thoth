@@ -24,6 +24,7 @@ import {
 	CommandPalette,
 	ShortcutSheet,
 } from "../components/Palette";
+import PhoneNav, { type NavKey } from "../components/PhoneNav";
 import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
 import Replay from "../components/Replay";
 import SinceDigest from "../components/SinceDigest";
@@ -31,6 +32,7 @@ import Sitrep from "../components/Sitrep";
 import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
+import ToolsSheet from "../components/ToolsSheet";
 import { API, api } from "../lib/api";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
 import {
@@ -80,6 +82,11 @@ export default function Terminal() {
 	const [replayOn, setReplayOn] = useState(false);
 	const [countryQ, setCountryQ] = useState<string | undefined>(undefined);
 	const [inspReq, setInspReq] = useState<InspRequest | null>(null);
+	// Phone navigation: the More sheet, the command line (shown on demand
+	// above the nav) and new critical alerts since Alerts was last opened.
+	const [toolsOpen, setToolsOpen] = useState(false);
+	const [cmdOpen, setCmdOpen] = useState(false);
+	const [alertBadge, setAlertBadge] = useState(0);
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 	const [keysOpen, setKeysOpen] = useState(false);
 	const [sitrepOn, setSitrepOn] = useState(false);
@@ -249,6 +256,8 @@ export default function Terminal() {
 			} else if (e.key === "Escape") {
 				setPalOpen(false);
 				setKeysOpen(false);
+				setToolsOpen(false);
+				setCmdOpen(false);
 				document.getElementById("inspector")?.classList.remove("open");
 				setOsint(null);
 				setFull(null);
@@ -277,6 +286,65 @@ export default function Terminal() {
 		return () => document.removeEventListener("keydown", onKey);
 	}, [mission, applyMission, setPanel, togglePanel, toggleClear]);
 
+	// Phone nav: one sheet at a time. A tap on the active item closes it.
+	const navPick = useCallback(
+		(k: NavKey) => {
+			const ex = document.getElementById("explorer");
+			const insp = document.getElementById("inspector");
+			const exOpen = !!ex?.classList.contains("open");
+			const inOpen = !!insp?.classList.contains("open");
+			const was =
+				k === "layers"
+					? exOpen
+					: k === "intel"
+						? inOpen && tab !== "alerts"
+						: k === "alerts"
+							? inOpen && tab === "alerts"
+							: k === "search"
+								? cmdOpen
+								: toolsOpen;
+			ex?.classList.remove("open");
+			insp?.classList.remove("open");
+			setToolsOpen(false);
+			setCmdOpen(false);
+			setFull(null);
+			if (was) return;
+			if (k === "layers") ex?.classList.add("open");
+			else if (k === "intel") {
+				if (tab === "alerts") setTab("object");
+				insp?.classList.add("open");
+			} else if (k === "alerts") {
+				setTab("alerts");
+				setAlertBadge(0);
+				insp?.classList.add("open");
+			} else if (k === "search") {
+				setCmdOpen(true);
+				requestAnimationFrame(() => document.getElementById("cmd")?.focus());
+			} else setToolsOpen(true);
+		},
+		[tab, cmdOpen, toolsOpen],
+	);
+	// A sheet opened any other way (a command, the status pill) takes the
+	// screen from the command line and the More sheet.
+	useEffect(() => {
+		const els = ["explorer", "inspector"]
+			.map((id) => document.getElementById(id))
+			.filter((e): e is HTMLElement => !!e);
+		const mo = new MutationObserver(() => {
+			if (els.some((e) => e.classList.contains("open"))) {
+				setToolsOpen(false);
+				setCmdOpen(false);
+			}
+		});
+		for (const e of els)
+			mo.observe(e, { attributes: true, attributeFilter: ["class"] });
+		return () => mo.disconnect();
+	}, []);
+	useEffect(() => {
+		document.body.classList.toggle("cmd-open", cmdOpen);
+		document.body.classList.toggle("replay-on", replayOn);
+	}, [cmdOpen, replayOn]);
+
 	// breakpoint mirror (responsive contract)
 	useEffect(() => {
 		function bp() {
@@ -304,7 +372,21 @@ export default function Terminal() {
 		// The dock's height is content-driven; publish the measured value so
 		// the chrome stacked above it (minimap, toasts, full view) clears it.
 		const dock = el("bottom");
-		if (dock?.offsetHeight)
+		const nav = el("phone-nav");
+		// Phone: the bottom chrome is the nav bar, plus the command pill or
+		// replay bar when one is shown above it.
+		const phoneBottom = nav
+			? Math.min(
+					nav.offsetTop,
+					dock?.offsetHeight ? dock.offsetTop : Number.POSITIVE_INFINITY,
+				)
+			: null;
+		if (phoneBottom != null)
+			document.documentElement.style.setProperty(
+				"--dock-h",
+				`${Math.max(0, window.innerHeight - phoneBottom - 8)}px`,
+			);
+		else if (dock?.offsetHeight)
 			document.documentElement.style.setProperty(
 				"--dock-h",
 				`${dock.offsetHeight}px`,
@@ -319,7 +401,12 @@ export default function Terminal() {
 		const H = window.innerHeight;
 		const tk = el("ticker");
 		const top = tk ? tk.offsetTop + tk.offsetHeight : 0;
-		const bottom = dock && !hid("hide-dock") ? H - dock.offsetTop : 0;
+		const bottom =
+			phoneBottom != null
+				? H - phoneBottom
+				: dock && !hid("hide-dock")
+					? H - dock.offsetTop
+					: 0;
 		const ex = el("explorer");
 		const left =
 			bp === "phone" || !ex || hid("hide-expl")
@@ -356,7 +443,13 @@ export default function Terminal() {
 	syncPaddingRef.current = syncPadding;
 	useEffect(() => {
 		const ro = new ResizeObserver(() => syncPadding());
-		for (const id of ["ticker", "explorer", "inspector", "bottom"]) {
+		for (const id of [
+			"ticker",
+			"explorer",
+			"inspector",
+			"bottom",
+			"phone-nav",
+		]) {
 			const el = document.getElementById(id);
 			if (el) ro.observe(el);
 		}
@@ -414,6 +507,7 @@ export default function Terminal() {
 				);
 				for (const a of j.items) seenCrit.current.add(a.id);
 				if (fresh.length) {
+					setAlertBadge((b) => b + fresh.length);
 					setToasts((t) =>
 						[
 							...fresh.map((a) => ({ id: a.id, title: a.title ?? a.id })),
@@ -881,6 +975,37 @@ export default function Terminal() {
 				},
 			]),
 			{
+				id: "area-centre",
+				group: "Report",
+				label: "Area dossier at the map centre",
+				run: () => {
+					const c = mapRef.current?.getCenter();
+					if (c)
+						setInspReq({
+							n: Date.now(),
+							kind: "area",
+							lat: c.lat.toFixed(4),
+							lng: c.lng.toFixed(4),
+						});
+				},
+			},
+			{
+				id: "monitor",
+				group: "Help",
+				label: "Server monitor",
+				run: () => {
+					setTab("monitor");
+					setPanel("insp", false);
+					document.getElementById("inspector")?.classList.add("open");
+				},
+			},
+			{
+				id: "changelog",
+				group: "Help",
+				label: "Changelog",
+				run: () => setChangelog(true),
+			},
+			{
 				id: "keys",
 				group: "Help",
 				label: "Keyboard shortcuts",
@@ -910,6 +1035,7 @@ export default function Terminal() {
 				sse={sse}
 				sseLast={sseLast}
 				onMonitor={() => setTab("monitor")}
+				onPalette={() => setPalOpen(true)}
 				focus={focus}
 				setFocus={setFocus}
 				clear={clear}
@@ -1067,6 +1193,27 @@ export default function Terminal() {
 				/>
 			</div>
 			<PopWindows getMap={getMap} onFull={selectFull} />
+			{phone && (
+				<>
+					<ToolsSheet
+						open={toolsOpen}
+						onClose={() => setToolsOpen(false)}
+						mode={mode}
+						setMode={setMode}
+						globe={globe}
+						setGlobe={setGlobe}
+						actions={toolsOpen ? buildActions() : []}
+						onPalette={() => setPalOpen(true)}
+					/>
+					<PhoneNav
+						onPick={navPick}
+						tab={tab}
+						searchOpen={cmdOpen}
+						moreOpen={toolsOpen}
+						alertBadge={alertBadge}
+					/>
+				</>
+			)}
 			{/* Edge handles: a slim grip on each panel's inner edge; when the
 			panel is hidden it becomes a labelled tab on the screen edge. */}
 			{(["expl", "insp", "dock"] as const).map((k) => (
