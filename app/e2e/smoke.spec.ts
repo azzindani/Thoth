@@ -1,5 +1,11 @@
 // Thoth app smoke: boots, counts, tabs, OSINT command. Needs backend on :4000 + app on :3000.
+
+import { readFileSync } from "node:fs";
 import { expect, test } from "./fixtures";
+
+const VERSION: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 test("terminal boots with counts + globe", async ({ page }) => {
 	await page.goto("/");
@@ -33,7 +39,8 @@ test("tabs + osint command work", async ({ page }) => {
 	});
 	await page.fill("#cmd", "changelog");
 	await page.keyboard.press("Enter");
-	await expect(page.locator(".modal")).toContainText("Phase 4", {
+	// The dialog heads with the release version from package.json.
+	await expect(page.locator("#changelog-h")).toContainText(VERSION, {
 		timeout: 15000,
 	});
 });
