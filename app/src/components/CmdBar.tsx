@@ -73,7 +73,9 @@ export default function CmdBar({
 			onOut(
 				/^globe$/i.test(c)
 					? "globe ↔ flat map"
-					: `map mode: ${c.toLowerCase()}`,
+					: /^cinema$/i.test(c)
+						? "cinema toggled (grab the map to stop)"
+						: `map mode: ${c.toLowerCase()}`,
 			);
 		} else if (/^focus$/i.test(c || "")) {
 			onFocus();
