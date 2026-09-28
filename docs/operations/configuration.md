@@ -20,7 +20,7 @@ only **passes a fixed set to each service**, as listed in
 | Service | Receives |
 |---|---|
 | `api` | `DATABASE_URL`, `API_WRITE_KEY`, `CORS_ORIGIN`, `TRUST_PROXY`, `REQUESTS_PER_MIN`, `LOG_LEVEL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
-| `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `LOG_LEVEL` |
+| `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOG_LEVEL` |
 | `app` | `API_WRITE_KEY`, `APP_ACCESS_KEY`, `APP_TOKENS`, `APP_JWT_SECRET`, `APP_SESSION_TTL_MS`, `APP_TRUST_UPSTREAM_AUTH` |
 
 To set anything else in a container (for example the `*_RETENTION_DAYS`
@@ -33,14 +33,12 @@ services:
   worker:
     environment:
       EVENTS_RETENTION_DAYS: "365"
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}   # needed for ops-alert pushes
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
 ```
 
-> **Telegram alerts:** ops-alert pushes are sent by the **worker**, but the
-> default compose file only passes the Telegram bot variables to the `api`
-> (which uses them for `POST /api/notify`). Add them to the worker as shown
-> above if you want alert delivery.
+> **Telegram alerts:** set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` once
+> in `backend/.env`. Compose passes them to the `worker`, which sends
+> ops-alert pushes, and to the `api`, which uses them for
+> `POST /api/notify`.
 
 ## Backend: API and worker
 

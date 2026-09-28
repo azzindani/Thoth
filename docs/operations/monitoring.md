@@ -64,7 +64,7 @@ During a mass failure, per-source pushes are suppressed, so an outbound
 network outage sends **one** message, not hundreds.
 
 For Telegram delivery, the **worker** needs `TELEGRAM_BOT_TOKEN` and
-`TELEGRAM_CHAT_ID`. See
+`TELEGRAM_CHAT_ID`; Compose passes them from `backend/.env`. See
 [Configuration › How variables reach the containers](configuration.md#how-variables-reach-the-containers).
 Test delivery with `notify hello` in the command bar, which goes through
 the API.
