@@ -132,7 +132,7 @@ export default function Explorer({
 						</Chip>
 					))}
 				</div>
-				<div className="legend" aria-label="map legend">
+				<div className="legend">
 					<span>
 						<i className="lg-ring" style={{ borderColor: "var(--red)" }} />
 						critical

@@ -72,17 +72,21 @@ export default function PhoneNav({
 					id={`nav-${k}`}
 					className={`nav-btn${active[k] ? " on" : ""}`}
 					aria-pressed={active[k]}
+					aria-label={
+						k === "alerts" && alertBadge > 0
+							? `${LABEL[k]}, ${alertBadge} new`
+							: LABEL[k]
+					}
 					onClick={() => onPick(k)}
 				>
 					<svg
 						viewBox="0 0 24 24"
 						aria-hidden="true"
-						// biome-ignore lint/security/noDangerouslySetInnerHtml: static icon paths from this file
 						dangerouslySetInnerHTML={{ __html: ICON[k] }}
 					/>
 					<span>{LABEL[k]}</span>
 					{k === "alerts" && alertBadge > 0 && (
-						<b className="nav-badge" aria-label={`${alertBadge} new`}>
+						<b className="nav-badge" aria-hidden="true">
 							{alertBadge > 99 ? "99+" : alertBadge}
 						</b>
 					)}

@@ -1851,9 +1851,6 @@ body.focus .inspector.open {
 	body[data-bp="phone"]:not(.cmd-open):not(.replay-on) .bottom {
 		display: none;
 	}
-	body[data-bp="phone"].replay-on:not(.cmd-open) .cmdbar {
-		display: none;
-	}
 	.tl-row {
 		display: none;
 	}
@@ -1872,6 +1869,9 @@ body.focus .inspector.open {
 	.cmdbar {
 		border-top: none;
 		height: 50px;
+	}
+	body[data-bp="phone"].replay-on:not(.cmd-open) .cmdbar {
+		display: none;
 	}
 	.cmdbar input {
 		min-height: var(--tap);
@@ -3351,14 +3351,16 @@ body[data-bp="tab"] .inspector {
 	overscroll-behavior: contain;
 	padding: 0 14px 16px;
 }
-.tools-body > h3,
-.tools-body > div > h3 {
+.tools-h {
 	margin: 14px 2px 8px;
 }
 .tools-seg {
 	display: flex;
 	gap: 6px;
-	margin-bottom: 6px;
+	margin: 0 0 6px;
+	padding: 0;
+	border: 0;
+	min-width: 0;
 }
 .tools-seg > button {
 	flex: 1;
@@ -3371,7 +3373,7 @@ body[data-bp="tab"] .inspector {
 	font-size: var(--fs-s);
 	cursor: pointer;
 }
-.tools-seg > button.on {
+.tools-seg > [aria-pressed="true"] {
 	color: var(--txt);
 	background: var(--raise2);
 	border-color: var(--accent-line);
@@ -3494,7 +3496,7 @@ body[data-bp="tab"].insp-wide .inspector {
 	font-size: 11px;
 	color: var(--dim);
 }
-.legend span {
+.legend > * {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
@@ -3525,10 +3527,10 @@ body[data-bp="tab"].insp-wide .inspector {
 	padding: 10px 8px;
 	font-size: var(--fs-s);
 }
-body[data-bp="tab"] .explorer:not(.expanded) .legend {
-	display: none;
-}
-body.focus .explorer .legend {
+.legend:where(
+	body[data-bp="tab"] .explorer:not(.expanded) *,
+	body.focus .explorer *
+) {
 	display: none;
 }
 .tabs-arrow {

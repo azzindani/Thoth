@@ -34,6 +34,7 @@ import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
 import ToolsSheet from "../components/ToolsSheet";
 import { API, api, type LayerItem } from "../lib/api";
+import { useDialog } from "../lib/dialog";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
 import {
 	deleteWorkspace,
@@ -1355,35 +1356,50 @@ export default function Terminal() {
 				))}
 			</div>
 			{full && <CompleteView sel={full} onClose={() => setFull(null)} />}
-			{changelog && (
-				<div className="modal-veil" onClick={() => setChangelog(false)}>
-					<div className="modal" onClick={(e) => e.stopPropagation()}>
-						<h3>CHANGELOG</h3>
-						<div className="ibody" style={{ maxHeight: "60vh" }}>
-							<div className="item">
-								<b>Phase 4</b> · NEWS/MARKETS/CYBER tabs · toasts · shortcuts ·
-								changelog
-							</div>
-							<div className="item">
-								<b>Phase 3</b> · Next.js rebuild, parity with terminal
-							</div>
-							<div className="item">
-								<b>Phase 2</b> · freeze alarms · SSE resume · video wall
-							</div>
-							<div className="item">
-								<b>Phase 1</b> · 25 layers · 36 feeds · 11 static datasets · 7
-								OSINT endpoints
-							</div>
-							<div className="item">
-								<b>Phase 0</b> · 7 PORT docs · primitives + responsive contract
-							</div>
-						</div>
-						<button className="go" onClick={() => setChangelog(false)}>
-							Close
-						</button>
+			{changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
+		</main>
+	);
+}
+
+/** The changelog as a modal dialog (focus in, Tab trapped, Esc closes,
+ * focus back to the opener). */
+function ChangelogModal({ onClose }: { onClose: () => void }) {
+	const box = useRef<HTMLDivElement>(null);
+	useDialog(box, true, onClose);
+	return (
+		<div className="modal-veil" onClick={onClose}>
+			<div
+				className="modal"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="changelog-h"
+				ref={box}
+				onClick={(e) => e.stopPropagation()}
+			>
+				<h3 id="changelog-h">CHANGELOG</h3>
+				<div className="ibody" style={{ maxHeight: "60vh" }}>
+					<div className="item">
+						<b>Phase 4</b> · NEWS/MARKETS/CYBER tabs · toasts · shortcuts ·
+						changelog
+					</div>
+					<div className="item">
+						<b>Phase 3</b> · Next.js rebuild, parity with terminal
+					</div>
+					<div className="item">
+						<b>Phase 2</b> · freeze alarms · SSE resume · video wall
+					</div>
+					<div className="item">
+						<b>Phase 1</b> · 25 layers · 36 feeds · 11 static datasets · 7 OSINT
+						endpoints
+					</div>
+					<div className="item">
+						<b>Phase 0</b> · 7 PORT docs · primitives + responsive contract
 					</div>
 				</div>
-			)}
-		</main>
+				<button className="go" onClick={onClose}>
+					Close
+				</button>
+			</div>
+		</div>
 	);
 }
