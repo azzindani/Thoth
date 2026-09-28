@@ -59,7 +59,7 @@ test("new widgets render: threatclock + minimap + graph", async ({ page }) => {
 	await page.goto("/");
 	await expect(page.locator(".threatclock")).toBeVisible({ timeout: 30000 });
 	await expect(page.locator(".minimap")).toBeVisible({ timeout: 30000 });
-	// The page is prerendered: the minimap is in the server HTML before React
+	// The page is server-rendered: the minimap is in the HTML before React
 	// hydrates. Wait for a client-only mark (set in an effect) so the key
 	// lands on an attached listener, not on static markup.
 	await page.waitForFunction(() => !!document.body.dataset.bp);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import { LAYOUT_K, TEXT_K } from "../lib/settings";
 
@@ -19,15 +20,18 @@ export const viewport = {
 	themeColor: "#0b0b0a",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
+	// Per-request CSP nonce from src/proxy.ts (reading it renders pages on
+	// demand, which a nonce requires).
+	const nonce = (await headers()).get("x-nonce") ?? undefined;
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
-				<script dangerouslySetInnerHTML={{ __html: EARLY }} />
+				<script nonce={nonce} dangerouslySetInnerHTML={{ __html: EARLY }} />
 				<link rel="preconnect" href="https://fonts.googleapis.com" />
 				<link
 					rel="preconnect"

@@ -23,7 +23,9 @@ DATABASE_URL=postgres://thoth:thoth@localhost:5432/thoth_test npm --prefix backe
    - add user-visible changes to `CHANGELOG.md` under **Unreleased**;
    - for a new or removed data source, update
      [Data sources](docs/reference/data-sources.md);
-   - for a new or changed route, update the [API reference](docs/reference/api.md);
+   - for a new or changed route, add it to `backend/src/api/openapi-routes.ts`,
+     run `npm --prefix backend run openapi`, and update the
+     [API reference](docs/reference/api.md);
    - for a new environment variable, update [Configuration](docs/operations/configuration.md)
      and `backend/.env.example`;
    - for a change that needs operator action, add a note to [Upgrading](docs/operations/upgrading.md).
@@ -84,6 +86,7 @@ backend share one version number.
    ```bash
    npm --prefix app version X.Y.Z --no-git-tag-version
    npm --prefix backend version X.Y.Z --no-git-tag-version
+   npm --prefix backend run openapi   # the spec carries the version
    ```
 
 2. In `CHANGELOG.md`, rename **Unreleased** to `[X.Y.Z] - YYYY-MM-DD`,
