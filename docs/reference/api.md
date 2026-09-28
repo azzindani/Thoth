@@ -7,6 +7,7 @@ The Thoth API is JSON over HTTP, plus one Server-Sent Events stream.
 | Base URL (through the app) | `https://<host>/api/…`: needs the access token if the gate is on |
 | Base URL (direct) | `http://127.0.0.1:4000/api/…`: from the host only in the default compose setup |
 | Route index | `GET /api/routes` returns every registered route. It is generated from the running server, so it cannot drift from the code. |
+| OpenAPI | `GET /api/openapi.json` (OpenAPI 3.1), also committed as [`openapi.json`](openapi.json). Parameters come from the routes' zod schemas, and a unit test fails when a route is undocumented or the committed copy is stale. |
 
 ## Conventions
 

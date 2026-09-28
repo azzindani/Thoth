@@ -9,6 +9,7 @@ import {
 	requireWriteKey,
 	securityHeaders,
 } from "./middleware.js";
+import { registerOpenApi } from "./openapi.js";
 import { registerCore } from "./routes-core.js";
 import { registerCountry } from "./routes-country.js";
 import { registerIntel } from "./routes-intel.js";
@@ -51,6 +52,7 @@ export function createApp(): express.Express {
 	registerIntel(app);
 	registerMonitor(app);
 	registerCountry(app);
+	registerOpenApi(app);
 
 	app.use("/api", notFound);
 	app.use(errorHandler);
