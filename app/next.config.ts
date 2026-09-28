@@ -1,4 +1,11 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+
+// The release version, shown in the changelog dialog and Settings. The
+// app and backend share one version (CONTRIBUTING.md › Releasing).
+const VERSION: string =
+	JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"))
+		.version ?? "0.0.0";
 
 // Baseline browser hardening for every page. No CSP yet: the terminal pulls
 // map tiles, fonts and 24/7 video embeds from several third-party origins —
@@ -24,6 +31,7 @@ const nextConfig: NextConfig = {
 		// avoids https→http mixed-content blocks. Set explicitly only when the
 		// browser can reach the backend directly (e.g. local dev without proxy).
 		NEXT_PUBLIC_THOTH_API: process.env.NEXT_PUBLIC_THOTH_API ?? "",
+		NEXT_PUBLIC_THOTH_VERSION: VERSION,
 	},
 	async headers() {
 		return [{ source: "/:path*", headers: SECURITY_HEADERS }];

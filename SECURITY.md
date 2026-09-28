@@ -13,9 +13,15 @@ not to be named.
 
 ## Supported versions
 
-Thoth is released from `main`. Security fixes go to the latest commit on
-`main`. Keep deployments current (see
+Thoth is released from `main` as tagged versions (`v0.1.0` onwards).
+Only the latest release is supported: security fixes land on `main` and
+ship in the next release. Keep deployments current (see
 [Upgrading](docs/operations/upgrading.md)).
+
+| Version | Supported |
+|---|---|
+| latest `0.x` release | yes |
+| older releases | no, upgrade |
 
 ## Security model
 

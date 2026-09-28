@@ -36,8 +36,8 @@ Pages are grouped by what you are trying to do.
 
 ## Development
 
-- [Contributing](../CONTRIBUTING.md): workflow, quality gates and pull
-  requests.
+- [Contributing](../CONTRIBUTING.md): workflow, quality gates, pull
+  requests and releases.
 - [Conventions](development/conventions.md): the code standards every
   change is reviewed against.
 - [Testing](development/testing.md): test suites and how to run them.

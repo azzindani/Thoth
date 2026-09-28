@@ -1405,24 +1405,28 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
 				ref={box}
 				onClick={(e) => e.stopPropagation()}
 			>
-				<h3 id="changelog-h">CHANGELOG</h3>
+				<h3 id="changelog-h">
+					CHANGELOG · {process.env.NEXT_PUBLIC_THOTH_VERSION}
+				</h3>
 				<div className="ibody" style={{ maxHeight: "60vh" }}>
 					<div className="item">
-						<b>Phase 4</b> · NEWS/MARKETS/CYBER tabs · toasts · shortcuts ·
-						changelog
+						<b>0.1.0</b> · first release · settings with five layout and text
+						sizes · phone navigation · source and provenance on every object ·
+						half/full sheets
 					</div>
 					<div className="item">
-						<b>Phase 3</b> · Next.js rebuild, parity with terminal
+						<b>pre-release</b> · monitoring and ops alerts · replay, watches,
+						sitrep · incidents and anomalies · about 70 collectors over 300+
+						keyless sources · OSINT lookups
 					</div>
 					<div className="item">
-						<b>Phase 2</b> · freeze alarms · SSE resume · video wall
-					</div>
-					<div className="item">
-						<b>Phase 1</b> · 25 layers · 36 feeds · 11 static datasets · 7 OSINT
-						endpoints
-					</div>
-					<div className="item">
-						<b>Phase 0</b> · 7 PORT docs · primitives + responsive contract
+						<a
+							href="https://github.com/azzindani/Thoth/blob/main/CHANGELOG.md"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Full changelog ↗
+						</a>
 					</div>
 				</div>
 				<button className="go" onClick={onClose}>

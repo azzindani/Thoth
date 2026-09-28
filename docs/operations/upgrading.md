@@ -5,7 +5,7 @@
 ```bash
 cd backend
 docker compose exec -T db pg_dump -U thoth -Fc thoth > thoth-pre-upgrade.dump   # always
-git fetch && git checkout <release-or-commit>
+git fetch --tags && git checkout <release-tag-or-commit>   # e.g. v0.1.0
 docker compose up -d --build          # runs migrate + seed, then restarts services
 curl -sf localhost:4000/api/readyz && curl -sf localhost:3000/healthz
 ```
@@ -17,6 +17,19 @@ curl -sf localhost:4000/api/readyz && curl -sf localhost:3000/healthz
   those that need manual action.
 
 ## Version-specific notes
+
+Releases are tagged `vX.Y.Z` from `main`. The dated notes below come from
+before the first release and are all included in v0.1.0.
+
+### v0.1.0
+
+No manual steps: there are no new migrations or required variables.
+
+- Native (non-compose) runs now default `REQUESTS_PER_MIN` to `300`, the
+  value compose already used. If you set a lower limit yourself, keep it
+  well above about 45 requests per page load, or layers load on retry.
+- Display settings are new and kept per browser, so nothing needs to be
+  migrated.
 
 ### 2026-09-24: access-token gate and compose project name
 
