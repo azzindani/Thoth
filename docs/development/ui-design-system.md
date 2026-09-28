@@ -115,8 +115,8 @@ around it is composed from the catalog below.
 | Class | Width | Layout |
 |---|---|---|
 | `desk` | ≥1200px | Full-bleed map; floating status bar across the top, explorer (`--expl` 264px) left, inspector (`--insp` 372px) right, dock (threat · timeline · command line) between them at the bottom. Reference look. |
-| `tab` | 768–1199px | Explorer collapses to a floating 56px rail: glyph over its count (names/groups hidden; the row title carries the name). Inspector is an overlay panel below the status bar that slides in from the right, hidden until a tab/selection opens it; the dock spans rail → right edge. |
-| `phone` | <768px | Map-first. Floating status bar: LAYERS button + mark + health (clock and mode controls hidden). The dock shrinks to a floating command pill. Explorer and inspector share one bottom-sheet form (`--r-sheet` top corners, grabber, 60vh cap, slides up). Inputs are 16px so iOS never zooms; safe-area insets respected. |
+| `tab` | 768–1199px (and over 500px tall below 1024) | Explorer collapses to a floating 56px rail: glyph over its count; its ☰ expands it into the full panel over the map, and a folded-rail toggle announces itself. Inspector is an overlay panel below the status bar that slides in from the right (INTEL in the ticker), stopping above the dock; the Monitor widens it. The dock spans rail → right edge. |
+| `phone` | <768px, or ≤500px tall and <1024px wide (a phone on its side) | Map-first. Floating status bar: mark + health (clock, tape and mode controls hidden). A bottom nav (`PhoneNav.tsx`: Layers · Intel · Search · Alerts · More) sits above every sheet; the command pill shows on Search, the replay bar while replay runs. Explorer, inspector, full view and the Tools sheet share one bottom-sheet form (`--r-sheet` top corners, grabber, half/full snaps via `lib/sheet.tsx`). Long-press opens the area dossier. Inputs are 16px so iOS never zooms; safe-area insets respected. |
 
 Rules:
 - No fixed pixel widths outside the token + breakpoint system. Panels size in `px` tokens only at `desk`; everywhere else they are overlays/sheets.
