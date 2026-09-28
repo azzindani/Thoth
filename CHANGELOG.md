@@ -9,6 +9,10 @@ listed in [Upgrading](docs/operations/upgrading.md).
 
 ## [Unreleased]
 
+### Changed
+- Compose passes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to the
+  worker, so ops alerts reach Telegram without an override file.
+
 ## [0.1.0] - 2026-09-28
 
 The first tagged release. It contains all the work to date: the entries

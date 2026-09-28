@@ -101,6 +101,9 @@ services:
       TELEGRAM_CHANNELS: ${TELEGRAM_CHANNELS:-osintdefender,war_monitor,aljazeeraenglish}
       OTX_API_KEY: ${OTX_API_KEY:-}
       FINNHUB_KEY: ${FINNHUB_KEY:-}
+      # Ops-alert pushes are sent from the worker (empty = off).
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       migrate:
