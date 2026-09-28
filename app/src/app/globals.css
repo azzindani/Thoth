@@ -3570,9 +3570,23 @@ body[data-bp="tab"] #focus-btn {
 		min-height: 36px;
 	}
 	.src-link,
-	.prov-row a {
+	.prov-row a,
+	.prov-card a {
 		display: inline-block;
 		padding: 6px 0;
+	}
+	.inspector .tbtn,
+	.inspector .ghost-btn {
+		min-height: 36px;
+	}
+	.cmdbar input {
+		min-height: 36px;
+	}
+	/* the slim panel grips keep their look but take a finger-sized hit */
+	.ptoggle::after {
+		content: "";
+		position: absolute;
+		inset: -10px;
 	}
 	.fv-close {
 		width: 40px;
