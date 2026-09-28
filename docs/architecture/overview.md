@@ -186,6 +186,16 @@ Every 5 minutes (`workers/intel.ts`):
    its 7-day median/MAD baseline. Sudden spikes, or drops such as airspace
    emptying, raise rows on the `anomalies` layer. A drop is ignored when the
    whole feed is down.
+4. **Cross-layer rules** (`workers/rules.ts`). Named patterns that join two
+   layers. Their findings are stored as incidents (source `thoth-rules`,
+   `meta.rule` names the rule) with the evidence in the timeline:
+   - `outage-at-cable-landings`: an IODA internet outage in a country where
+     submarine cables land;
+   - `airspace-near-conflict`: an air traffic drop anomaly within 300 km of
+     a conflict report from the last 24 hours.
+
+   A finding disappears on the next pass once its cause is gone. To add a
+   rule, write a function that returns findings and list it in `RULES`.
 
 The daily brief (`/api/brief`) is a deterministic keyword and severity
 classification. It costs nothing to run.

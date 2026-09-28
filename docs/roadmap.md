@@ -19,7 +19,7 @@ their entry in the themed lists below.
 5. [x] Installable PWA with critical-alert notifications (Frontend).
 6. [x] Light "paper" theme (Frontend).
 7. [x] Pop-out windows saved with workspaces (Analyst workflow).
-8. [ ] Explicit cross-layer rules (Intelligence).
+8. [x] Explicit cross-layer rules (Intelligence).
 9. [ ] Removal of the deprecated single-file terminal, on or after
    2026-10-09 as announced (Frontend).
 
@@ -63,8 +63,9 @@ their entry in the themed lists below.
 
 ## Intelligence
 
-- [ ] Explicit cross-layer rules, for example an internet outage near a
-      cable landing, or airspace emptying near a conflict event.
+- [ ] More cross-layer rules (`backend/src/workers/rules.ts`), for example
+      GNSS jamming next to an air traffic drop, or a quake near a nuclear
+      plant.
 - [ ] Hour-of-week anomaly baselines, once enough history has built up.
 - [ ] Market analytics HUD and backtesting. This needs several months of
       archived sitrep history first (earliest Q1 2027).
