@@ -1,12 +1,18 @@
 # Changelog
 
 This file lists the notable changes to Thoth. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Thoth has no
-tagged releases yet, so entries are grouped by date. Changes that need
-operator action are also listed in
-[Upgrading](docs/operations/upgrading.md).
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the
+version is 0.x, a minor release may include breaking changes; they are
+marked **Breaking** here. Changes that need operator action are also
+listed in [Upgrading](docs/operations/upgrading.md).
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-09-28
+
+The first tagged release. It contains all the work to date: the entries
+below, and the dated pre-release entries after this section.
 
 ### Added
 - **Settings** (gear in the status bar, More → Settings on phones, the
@@ -62,6 +68,8 @@ operator action are also listed in
 - `GET /api/event?id=` returns one event with its provenance.
 
 ### Changed
+- The changelog dialog shows the release version and links the full
+  changelog (it listed build phases); Settings shows the version.
 - Card and full-view imagery is Esri World Imagery centred on the object
   under a crosshair, replacing the Sentinel-2 scene thumbnail (which
   showed the whole ~110 km scene, not the point). The full view still
@@ -112,7 +120,7 @@ operator action are also listed in
 ### Removed
 - Dependabot version-update configuration (`.github/dependabot.yml`).
 
-## 2026-09-24
+## 2026-09-24 (pre-release)
 
 ### Added
 - Data sources: JMA warnings (2026 "r8" system) and JMA volcano alert
@@ -147,7 +155,7 @@ operator action are also listed in
 - EPA Ireland radiation monitoring (upstream pages exceed its gateway
   timeout). Replaced by BfS ODL.
 
-## 2026-09-23
+## 2026-09-23 (pre-release)
 
 ### Added
 - **Monitoring:** run history, per-source outcomes and an upstream HTTP call
@@ -180,7 +188,7 @@ operator action are also listed in
   directly.
 - MapLibre GL 6, which fixes a critical XSS advisory.
 
-## 2026-09-09 to 2026-09-18
+## 2026-09-09 to 2026-09-18 (pre-release)
 
 ### Added
 - The Next.js 16 terminal replaces the original single-file UI: globe and
@@ -200,3 +208,6 @@ operator action are also listed in
   last-good-data serving, SSE resume.
 - CI (typecheck, lint, unit, collector contracts, route and alive suites,
   Playwright e2e, Docker build) and Dependabot.
+
+[Unreleased]: https://github.com/azzindani/Thoth/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/azzindani/Thoth/releases/tag/v0.1.0

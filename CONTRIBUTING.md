@@ -73,6 +73,36 @@ For how each suite works and what it needs, see [Testing](docs/development/testi
 - [ ] Docs and `CHANGELOG.md` updated
 - [ ] No secrets, keys or personal data in code, fixtures or screenshots
 
+## Releasing
+
+Versions follow [Semantic Versioning](https://semver.org/). The app and the
+backend share one version number.
+
+1. On a branch, set the version in both packages (this also updates the
+   lockfiles):
+
+   ```bash
+   npm --prefix app version X.Y.Z --no-git-tag-version
+   npm --prefix backend version X.Y.Z --no-git-tag-version
+   ```
+
+2. In `CHANGELOG.md`, rename **Unreleased** to `[X.Y.Z] - YYYY-MM-DD`,
+   add a new empty **Unreleased** above it, and update the compare links at
+   the bottom. Add a `vX.Y.Z` section to
+   [Upgrading](docs/operations/upgrading.md), even if it only says that no
+   manual steps are needed.
+3. Merge to `main` with CI green.
+4. Tag the merge commit on `main` and push the tag:
+
+   ```bash
+   git checkout main && git pull
+   git tag -a vX.Y.Z -m "Thoth vX.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+5. Create a GitHub release from the tag. Use the changelog section as the
+   release notes.
+
 ## Reporting bugs and security issues
 
 - Bugs and feature requests: GitHub Issues.

@@ -249,6 +249,9 @@ export default function SettingsPanel({
 						Settings are kept in this browser only. Saved workspaces are managed
 						from the command palette.
 					</p>
+					<p className="set-hint">
+						Thoth v{process.env.NEXT_PUBLIC_THOTH_VERSION}
+					</p>
 				</div>
 			</div>
 		</div>
