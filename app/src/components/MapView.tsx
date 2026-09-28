@@ -6,6 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { ApiError, api, type CameraView, type LayerItem } from "../lib/api";
 import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
 import { PALETTE, SEV_INK } from "../lib/palette";
+import { lastView, loadSettings } from "../lib/settings";
 import {
 	ensurePickHandler,
 	esc,
@@ -542,7 +543,7 @@ export async function loadLayer(
 			closeOnClick: false,
 			offset: 12,
 			className: "hov-pop",
-			maxWidth: "360px",
+			maxWidth: "min(460px, 94vw)",
 		});
 		const phovCtl = steadyHover(map, phov, (p) => {
 			phov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
@@ -686,7 +687,7 @@ export async function loadLayer(
 			closeOnClick: false,
 			offset: 12,
 			className: "hov-pop",
-			maxWidth: "360px",
+			maxWidth: "min(460px, 94vw)",
 		});
 		const hovCtl = steadyHover(map, hov, (p) => {
 			hov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
@@ -962,6 +963,7 @@ export default function MapView(props: Props) {
 	propsRef.current = props;
 
 	function initialView(): { center: [number, number]; zoom: number } {
+		loadSettings();
 		try {
 			const h = new URLSearchParams(window.location.hash.slice(1));
 			const c = (h.get("c") ?? "").split(",").map(Number);
@@ -970,7 +972,7 @@ export default function MapView(props: Props) {
 		} catch {
 			/* keep defaults */
 		}
-		return { center: [20, 30], zoom: 1.6 };
+		return lastView() ?? { center: [20, 30], zoom: 1.6 };
 	}
 	// mount-once: map construction reads the URL hash a single time
 	// biome-ignore lint/correctness/useExhaustiveDependencies: map init must run exactly once; initialView/mapCb are mount-time inputs

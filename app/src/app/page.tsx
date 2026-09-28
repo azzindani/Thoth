@@ -27,6 +27,7 @@ import {
 import PhoneNav, { type NavKey } from "../components/PhoneNav";
 import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
 import Replay from "../components/Replay";
+import SettingsPanel from "../components/SettingsPanel";
 import SinceDigest from "../components/SinceDigest";
 import Sitrep from "../components/Sitrep";
 import ThreatClock from "../components/ThreatClock";
@@ -36,6 +37,13 @@ import ToolsSheet from "../components/ToolsSheet";
 import { API, api, type LayerItem } from "../lib/api";
 import { useDialog } from "../lib/dialog";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
+import {
+	applySettings,
+	loadSettings,
+	saveView,
+	settings,
+} from "../lib/settings";
+import { useSettings } from "../lib/useSettings";
 import {
 	deleteWorkspace,
 	listWorkspaces,
@@ -94,6 +102,9 @@ export default function Terminal() {
 	// Phone navigation: the More sheet, the command line (shown on demand
 	// above the nav) and new critical alerts since Alerts was last opened.
 	const [toolsOpen, setToolsOpen] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [prefs] = useSettings();
+	useEffect(() => applySettings(loadSettings()), []);
 	const [cmdOpen, setCmdOpen] = useState(false);
 	const [alertBadge, setAlertBadge] = useState(0);
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -257,6 +268,9 @@ export default function Terminal() {
 				e.preventDefault();
 				setKeysOpen(false);
 				setPalOpen((o) => !o);
+			} else if (!typing && e.key === ",") {
+				e.preventDefault();
+				setSettingsOpen((o) => !o);
 			} else if (!typing && e.key === "?") {
 				e.preventDefault();
 				setPalOpen(false);
@@ -493,7 +507,7 @@ export default function Terminal() {
 					watchSeeded = true;
 					return;
 				}
-				if (fresh.length) {
+				if (fresh.length && settings().watchPopups) {
 					setToasts((t) =>
 						[
 							...fresh.slice(0, 3).map((w) => ({
@@ -530,8 +544,8 @@ export default function Terminal() {
 					critSeeded.current = true;
 					return;
 				}
-				if (fresh.length) {
-					setAlertBadge((b) => b + fresh.length);
+				if (fresh.length) setAlertBadge((b) => b + fresh.length);
+				if (fresh.length && settings().critPopups) {
 					setToasts((t) =>
 						[
 							...fresh.map((a) => ({
@@ -1047,6 +1061,13 @@ export default function Terminal() {
 				},
 			]),
 			{
+				id: "settings",
+				group: "View",
+				label: "Settings — size, text, time, alerts",
+				hint: ",",
+				run: () => setSettingsOpen(true),
+			},
+			{
 				id: "area-centre",
 				group: "Report",
 				label: "Area dossier at the map centre",
@@ -1109,6 +1130,7 @@ export default function Terminal() {
 				sseLast={sseLast}
 				onMonitor={() => setTab("monitor")}
 				onPalette={() => setPalOpen(true)}
+				onSettings={() => setSettingsOpen(true)}
 				focus={focus}
 				setFocus={setFocus}
 				clear={clear}
@@ -1166,7 +1188,7 @@ export default function Terminal() {
 						<>
 							{/* Hidden on phones: a second WebGL map there would still
 						    load tiles and redraw for nothing. */}
-							{!phone && <MiniMap getMap={getMap} />}
+							{!phone && prefs.minimap && <MiniMap getMap={getMap} />}
 							{graph && (
 								<EntityGraph
 									getMap={getMap}
@@ -1195,6 +1217,7 @@ export default function Terminal() {
 							try {
 								const c = m.getCenter();
 								window.location.hash = `c=${c.lng.toFixed(2)},${c.lat.toFixed(2)},${m.getZoom().toFixed(1)}`;
+								saveView([c.lng, c.lat], m.getZoom());
 							} catch {
 								/* keep */
 							}
@@ -1220,7 +1243,7 @@ export default function Terminal() {
 			<div className="bottom" id="bottom">
 				<div className="tl-row">
 					<ThreatClock />
-					<div style={{ flex: 1, minWidth: 0 }}>
+					<div className="tl-main" style={{ flex: 1, minWidth: 0 }}>
 						{replayOn ? (
 							<Replay getMap={getMap} />
 						) : (
@@ -1357,6 +1380,12 @@ export default function Terminal() {
 			</div>
 			{full && <CompleteView sel={full} onClose={() => setFull(null)} />}
 			{changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
+			{settingsOpen && (
+				<SettingsPanel
+					onClose={() => setSettingsOpen(false)}
+					onNotice={notice}
+				/>
+			)}
 		</main>
 	);
 }

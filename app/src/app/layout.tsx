@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { LAYOUT_K, TEXT_K } from "../lib/settings";
+
+// Applies the saved size levels before first paint (no flash of the
+// default size); lib/settings.ts applies the full set once the app mounts.
+const EARLY = `try{var s=JSON.parse(localStorage.getItem("thoth.settings")||"null")||{};var L=${JSON.stringify(LAYOUT_K)},T=${JSON.stringify(TEXT_K)},h=document.documentElement;if(L[s.layout])h.style.setProperty("--lk",L[s.layout]);if(T[s.text])h.style.setProperty("--fk",T[s.text]);if(s.solid)h.classList.add("solid-panels");if(s.motion==="reduce")h.classList.add("reduce-motion")}catch(e){}`;
 
 export const metadata: Metadata = {
 	title: "THOTH — live intelligence terminal",
@@ -20,8 +25,9 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
+				<script dangerouslySetInnerHTML={{ __html: EARLY }} />
 				<link rel="preconnect" href="https://fonts.googleapis.com" />
 				<link
 					rel="preconnect"

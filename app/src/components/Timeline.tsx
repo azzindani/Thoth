@@ -80,7 +80,7 @@ export default function Timeline({
 		<div>
 			<div className="tl-head">
 				<span>
-					Timeline ·{" "}
+					<span className="tl-title">Timeline · </span>
 					<select
 						className="tl-layer"
 						value={layer}

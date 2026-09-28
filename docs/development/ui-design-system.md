@@ -98,6 +98,13 @@ if they drift). The rules, in priority order:
     `GET /api/event`) states feed health, observed vs re-confirmed time
     and corroboration, and says "single source" plainly when nothing else
     agrees.
+15. **Two size dials, one baseline.** Every length in the chrome is a
+    token or a `calc(Npx * var(--lk))` (layout) / `calc(Npx * var(--fk))`
+    (text); `lib/settings.ts` sets the multipliers on `<html>` from the
+    Settings panel (five levels each, M = 1 = the original design) and
+    the layout script applies them before first paint. New CSS follows
+    the same rule; only hairlines (1–3 px), the 256 px imagery tiles, the
+    switch geometry and 16 px iOS input text stay fixed.
 
 Testing rule: with panels floating over the map, a feature can be rendered
 yet covered by chrome. E2e specs pick map points with
