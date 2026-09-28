@@ -1,5 +1,5 @@
 import type express from "express";
-import { z } from "zod";
+import { DnsParams } from "./schemas.js";
 
 /**
  * Keyless recon lookups, on-demand only (never polled).
@@ -83,9 +83,6 @@ export function registerRecon(app: express.Express): void {
 		}
 	});
 
-	const DnsParams = z.object({
-		q: z.string().trim().min(1).max(253),
-	});
 	// DNS records via HackerTarget free tier (A/AAAA/MX/NS/TXT/SOA).
 	app.get("/api/osint/dns", async (req, res) => {
 		const p = DnsParams.safeParse({ q: req.query.q });

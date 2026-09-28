@@ -14,34 +14,12 @@ import {
 } from "../db/queries.js";
 import { log } from "../lib/logger.js";
 import { frozenBudget } from "./freeze.js";
+import { registeredRoutes } from "./openapi.js";
+import { DossierParams, HistoryParams, ViewParams } from "./schemas.js";
 import { LayerParams, VERSION } from "./shared.js";
 import { SOURCE_MAP } from "./source-map.js";
 
 const BOOT = Date.now();
-
-/** Camera view for map slices: zoom + optional bbox "w,s,e,n" (w > e
- * crosses the antimeridian). */
-const ViewParams = z.object({
-	z: z.coerce.number().min(0).max(24).optional(),
-	bbox: z
-		.string()
-		.max(120)
-		.transform((s) => s.split(",").map(Number))
-		.refine(
-			(b) =>
-				b.length === 4 &&
-				b.every(Number.isFinite) &&
-				b[0] >= -180 &&
-				b[2] <= 180 &&
-				b[1] >= -90 &&
-				b[3] <= 90 &&
-				b[1] < b[3] &&
-				b[0] <= 180 &&
-				b[2] >= -180,
-		)
-		.transform((b) => b as [number, number, number, number])
-		.optional(),
-});
 
 /** Core routes: health, stats, versions, route index, layers, brief, alerts, dossier. */
 export function registerCore(app: express.Express): void {
@@ -127,22 +105,7 @@ export function registerCore(app: express.Express): void {
 	// Self-describing route index, generated from the Express stack at runtime —
 	// documentation that cannot drift from the code.
 	app.get("/api/routes", (_req, res) => {
-		const routes: { method: string; path: string }[] = [];
-		const stack =
-			(app as unknown as { router?: { stack?: unknown[] } }).router?.stack ??
-			[];
-		for (const l of stack) {
-			const r = (l as { route?: { path?: unknown; methods?: unknown } }).route;
-			if (typeof r?.path !== "string") continue;
-			const methods = r.methods as Record<string, unknown> | undefined;
-			for (const [m, on] of Object.entries(methods ?? {}))
-				if (on && !m.startsWith("_"))
-					routes.push({ method: m.toUpperCase(), path: r.path });
-		}
-		routes.sort(
-			(a, b) =>
-				a.path.localeCompare(b.path) || a.method.localeCompare(b.method),
-		);
+		const routes = registeredRoutes(app);
 		res.json({ ok: true, count: routes.length, routes });
 	});
 
@@ -246,12 +209,6 @@ export function registerCore(app: express.Express): void {
 		}
 	});
 
-	const HistoryParams = z.object({
-		layer: z.string().min(1).max(64),
-		bucket: z.enum(["hour", "day"]).default("day"),
-		from: z.string().datetime({ offset: true }).optional(),
-		to: z.string().datetime({ offset: true }).optional(),
-	});
 	app.get("/api/layers/:layer/history", async (req, res) => {
 		const p = HistoryParams.safeParse({
 			layer: req.params.layer,
@@ -280,11 +237,6 @@ export function registerCore(app: express.Express): void {
 		}
 	});
 
-	const DossierParams = z.object({
-		lat: z.coerce.number().min(-90).max(90),
-		lon: z.coerce.number().min(-180).max(180),
-		radius_km: z.coerce.number().min(1).max(1000).default(100),
-	});
 	app.get("/api/dossier", async (req, res) => {
 		const p = DossierParams.safeParse({
 			lat: req.query.lat,
