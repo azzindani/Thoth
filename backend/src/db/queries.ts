@@ -242,11 +242,12 @@ export async function getBrief() {
 		source: string;
 		layer: string;
 		title: string;
+		url: string | null;
 		severity: string;
 	};
 	const q = (sev: string, lim: number) =>
 		query<Row>(
-			`SELECT id, ts, source, layer, title, severity FROM events
+			`SELECT id, ts, source, layer, title, url, severity FROM events
        WHERE ts > now() - interval '24 hours' AND severity = $1
        ORDER BY ts DESC LIMIT $2`,
 			[sev, lim],

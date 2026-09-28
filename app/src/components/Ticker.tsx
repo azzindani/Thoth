@@ -269,7 +269,7 @@ export default function Ticker({
 				<Btn on={!!cinema} onClick={() => setMode("cinema")}>
 					CINEMA
 				</Btn>
-				<Btn on={focus} onClick={() => setFocus(!focus)}>
+				<Btn on={focus} onClick={() => setFocus(!focus)} id="focus-btn">
 					FOCUS
 				</Btn>
 				<Btn

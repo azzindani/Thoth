@@ -326,7 +326,6 @@ export default function PopWindows({
 				</div>
 				<div className="popwin-body">
 					<div className="hov-m">
-						<span className="sev-dot" style={{ background: col }} />
 						<span className="sev-tag" style={{ color: col }}>
 							{sev.toUpperCase()}
 						</span>{" "}

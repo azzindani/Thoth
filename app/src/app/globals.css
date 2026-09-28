@@ -3484,3 +3484,102 @@ body[data-bp="tab"] .explorer.expanded .lgroup {
 body[data-bp="tab"].insp-wide .inspector {
 	width: min(780px, calc(100vw - var(--lw) - var(--inset) * 3));
 }
+
+/* ── polish: legend, tab arrows, empty states, touch sizes ────────────── */
+.legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+	margin: 10px 2px 0;
+	font-size: 11px;
+	color: var(--dim);
+}
+.legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+.lg-ring {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	border: 2px solid var(--dim);
+}
+.lg-count {
+	min-width: 16px;
+	height: 16px;
+	padding: 0 3px;
+	border-radius: var(--r-pill);
+	border: 1px solid var(--dim);
+	font-style: normal;
+	font-size: 9px;
+	line-height: 14px;
+	text-align: center;
+	font-family: var(--mono);
+}
+.h3-note {
+	color: var(--amber);
+	letter-spacing: 0.06em;
+}
+.lrow-none {
+	padding: 10px 8px;
+	font-size: var(--fs-s);
+}
+body[data-bp="tab"] .explorer:not(.expanded) .legend {
+	display: none;
+}
+body.focus .explorer .legend {
+	display: none;
+}
+.tabs-arrow {
+	flex: none;
+	width: 28px;
+	background: none;
+	border: none;
+	color: var(--txt2);
+	font-size: 18px;
+	cursor: pointer;
+}
+.tabs-arrow:hover {
+	color: var(--txt);
+	background: var(--hover);
+}
+.tabs.at-end {
+	mask-image: none;
+}
+body.focus .inspector:not(.open) .tabs-arrow {
+	display: none;
+}
+/* tablet: FOCUS collapses desk panels to rails, which tablet already is */
+body[data-bp="tab"] #focus-btn {
+	display: none;
+}
+/* touch: controls a finger can hit */
+@media (pointer: coarse) {
+	.ticker .tbtn {
+		min-height: 36px;
+	}
+	#map .maplibregl-popup-close-button {
+		width: 36px;
+		height: 36px;
+	}
+	.tl-layer,
+	#bottom select {
+		min-height: 36px;
+	}
+	.src-link,
+	.prov-row a {
+		display: inline-block;
+		padding: 6px 0;
+	}
+	.fv-close {
+		width: 40px;
+		height: 40px;
+	}
+}
+/* narrow tablets: the status pill (DEFCON, live feeds) outranks the clock */
+@media (max-width: 999px) {
+	body[data-bp="tab"] .ticker .clock {
+		display: none;
+	}
+}

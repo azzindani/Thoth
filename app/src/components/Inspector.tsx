@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { LAYERS, STREAMS } from "../lib/layer-catalog";
 import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
@@ -88,6 +88,28 @@ export default function Inspector({
 	} | null>(null);
 	const [video, setVideo] = useState<string>(STREAMS[0][1]);
 	const [areaState, setAreaState] = useState<LookupState>("idle");
+	// 15 tabs in a strip that shows about six: arrows say there is more.
+	const tabsRef = useRef<HTMLDivElement>(null);
+	const [edges, setEdges] = useState({ l: false, r: false });
+	const readEdges = () => {
+		const t = tabsRef.current;
+		if (!t) return;
+		setEdges({
+			l: t.scrollLeft > 2,
+			r: t.scrollLeft + t.clientWidth < t.scrollWidth - 2,
+		});
+	};
+	// biome-ignore lint/correctness/useExhaustiveDependencies: DOM measurement only
+	useEffect(() => {
+		const t = tabsRef.current;
+		if (!t) return;
+		readEdges();
+		const ro = new ResizeObserver(readEdges);
+		ro.observe(t);
+		return () => ro.disconnect();
+	}, []);
+	const nudge = (dx: number) =>
+		tabsRef.current?.scrollBy({ left: dx, behavior: "smooth" });
 	const [sdnState, setSdnState] = useState<LookupState>("idle");
 
 	async function openTab(t: Tab) {
@@ -168,7 +190,22 @@ export default function Inspector({
 		<div className="inspector" id="inspector">
 			<SheetHead onClose={onClose} />
 			<div className="insp-head">
-				<div className="tabs" id="tabs">
+				{edges.l && (
+					<button
+						type="button"
+						className="tabs-arrow"
+						aria-label="earlier tabs"
+						onClick={() => nudge(-220)}
+					>
+						‹
+					</button>
+				)}
+				<div
+					className={`tabs${edges.r ? "" : " at-end"}`}
+					id="tabs"
+					ref={tabsRef}
+					onScroll={readEdges}
+				>
 					{(
 						[
 							"object",
@@ -198,6 +235,16 @@ export default function Inspector({
 						</button>
 					))}
 				</div>
+				{edges.r && (
+					<button
+						type="button"
+						className="tabs-arrow"
+						aria-label="more tabs"
+						onClick={() => nudge(220)}
+					>
+						›
+					</button>
+				)}
 				<button
 					className="insp-close"
 					aria-label="close panel"
