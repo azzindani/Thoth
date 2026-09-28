@@ -349,9 +349,11 @@ export default function Terminal() {
 	useEffect(() => {
 		function bp() {
 			const w = window.innerWidth;
-			document.body.dataset.bp =
-				w >= 1200 ? "desk" : w >= 768 ? "tab" : "phone";
-			setPhone(w < 768);
+			// A phone on its side is still a phone: short screens below
+			// 1024 wide get the phone layout (same rule as the CSS).
+			const phone = w < 768 || (window.innerHeight <= 500 && w < 1024);
+			document.body.dataset.bp = w >= 1200 ? "desk" : phone ? "phone" : "tab";
+			setPhone(phone);
 		}
 		bp();
 		window.addEventListener("resize", bp);

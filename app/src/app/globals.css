@@ -1620,8 +1620,8 @@ body.focus .inspector.open {
 	}
 }
 
-/* ── phone (<768): map-first, floating bar + command pill, bottom sheets ─ */
-@media (max-width: 767px) {
+/* ── phone (<768, or a phone on its side: ≤500 tall): map-first, floating bar + command pill, bottom sheets ─ */
+@media (max-width: 767px), (max-height: 500px) and (max-width: 1023px) {
 	:root {
 		--inset: 8px;
 		--lw: 0px;
@@ -2412,7 +2412,7 @@ body:not(.insp-wide) .dt-wrap {
 .ptoggle {
 	display: none;
 }
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 501px), (min-width: 1024px) {
 	.explorer,
 	.bottom {
 		transition:
@@ -2558,7 +2558,7 @@ body:not(.insp-wide) .dt-wrap {
 		--rot: 90deg;
 	}
 }
-@media (min-width: 768px) and (max-width: 1199px) {
+@media (min-width: 768px) and (max-width: 1199px) and (min-height: 501px), (min-width: 1024px) and (max-width: 1199px) {
 	.pt-insp {
 		display: none;
 	}
@@ -3241,7 +3241,7 @@ body:not(.insp-wide) .dt-wrap {
 .tools-sheet {
 	display: none;
 }
-@media (max-width: 767px) {
+@media (max-width: 767px), (max-height: 500px) and (max-width: 1023px) {
 	body[data-bp="phone"] .tools-sheet.open {
 		display: flex;
 		flex-direction: column;
