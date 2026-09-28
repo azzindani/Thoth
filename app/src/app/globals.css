@@ -3072,3 +3072,7 @@ body:not(.insp-wide) .dt-wrap {
 	font-size: var(--fs-s);
 	margin: 4px 0 8px;
 }
+.lrow b.lrow-err {
+	color: var(--amber);
+	font-weight: 700;
+}

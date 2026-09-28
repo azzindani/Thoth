@@ -23,7 +23,7 @@ const Env = z.object({
 	// `Authorization: Bearer <key>` or `X-Thoth-Key`. Unset in production =
 	// writes refused (fail closed); unset in dev = writes open.
 	API_WRITE_KEY: z.string().default(""),
-	REQUESTS_PER_MIN: z.coerce.number().int().min(10).default(120),
+	REQUESTS_PER_MIN: z.coerce.number().int().min(10).default(300),
 	POLL_JITTER_PCT: z.coerce.number().min(0).max(50).default(10),
 	TELEGRAM_CHANNELS: z
 		.string()

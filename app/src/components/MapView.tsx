@@ -3,7 +3,7 @@ import * as maplibregl from "maplibre-gl";
 import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { api, type CameraView, type LayerItem } from "../lib/api";
+import { ApiError, api, type CameraView, type LayerItem } from "../lib/api";
 import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
 import { PALETTE, SEV_INK } from "../lib/palette";
 import {
@@ -289,13 +289,30 @@ export function setReplay(
 
 /** Limited-parallel layer loading (pool of 6): boot drops ~25s → ~5s.
  *  Layers are independent — order of completion doesn't matter. */
+/** Layers whose last load failed (layer → reason), for the layer list.
+ * Cleared as soon as a load of that layer succeeds. */
+export const layerErrors = new Map<string, string>();
+export const LAYER_STATUS_EVENT = "thoth:layer-status";
+function layerStatusChanged(): void {
+	window.dispatchEvent(new Event(LAYER_STATUS_EVENT));
+}
+const RETRY_BACKOFF_S = [5, 20, 60];
+const retrying = new Set<string>();
+// Retries run later: they take the newest filters, not the failed call's.
+let latestOpts: LoadOpts | null = null;
+
 export async function loadAll(
 	map: maplibregl.Map,
 	names: string[],
 	opts: LoadOpts,
+	attempt = 0,
 ): Promise<void> {
+	if (attempt === 0) latestOpts = opts;
+	else opts = latestOpts ?? opts;
 	const POOL = 6;
 	const queue = [...names];
+	const failed: string[] = [];
+	let wait = 0;
 	await Promise.all(
 		Array.from({ length: Math.min(POOL, queue.length) }, async () => {
 			while (queue.length) {
@@ -303,13 +320,41 @@ export async function loadAll(
 				if (!n) return;
 				try {
 					await loadLayer(map, n, opts);
-				} catch {
-					/* per-layer errors stay silent; health pill reports feeds */
+					if (layerErrors.delete(n)) layerStatusChanged();
+				} catch (e) {
+					// A refused or failed load used to leave the layer silently
+					// empty until the next SSE tick. Flag it and retry.
+					const status = e instanceof ApiError ? e.status : 0;
+					layerErrors.set(
+						n,
+						status === 429
+							? "rate limited by the API"
+							: status
+								? `API answered HTTP ${status}`
+								: "network error",
+					);
+					if (e instanceof ApiError && e.retryAfter)
+						wait = Math.max(wait, e.retryAfter);
+					failed.push(n);
 				}
 			}
 		}),
 	);
 	raiseMapNotes(map);
+	if (!failed.length) return;
+	layerStatusChanged();
+	if (attempt >= RETRY_BACKOFF_S.length) return;
+	const todo = failed.filter((n) => !retrying.has(n));
+	if (!todo.length) return;
+	for (const n of todo) retrying.add(n);
+	const delay = Math.max(wait, RETRY_BACKOFF_S[attempt]) * 1000;
+	setTimeout(
+		() => {
+			for (const n of todo) retrying.delete(n);
+			void loadAll(map, todo, opts, attempt + 1);
+		},
+		delay + Math.random() * 1000,
+	);
 }
 
 export function setVis(
