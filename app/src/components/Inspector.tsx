@@ -38,6 +38,14 @@ export type Tab =
 	| "monitor"
 	| "notes";
 
+/** An ask from outside the panel (map right-click / long-press, command
+ * line, palette). `n` makes a repeat of the same ask run again. */
+export type InspRequest = { n: number } & (
+	| { kind: "area"; lat: string; lng: string }
+	| { kind: "sdn"; q: string }
+);
+export type LookupState = "idle" | "loading" | "error";
+
 function Sev({ s }: { s?: string }) {
 	return (
 		<span className={`sev-${s || "info"}`}>{(s || "info").toUpperCase()}</span>
@@ -52,6 +60,7 @@ export default function Inspector({
 	onClose,
 	onOsint,
 	country,
+	request,
 }: {
 	tab: Tab;
 	setTab: (t: Tab) => void;
@@ -61,6 +70,7 @@ export default function Inspector({
 	onOsint?: (kind: string, arg: string) => void;
 	/** Country the command line / palette asked for (country tab). */
 	country?: string;
+	request?: InspRequest | null;
 }) {
 	const [area, setArea] = useState<{
 		lat: string;
@@ -77,6 +87,8 @@ export default function Inspector({
 		items: Record<string, unknown>[];
 	} | null>(null);
 	const [video, setVideo] = useState<string>(STREAMS[0][1]);
+	const [areaState, setAreaState] = useState<LookupState>("idle");
+	const [sdnState, setSdnState] = useState<LookupState>("idle");
 
 	async function openTab(t: Tab) {
 		setTab(t);
@@ -90,6 +102,7 @@ export default function Inspector({
 		}
 	}
 	async function goArea(lat: string, lng: string, r: string) {
+		setAreaState("loading");
 		try {
 			const [d, g] = await Promise.all([
 				api.dossier(lat, lng, Number(r)),
@@ -106,18 +119,35 @@ export default function Inspector({
 				items: d.items,
 				threat: d.threat,
 			});
+			setAreaState("idle");
 		} catch {
-			/* keep */
+			setAreaState("error");
 		}
 	}
 	async function goSdn(q: string) {
 		if (!q.trim()) return;
+		setSdnState("loading");
 		try {
 			setSdn({ q, items: (await api.sdn(q)).items });
+			setSdnState("idle");
 		} catch {
-			/* keep */
+			setSdn({ q, items: [] });
+			setSdnState("error");
 		}
 	}
+	// Outside asks: the map's right-click / long-press and the command
+	// line's `dossier lat,lng` / `sdn name` land here with their arguments.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the nonce is the trigger
+	useEffect(() => {
+		if (!request) return;
+		if (request.kind === "area") {
+			void openTab("area");
+			void goArea(request.lat, request.lng, "300");
+		} else {
+			void openTab("sdn");
+			void goSdn(request.q);
+		}
+	}, [request?.n]);
 
 	// Keep the active tab visible in the scrollable strip: deep links
 	// (pulse/portfolio/screen/notes via cmdbar) land off-screen on phone
@@ -226,8 +256,17 @@ export default function Inspector({
 						)}
 					</>
 				)}
-				{tab === "area" && <AreaTab area={area} goArea={goArea} />}
-				{tab === "sdn" && <SdnTab sdn={sdn} goSdn={goSdn} />}
+				{tab === "area" && (
+					<AreaTab
+						key={area ? `${area.lat},${area.lng}` : "none"}
+						area={area}
+						goArea={goArea}
+						state={areaState}
+					/>
+				)}
+				{tab === "sdn" && (
+					<SdnTab key={sdn?.q ?? ""} sdn={sdn} goSdn={goSdn} state={sdnState} />
+				)}
 				{tab === "alerts" && (
 					<>
 						<h3>Alerts · 24h · {(alerts ?? []).length}</h3>

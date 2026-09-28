@@ -853,6 +853,45 @@ const SAT_LAYER = {
 // The live map, for components that only need to move the camera (tabs,
 // lists) — no prop threading through the page.
 let liveMap: maplibregl.Map | null = null;
+/**
+ * MapLibre 6, globe projection with camera padding: a flyTo whose target is
+ * exactly the current centre computes a NaN zoom and the map stops
+ * rendering for good (the card's Zoom button, a second "fly to" on the same
+ * row). Such a move has no path to fly anyway, so it becomes an easeTo.
+ * A watchdog restores the last good camera should any other move go
+ * non-finite.
+ */
+export function guardCamera(map: maplibregl.Map): void {
+	const fly = map.flyTo.bind(map);
+	map.flyTo = ((opts: maplibregl.FlyToOptions, data?: unknown) => {
+		const c = opts.center ? maplibregl.LngLat.convert(opts.center) : null;
+		const cur = map.getCenter();
+		if (
+			!c ||
+			(Math.abs(c.lng - cur.lng) < 1e-7 && Math.abs(c.lat - cur.lat) < 1e-7)
+		) {
+			const {
+				speed: _s,
+				curve: _c,
+				minZoom: _m,
+				screenSpeed: _ss,
+				maxDuration: _md,
+				...ease
+			} = opts;
+			return map.easeTo({ duration: 800, ...ease }, data as never);
+		}
+		return fly(opts, data as never);
+	}) as typeof map.flyTo;
+	let good = { center: map.getCenter(), zoom: map.getZoom() };
+	map.on("moveend", () => {
+		const z = map.getZoom();
+		const c = map.getCenter();
+		if (Number.isFinite(z) && Number.isFinite(c.lng) && Number.isFinite(c.lat))
+			good = { center: c, zoom: z };
+		else map.jumpTo(good);
+	});
+}
+
 export function flyTo(lat: number, lon: number, zoom = 5) {
 	liveMap?.flyTo({
 		center: [lon, lat],
@@ -901,6 +940,7 @@ export default function MapView(props: Props) {
 		});
 		mapRef.current = map;
 		liveMap = map;
+		guardCamera(map);
 		(window as unknown as { __thothMap?: maplibregl.Map }).__thothMap = map;
 		// right-click sets area dossier
 		map.on("contextmenu", (e) => {

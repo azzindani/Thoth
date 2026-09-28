@@ -313,6 +313,7 @@ function NoteHere({ area }: { area: { lat: string; lng: string } }) {
 export function AreaTab({
 	area,
 	goArea,
+	state = "idle",
 }: {
 	area: {
 		lat: string;
@@ -324,32 +325,65 @@ export function AreaTab({
 		threat?: { score: number; level: string };
 	} | null;
 	goArea: (lat: string, lng: string, r: string) => void;
+	state?: "idle" | "loading" | "error";
 }) {
 	const [lat, setLat] = useState(area?.lat ?? "51.5");
 	const [lng, setLng] = useState(area?.lng ?? "-0.12");
-	const [r, setR] = useState("300");
+	const [r, setR] = useState(area?.r ?? "300");
+	// The form stays above the result: a new spot is one edit away.
+	const form = (
+		<div className="row2" style={{ margin: "6px 0" }}>
+			<Field
+				aria-label="latitude"
+				inputMode="decimal"
+				value={lat}
+				onChange={(e) => setLat(e.target.value)}
+			/>
+			<Field
+				aria-label="longitude"
+				inputMode="decimal"
+				value={lng}
+				onChange={(e) => setLng(e.target.value)}
+			/>
+			<select
+				aria-label="radius in km"
+				value={r}
+				onChange={(e) => setR(e.target.value)}
+			>
+				<option value="100">100 km</option>
+				<option value="300">300 km</option>
+				<option value="1000">1000 km</option>
+			</select>
+			<button className="go" id="ar-go" onClick={() => goArea(lat, lng, r)}>
+				Go
+			</button>
+		</div>
+	);
+	const status =
+		state === "loading" ? (
+			<div className="dim">Looking up the area…</div>
+		) : state === "error" ? (
+			<div className="lookup-err">
+				Area lookup failed. Check the coordinates or try again.
+			</div>
+		) : null;
 	if (!area)
 		return (
 			<>
-				<div className="row2" style={{ margin: "6px 0" }}>
-					<Field value={lat} onChange={(e) => setLat(e.target.value)} />
-					<Field value={lng} onChange={(e) => setLng(e.target.value)} />
-					<select value={r} onChange={(e) => setR(e.target.value)}>
-						<option>100</option>
-						<option>300</option>
-						<option>1000</option>
-					</select>
-					<button className="go" id="ar-go" onClick={() => goArea(lat, lng, r)}>
-						Go
-					</button>
-				</div>
-				<div style={{ color: "var(--dim)" }}>
-					right-click the map or enter coords
-				</div>
+				{form}
+				{status ?? (
+					<div style={{ color: "var(--dim)" }}>
+						Everything reported near a point: right-click the map (long-press on
+						a touch screen), use <code>dossier lat,lng</code>, or enter
+						coordinates.
+					</div>
+				)}
 			</>
 		);
 	return (
 		<>
+			{form}
+			{status}
 			<h3>
 				AREA · {area.lat},{area.lng} · {area.r}KM
 			</h3>
@@ -419,9 +453,11 @@ export function AreaTab({
 export function SdnTab({
 	sdn,
 	goSdn,
+	state = "idle",
 }: {
 	sdn: { q: string; items: Record<string, unknown>[] } | null;
 	goSdn: (q: string) => void;
+	state?: "idle" | "loading" | "error";
 }) {
 	const [q, setQ] = useState(sdn?.q ?? "");
 	return (
@@ -439,6 +475,22 @@ export function SdnTab({
 					Go
 				</button>
 			</div>
+			{state === "loading" ? (
+				<div className="dim">Searching…</div>
+			) : state === "error" ? (
+				<div className="lookup-err">Sanctions search failed. Try again.</div>
+			) : !sdn ? (
+				<div className="dim">
+					Search the sanctions lists by person, company or vessel name (aliases
+					included).
+				</div>
+			) : sdn.items.length === 0 ? (
+				<div className="dim">No sanctioned entity matches “{sdn.q}”.</div>
+			) : (
+				<h3>
+					{sdn.items.length} match{sdn.items.length > 1 ? "es" : ""} · “{sdn.q}”
+				</h3>
+			)}
 			{(sdn?.items ?? []).map((s, i) => (
 				<ItemRow key={i}>
 					<b>{String(s.name ?? "")}</b>

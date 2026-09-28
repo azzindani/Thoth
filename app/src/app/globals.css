@@ -3067,3 +3067,8 @@ body:not(.insp-wide) .dt-wrap {
 	white-space: nowrap;
 	color: var(--cyan);
 }
+.lookup-err {
+	color: var(--red);
+	font-size: var(--fs-s);
+	margin: 4px 0 8px;
+}

@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import CmdBar from "../components/CmdBar";
 import EntityGraph from "../components/EntityGraph";
 import Explorer from "../components/Explorer";
-import Inspector, { CompleteView, type Tab } from "../components/Inspector";
+import Inspector, {
+	CompleteView,
+	type InspRequest,
+	type Tab,
+} from "../components/Inspector";
 import MapView, {
 	loadAll,
 	MAP_NOTES_EVENT,
@@ -75,6 +79,7 @@ export default function Terminal() {
 	const [palOpen, setPalOpen] = useState(false);
 	const [replayOn, setReplayOn] = useState(false);
 	const [countryQ, setCountryQ] = useState<string | undefined>(undefined);
+	const [inspReq, setInspReq] = useState<InspRequest | null>(null);
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 	const [keysOpen, setKeysOpen] = useState(false);
 	const [sitrepOn, setSitrepOn] = useState(false);
@@ -938,7 +943,14 @@ export default function Terminal() {
 					onFull={(p) => {
 						selectFull(p);
 					}}
-					onArea={() => setTab("area")}
+					onArea={(lat, lng) =>
+						setInspReq({
+							n: Date.now(),
+							kind: "area",
+							lat: lat.toFixed(4),
+							lng: lng.toFixed(4),
+						})
+					}
 					overlay={
 						<>
 							{/* Hidden on phones: a second WebGL map there would still
@@ -991,6 +1003,7 @@ export default function Terminal() {
 						setTab("object");
 					}}
 					country={countryQ}
+					request={inspReq}
 				/>
 			</div>
 			<div className="bottom" id="bottom">
@@ -1030,8 +1043,14 @@ export default function Terminal() {
 				<CmdBar
 					onLayer={(l, st) => toggleLayer(l, st)}
 					onMode={handleMode}
-					onDossier={() => setTab("area")}
-					onSdn={() => setTab("sdn")}
+					onDossier={(lat, lng) =>
+						setInspReq({ n: Date.now(), kind: "area", lat, lng })
+					}
+					onSdn={(q) =>
+						q.trim()
+							? setInspReq({ n: Date.now(), kind: "sdn", q })
+							: setTab("sdn")
+					}
 					onAlerts={() => setTab("alerts")}
 					onTab={(t) => setTab(t as Tab)}
 					onSitrep={() => setSitrepOn(true)}
