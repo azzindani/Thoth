@@ -8,6 +8,14 @@ operator action are also listed in
 
 ## [Unreleased]
 
+### Added
+- Phone bottom sheets (Layers, Inspector, Full view) snap between half and
+  full height: swipe up on the grabber to expand, swipe down to step back
+  to half and then close; a tap on the grabber toggles half/full. The
+  Layers sheet has a header with a close (✕) button.
+- On/off switches on every layer row, plus a switch on each layer group
+  header that shows or hides the whole group.
+
 ### Removed
 - Dependabot version-update configuration (`.github/dependabot.yml`).
 

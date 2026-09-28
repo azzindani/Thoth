@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
+import { SheetHead } from "../lib/sheet";
 import { ageStr, Glyph, ItemRow, KV } from "../lib/ui";
 import { CountryTab } from "./CountryTab";
 import { IncidentsTab } from "./IncidentsTab";
@@ -133,6 +134,7 @@ export default function Inspector({
 
 	return (
 		<div className="inspector" id="inspector">
+			<SheetHead onClose={onClose} />
 			<div className="insp-head">
 				<div className="tabs" id="tabs">
 					{(
@@ -390,48 +392,51 @@ export function CompleteView({
 	return (
 		<div className="fullview-wrap" id="fullview">
 			<div className="fullview" role="dialog" aria-label="full preview">
+				<SheetHead onClose={onClose} />
 				<button className="fv-close" onClick={onClose} aria-label="close">
 					✕
 				</button>
-				<h3>
-					Full view · <Glyph layer={sel.layer} size={14} /> {sel.layer}
-				</h3>
-				<div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>
-					{sel.title}
+				<div className="fv-body">
+					<h3>
+						Full view · <Glyph layer={sel.layer} size={14} /> {sel.layer}
+					</h3>
+					<div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>
+						{sel.title}
+					</div>
+					<KV
+						pairs={[
+							["SEV", <Sev key="s" s={sel.severity} />],
+							["SRC", sel.source],
+							["TS", String(sel.ts).slice(0, 19).replace("T", " ")],
+							["AGE", ageStr(sel.ts)],
+							[
+								"POS",
+								`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
+							],
+							[
+								"ID",
+								<span key="i" style={{ wordBreak: "break-all" }}>
+									{sel.id}
+								</span>,
+							],
+							...(sel.airline
+								? [["AIRLINE", sel.airline] as [string, string]]
+								: []),
+						]}
+					/>
+					{sel.url && (
+						<a href={sel.url} target="_blank" rel="noreferrer">
+							SOURCE ↗
+						</a>
+					)}
+					<ObjectDetail sel={sel} />
+					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
+						<SatImage lat={sel.lat} lon={sel.lon} />
+					)}
+					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
+						<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
+					)}
 				</div>
-				<KV
-					pairs={[
-						["SEV", <Sev key="s" s={sel.severity} />],
-						["SRC", sel.source],
-						["TS", String(sel.ts).slice(0, 19).replace("T", " ")],
-						["AGE", ageStr(sel.ts)],
-						[
-							"POS",
-							`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
-						],
-						[
-							"ID",
-							<span key="i" style={{ wordBreak: "break-all" }}>
-								{sel.id}
-							</span>,
-						],
-						...(sel.airline
-							? [["AIRLINE", sel.airline] as [string, string]]
-							: []),
-					]}
-				/>
-				{sel.url && (
-					<a href={sel.url} target="_blank" rel="noreferrer">
-						SOURCE ↗
-					</a>
-				)}
-				<ObjectDetail sel={sel} />
-				{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-					<SatImage lat={sel.lat} lon={sel.lon} />
-				)}
-				{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-					<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
-				)}
 			</div>
 		</div>
 	);

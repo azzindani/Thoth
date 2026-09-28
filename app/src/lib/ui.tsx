@@ -111,13 +111,43 @@ export function LayerRow({
 	return (
 		<div
 			className={`lrow${visible ? "" : " off"}`}
+			role="switch"
+			aria-checked={visible}
+			aria-label={name}
+			tabIndex={0}
 			onClick={onToggle}
+			onKeyDown={(e) => {
+				if (e.key === " " || e.key === "Enter") {
+					e.preventDefault();
+					onToggle();
+				}
+			}}
 			title={title}
 		>
 			<Glyph layer={name} />
 			<span className="nm">{name}</span>
 			<b>{count}</b>
+			<Switch on={visible} />
 		</div>
+	);
+}
+
+/** On/off track. Presentational only: the row or header around it owns the
+ * click and the switch role, so the hit target stays the full row. */
+export function Switch({
+	on,
+	mixed = false,
+}: {
+	on: boolean;
+	mixed?: boolean;
+}) {
+	return (
+		<span
+			className={`sw${on ? " on" : ""}${mixed ? " mixed" : ""}`}
+			aria-hidden="true"
+		>
+			<span className="sw-knob" />
+		</span>
 	);
 }
 

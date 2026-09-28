@@ -556,6 +556,16 @@ export default function Terminal() {
 		});
 		refreshStats();
 	}
+	function setLayers(ls: string[], st: boolean) {
+		setVisible((v) => {
+			const nv = { ...v };
+			for (const l of ls) nv[l] = st;
+			const map = mapRef.current;
+			if (map) for (const l of ls) setVis(map, l, nv);
+			return nv;
+		});
+		refreshStats();
+	}
 	function handleMode(m: string) {
 		if (m === "globe") {
 			setGlobe((g) => !g);
@@ -905,6 +915,10 @@ export default function Terminal() {
 					counts={counts}
 					visible={visible}
 					onToggle={(l) => toggleLayer(l)}
+					onSetLayers={setLayers}
+					onClose={() =>
+						document.getElementById("explorer")?.classList.remove("open")
+					}
 					sev={sev}
 					setSev={setSev}
 					onMonitor={() => setTab("monitor")}
