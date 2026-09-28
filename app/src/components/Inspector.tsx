@@ -215,8 +215,8 @@ export default function Inspector({
 						<h3>No object selected</h3>
 						<p>
 							Tap or click a dot on the map to inspect it. Right-click a spot
-							for its area dossier, or type <code>help</code> in the command
-							line.
+							(long-press on a touch screen) for its area dossier, or type{" "}
+							<code>help</code> in the command line.
 						</p>
 					</div>
 				)}
