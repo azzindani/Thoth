@@ -7,6 +7,7 @@ The Thoth API is JSON over HTTP, plus one Server-Sent Events stream.
 | Base URL (through the app) | `https://<host>/api/…`: needs the access token if the gate is on |
 | Base URL (direct) | `http://127.0.0.1:4000/api/…`: from the host only in the default compose setup |
 | Route index | `GET /api/routes` returns every registered route. It is generated from the running server, so it cannot drift from the code. |
+| OpenAPI | `GET /api/openapi.json` (OpenAPI 3.1), also committed as [`openapi.json`](openapi.json). Parameters come from the routes' zod schemas, and a unit test fails when a route is undocumented or the committed copy is stale. |
 
 ## Conventions
 
@@ -15,7 +16,7 @@ The Thoth API is JSON over HTTP, plus one Server-Sent Events stream.
 | Request | Needs |
 |---|---|
 | Through the app, when `APP_ACCESS_KEY` is set | `Authorization: Bearer <access key>`, or the `thoth_session` cookie |
-| `GET` on the API directly | Nothing |
+| `GET` on the API directly | Nothing, unless the API sets `API_READ_REQUIRED`: then a reader key from `API_READ_KEYS` (or the write key), as `Authorization: Bearer <key>` or `X-Thoth-Key` |
 | `POST`, `PUT`, `PATCH`, `DELETE` | `Authorization: Bearer <API_WRITE_KEY>` or `X-Thoth-Key: <API_WRITE_KEY>`. The app adds it for signed-in users. |
 
 ### Responses
@@ -28,9 +29,9 @@ The Thoth API is JSON over HTTP, plus one Server-Sent Events stream.
   | Status | Meaning |
   |---|---|
   | `400` | Invalid parameters. Every input is validated. |
-  | `401` | Missing or invalid key |
+  | `401` | Missing or invalid key (an unknown reader key is refused, never ignored) |
   | `404` | Unknown route or item |
-  | `429` | Rate limited (`REQUESTS_PER_MIN` per client IP) |
+  | `429` | Rate limited: `REQUESTS_PER_MIN` per client IP, or a reader key's own `perMin` |
   | `502` | The upstream behind an on-demand lookup failed. The API reports it rather than returning an empty `200`. |
   | `503` | `/api/stream` at `SSE_MAX_CLIENTS`. Honour `Retry-After`. |
 
@@ -114,6 +115,7 @@ curl -N http://127.0.0.1:4000/api/stream
 | Method & path | Parameters | Description |
 |---|---|---|
 | `GET /api/brief` | — | Deterministic brief: counts and top items from critical down to info |
+| `GET /api/event` | `id` | One event with its provenance: the stored record (observed `ts`, `ingested_at` = last poll that re-confirmed it, `url`, confidence), its source feed's health and latest fetch (`feed`, `lastFetch`), and other reports of the same event (`related`, from duplicate detection) |
 | `GET /api/alerts` | `hours` (1–168, default 24), `limit` (default 50) | Critical and watch events in the window |
 | `GET /api/dossier` | `lat`, `lng` (or `lon`), `radius_km` (1–1000, default 100) | Everything near a point: events by layer, geo context, threat score |
 | `GET /api/country` | `q` (name, ≥2 chars), `radius_km` (50–2000, default 500) | Country page: advisories, displacement, per-layer counts, critical and watch items, news |

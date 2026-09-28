@@ -1,9 +1,19 @@
 // VATSIM live virtual traffic (keyless, 2s refresh): ~1k connected pilots
 // with lat/lon/altitude/speed + flight plans, plus controllers. The human
 // air picture next to adsb/OpenSky metal. Sampled: airborne only, cap 400.
+// One row per callsign, moved in place each poll; pilots that disconnect or
+// land drop out on the next successful poll (pruneStale), so the map shows
+// where each flight is now, not every place it has been.
 import { z } from "zod";
 import { assertSafeUrl, stealthFetch } from "../lib/fetch.js";
-import { errMsg, markHealth, storeNormalized, storeRaw } from "../lib/store.js";
+import {
+	dbClock,
+	errMsg,
+	markHealth,
+	pruneStale,
+	storeNormalized,
+	storeRaw,
+} from "../lib/store.js";
 
 const URL = "https://data.vatsim.net/v3/vatsim-data.json";
 
@@ -44,6 +54,7 @@ export async function collect() {
 	const layer = "flights";
 	try {
 		assertSafeUrl(URL);
+		const runStart = await dbClock();
 		const res = await stealthFetch(URL);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const feed = Feed.parse(await res.json());
@@ -63,7 +74,7 @@ export async function collect() {
 			const route =
 				fp?.departure && fp?.arrival ? `${fp.departure}→${fp.arrival}` : "";
 			await storeNormalized({
-				id: `vatsim:${p.callsign ?? p.cid}:${new Date().toISOString().slice(0, 16)}`,
+				id: `vatsim:${p.callsign ?? p.cid}`,
 				ts: new Date().toISOString(),
 				source,
 				layer,
@@ -88,6 +99,7 @@ export async function collect() {
 			});
 			n++;
 		}
+		await pruneStale(source, runStart);
 		await markHealth(source, true);
 		const ivao = await collectIvao(layer);
 		return { ok: true, count: n + ivao };
@@ -132,6 +144,7 @@ const IvaoPilot = z
 async function collectIvao(layer: string): Promise<number> {
 	try {
 		assertSafeUrl(IVAO_URL);
+		const runStart = await dbClock();
 		const res = await stealthFetch(IVAO_URL);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		const j = (await res.json()) as { clients?: { pilots?: unknown[] } };
@@ -153,7 +166,7 @@ async function collectIvao(layer: string): Promise<number> {
 					? `${fp.departureId}→${fp.arrivalId}`
 					: "";
 			await storeNormalized({
-				id: `ivao:${p.callsign ?? "?"}:${new Date().toISOString().slice(0, 16)}`,
+				id: `ivao:${p.callsign ?? "?"}`,
 				ts: new Date().toISOString(),
 				source: "ivao",
 				layer,
@@ -177,6 +190,7 @@ async function collectIvao(layer: string): Promise<number> {
 			});
 			n++;
 		}
+		await pruneStale("ivao", runStart);
 		await markHealth("ivao", true);
 		return n;
 	} catch (e: unknown) {

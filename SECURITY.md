@@ -13,9 +13,15 @@ not to be named.
 
 ## Supported versions
 
-Thoth is released from `main`. Security fixes go to the latest commit on
-`main`. Keep deployments current (see
+Thoth is released from `main` as tagged versions (`v0.1.0` onwards).
+Only the latest release is supported: security fixes land on `main` and
+ship in the next release. Keep deployments current (see
 [Upgrading](docs/operations/upgrading.md)).
+
+| Version | Supported |
+|---|---|
+| latest `0.x` release | yes |
+| older releases | no, upgrade |
 
 ## Security model
 
@@ -81,6 +87,10 @@ a password prompt.
   `TRUST_PROXY`.
 - zod validation of every environment variable at startup and of all API
   inputs. Request bodies are limited to 100 kB.
+- A Content-Security-Policy on every app page: scripts run only with a
+  per-request nonce, and other resources load only from an audited
+  allowlist (basemap, imagery, fonts, video embeds; see
+  `app/src/lib/csp.ts`). Framing is refused.
 - Parameterized SQL only. Every statement has a timeout.
 - Non-root, multi-stage container images with healthchecks and memory
   limits.
@@ -90,11 +100,9 @@ a password prompt.
 
 ### Known limitations
 
-- **No Content-Security-Policy on the app yet.** Tiles, fonts and video
-  embeds come from several third-party origins, and the allowlist still
-  needs an audit.
 - **Single shared write key.** There is no per-user identity or audit trail
-  for writes.
+  for writes. Named reader keys (`API_READ_KEYS`) identify read-only
+  integrations, and `API_READ_REQUIRED=1` closes the API to keyless reads.
 - **Per-process state.** Rate-limit and SSE state live in memory. That is
   fine for the single-API compose setup, but running several API replicas
   needs a shared store first.

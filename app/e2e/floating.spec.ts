@@ -299,7 +299,7 @@ test.describe
 
 test.describe
 	.serial("floating phone", () => {
-		test("popped-out cards stack above the command line", async ({
+		test("popped-out cards stack above the bottom navigation", async ({
 			browser,
 		}) => {
 			test.setTimeout(240000);
@@ -313,13 +313,26 @@ test.describe
 			await page.locator('.pin-pop [data-act^="pop:"]').click();
 			const card = page.locator(".pop-stack .popwin");
 			await expect(card).toHaveCount(1);
-			// Stacked form: no free-window chrome, and it sits above the pill.
+			// Stacked form: no free-window chrome, and it sits above the phone's
+			// bottom chrome (the nav bar; the command pill only shows on Search).
 			await expect(card.locator('[data-pop-act="min"]')).toHaveCount(0);
 			const cb = await card.boundingBox();
-			const dock = await page.locator("#bottom").boundingBox();
+			const nav = await page.locator("#phone-nav").boundingBox();
+			expect(nav, "bottom nav is laid out").toBeTruthy();
 			expect((cb?.y ?? 0) + (cb?.height ?? 0)).toBeLessThanOrEqual(
-				(dock?.y ?? 0) + 1,
+				(nav?.y ?? 0) + 1,
 			);
+			// With the command line open the stack clears it too.
+			await page.locator("#nav-search").click();
+			await expect(page.locator("#cmd")).toBeVisible();
+			await expect
+				.poll(async () => {
+					const dock = await page.locator("#bottom").boundingBox();
+					const cb2 = await card.boundingBox();
+					return (cb2?.y ?? 0) + (cb2?.height ?? 0) - (dock?.y ?? 0);
+				})
+				.toBeLessThanOrEqual(1);
+			await page.locator("#nav-search").click();
 			await page.screenshot({ path: "e2e/shots/phone-popstack.png" });
 			await card.locator('[data-pop-act="close"]').click();
 			await expect(card).toHaveCount(0);

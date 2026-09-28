@@ -1,7 +1,7 @@
 "use client";
 import type * as maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
-import { PALETTE } from "../lib/palette";
+import { basemapStyle, PALETTE, syncPaletteFromDom } from "../lib/palette";
 
 // MiniMap — floating world overview. Follows the main camera, draws the
 // viewport rectangle, click-to-fly. Hidden on phone (responsive contract).
@@ -22,8 +22,7 @@ export default function MiniMap({
 			if (stop || !divRef.current) return;
 			const m = new ml.Map({
 				container: divRef.current,
-				style:
-					"https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+				style: basemapStyle(syncPaletteFromDom()),
 				center: [10, 30],
 				zoom: 1,
 				interactive: false,

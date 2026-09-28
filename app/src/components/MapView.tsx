@@ -3,13 +3,19 @@ import * as maplibregl from "maplibre-gl";
 import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { api, type CameraView, type LayerItem } from "../lib/api";
+import { ApiError, api, type CameraView, type LayerItem } from "../lib/api";
 import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
-import { PALETTE, SEV_INK } from "../lib/palette";
 import {
-	armThumb,
+	basemapStyle,
+	PALETTE,
+	SEV_INK,
+	syncPaletteFromDom,
+} from "../lib/palette";
+import { lastView, loadSettings } from "../lib/settings";
+import {
 	ensurePickHandler,
 	esc,
+	factsOf,
 	hoverCard,
 	type ObjProps,
 	pickedRecently,
@@ -25,6 +31,9 @@ interface Props {
 	sev: string;
 	since: string | null;
 	mode: string;
+	/** slow auto-rotate over the current basemap */
+	cinema?: boolean;
+	onCinemaStop?: () => void;
 	globe: boolean;
 	onSelect: SelectFn;
 	onFull: SelectFn;
@@ -53,6 +62,9 @@ function toGeoJSON(items: LayerItem[], sev: string) {
 					lat: i.geom?.coordinates?.[1],
 					airline: (i.meta?.airline as string) || "",
 					rot: Number(i.meta?.track ?? 0) || 0,
+					facts: factsOf(i.meta, i.title ?? ""),
+					desc: i.body ? i.body.replace(/\s+/g, " ").slice(0, 180) : "",
+					img: typeof i.meta?.image === "string" ? i.meta.image : "",
 				},
 			})),
 	};
@@ -286,13 +298,34 @@ export function setReplay(
 
 /** Limited-parallel layer loading (pool of 6): boot drops ~25s → ~5s.
  *  Layers are independent — order of completion doesn't matter. */
+/** Layers whose last load failed (layer → reason), for the layer list.
+ * Cleared as soon as a load of that layer succeeds. */
+export const layerErrors = new Map<string, string>();
+/** Features of a layer in the loaded slice, after the severity filter. */
+export function loadedCount(name: string): number {
+	return fullData[name]?.features.length ?? 0;
+}
+export const LAYER_STATUS_EVENT = "thoth:layer-status";
+function layerStatusChanged(): void {
+	window.dispatchEvent(new Event(LAYER_STATUS_EVENT));
+}
+const RETRY_BACKOFF_S = [5, 20, 60];
+const retrying = new Set<string>();
+// Retries run later: they take the newest filters, not the failed call's.
+let latestOpts: LoadOpts | null = null;
+
 export async function loadAll(
 	map: maplibregl.Map,
 	names: string[],
 	opts: LoadOpts,
+	attempt = 0,
 ): Promise<void> {
+	if (attempt === 0) latestOpts = opts;
+	else opts = latestOpts ?? opts;
 	const POOL = 6;
 	const queue = [...names];
+	const failed: string[] = [];
+	let wait = 0;
 	await Promise.all(
 		Array.from({ length: Math.min(POOL, queue.length) }, async () => {
 			while (queue.length) {
@@ -300,13 +333,42 @@ export async function loadAll(
 				if (!n) return;
 				try {
 					await loadLayer(map, n, opts);
-				} catch {
-					/* per-layer errors stay silent; health pill reports feeds */
+					if (layerErrors.delete(n)) layerStatusChanged();
+				} catch (e) {
+					// A refused or failed load used to leave the layer silently
+					// empty until the next SSE tick. Flag it and retry.
+					const status = e instanceof ApiError ? e.status : 0;
+					layerErrors.set(
+						n,
+						status === 429
+							? "rate limited by the API"
+							: status
+								? `API answered HTTP ${status}`
+								: "network error",
+					);
+					if (e instanceof ApiError && e.retryAfter)
+						wait = Math.max(wait, e.retryAfter);
+					failed.push(n);
 				}
 			}
 		}),
 	);
 	raiseMapNotes(map);
+	// data changed: the layer list re-reads errors and filtered counts
+	layerStatusChanged();
+	if (!failed.length) return;
+	if (attempt >= RETRY_BACKOFF_S.length) return;
+	const todo = failed.filter((n) => !retrying.has(n));
+	if (!todo.length) return;
+	for (const n of todo) retrying.add(n);
+	const delay = Math.max(wait, RETRY_BACKOFF_S[attempt]) * 1000;
+	setTimeout(
+		() => {
+			for (const n of todo) retrying.delete(n);
+			void loadAll(map, todo, opts, attempt + 1);
+		},
+		delay + Math.random() * 1000,
+	);
 }
 
 export function setVis(
@@ -486,10 +548,10 @@ export async function loadLayer(
 			closeOnClick: false,
 			offset: 12,
 			className: "hov-pop",
+			maxWidth: "min(460px, 94vw)",
 		});
 		const phovCtl = steadyHover(map, phov, (p) => {
 			phov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
-			armThumb(phov, p);
 		});
 		// Fill, points, and the line hit band (lines have no fill to hover).
 		for (const hoverId of [name, `${name}-p`, `${name}-h`]) {
@@ -630,10 +692,10 @@ export async function loadLayer(
 			closeOnClick: false,
 			offset: 12,
 			className: "hov-pop",
+			maxWidth: "min(460px, 94vw)",
 		});
 		const hovCtl = steadyHover(map, hov, (p) => {
 			hov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
-			armThumb(hov, p);
 		});
 		map.on("mousemove", name, (e) => {
 			const f = e.features?.[0];
@@ -850,6 +912,47 @@ const SAT_LAYER = {
 // The live map, for components that only need to move the camera (tabs,
 // lists) — no prop threading through the page.
 let liveMap: maplibregl.Map | null = null;
+/**
+ * MapLibre 6, globe projection with camera padding: a flyTo whose target is
+ * exactly the current centre computes a NaN zoom and the map stops
+ * rendering for good (the card's Zoom button, a second "fly to" on the same
+ * row). Such a move has no path to fly anyway, so it becomes an easeTo.
+ * A watchdog restores the last good camera should any other move go
+ * non-finite.
+ */
+let attribution: maplibregl.AttributionControl | null = null;
+
+export function guardCamera(map: maplibregl.Map): void {
+	const fly = map.flyTo.bind(map);
+	map.flyTo = ((opts: maplibregl.FlyToOptions, data?: unknown) => {
+		const c = opts.center ? maplibregl.LngLat.convert(opts.center) : null;
+		const cur = map.getCenter();
+		if (
+			!c ||
+			(Math.abs(c.lng - cur.lng) < 1e-7 && Math.abs(c.lat - cur.lat) < 1e-7)
+		) {
+			const {
+				speed: _s,
+				curve: _c,
+				minZoom: _m,
+				screenSpeed: _ss,
+				maxDuration: _md,
+				...ease
+			} = opts;
+			return map.easeTo({ duration: 800, ...ease }, data as never);
+		}
+		return fly(opts, data as never);
+	}) as typeof map.flyTo;
+	let good = { center: map.getCenter(), zoom: map.getZoom() };
+	map.on("moveend", () => {
+		const z = map.getZoom();
+		const c = map.getCenter();
+		if (Number.isFinite(z) && Number.isFinite(c.lng) && Number.isFinite(c.lat))
+			good = { center: c, zoom: z };
+		else map.jumpTo(good);
+	});
+}
+
 export function flyTo(lat: number, lon: number, zoom = 5) {
 	liveMap?.flyTo({
 		center: [lon, lat],
@@ -865,6 +968,7 @@ export default function MapView(props: Props) {
 	propsRef.current = props;
 
 	function initialView(): { center: [number, number]; zoom: number } {
+		loadSettings();
 		try {
 			const h = new URLSearchParams(window.location.hash.slice(1));
 			const c = (h.get("c") ?? "").split(",").map(Number);
@@ -873,7 +977,7 @@ export default function MapView(props: Props) {
 		} catch {
 			/* keep defaults */
 		}
-		return { center: [20, 30], zoom: 1.6 };
+		return lastView() ?? { center: [20, 30], zoom: 1.6 };
 	}
 	// mount-once: map construction reads the URL hash a single time
 	// biome-ignore lint/correctness/useExhaustiveDependencies: map init must run exactly once; initialView/mapCb are mount-time inputs
@@ -887,23 +991,63 @@ export default function MapView(props: Props) {
 		const touch = window.matchMedia("(pointer: coarse)").matches;
 		const map = new maplibregl.Map({
 			container: divRef.current as HTMLDivElement,
-			style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+			style: basemapStyle(syncPaletteFromDom()),
 			center: init.center,
 			zoom: init.zoom,
 			pixelRatio: touch
 				? Math.min(window.devicePixelRatio || 1, 2)
 				: window.devicePixelRatio,
 			canvasContextAttributes: { antialias: !touch },
-			attributionControl: { compact: true },
+			// Our own control (below): MapLibre's never drops the credit of a
+			// removed source, so "Esri World Imagery" outlived the SAT basemap.
+			attributionControl: false,
 		});
 		mapRef.current = map;
 		liveMap = map;
+		attribution = new maplibregl.AttributionControl({ compact: true });
+		map.addControl(attribution);
+		guardCamera(map);
 		(window as unknown as { __thothMap?: maplibregl.Map }).__thothMap = map;
-		// right-click sets area dossier
+		// Right-click (desk) or a long-press (touch) opens the area dossier.
+		// Some mobile browsers also fire contextmenu on a long-press: one
+		// gesture, one dossier.
+		let lastArea = 0;
+		const area = (lat: number, lng: number) => {
+			if (Date.now() - lastArea < 900) return;
+			lastArea = Date.now();
+			propsRef.current.onArea(lat, lng);
+		};
 		map.on("contextmenu", (e) => {
 			e.preventDefault();
-			propsRef.current.onArea(e.lngLat.lat, e.lngLat.lng);
+			area(e.lngLat.lat, e.lngLat.lng);
 		});
+		let press: ReturnType<typeof setTimeout> | undefined;
+		let pressAt: { x: number; y: number } | null = null;
+		const cancelPress = () => {
+			clearTimeout(press);
+			pressAt = null;
+		};
+		map.on("touchstart", (e) => {
+			cancelPress();
+			if ((e.originalEvent as TouchEvent).touches.length !== 1) return;
+			pressAt = { x: e.point.x, y: e.point.y };
+			const ll = e.lngLat;
+			press = setTimeout(() => {
+				pressAt = null;
+				navigator.vibrate?.(12);
+				area(ll.lat, ll.lng);
+			}, 600);
+		});
+		map.on("touchmove", (e) => {
+			if (
+				pressAt &&
+				Math.hypot(e.point.x - pressAt.x, e.point.y - pressAt.y) > 10
+			)
+				cancelPress();
+		});
+		map.on("touchend", cancelPress);
+		map.on("touchcancel", cancelPress);
+		map.on("movestart", cancelPress);
 		map.on("load", async () => {
 			try {
 				map.setProjection({ type: "globe" });
@@ -955,16 +1099,45 @@ export default function MapView(props: Props) {
 		} catch {
 			/* older style */
 		}
-		const hasSat = !!map.getSource("sat");
-		if ((props.mode === "sat" || props.mode === "cinema") && !hasSat) {
-			map.addSource("sat", SAT_SOURCE);
-			map.addLayer(SAT_LAYER);
-		} else if (props.mode !== "sat" && props.mode !== "cinema" && hasSat) {
-			if (map.getLayer("sat")) map.removeLayer("sat");
-			map.removeSource("sat");
-		}
 		document.body.classList.toggle("nvg", props.mode === "nvg");
-		if (props.mode !== "cinema") return;
+		const sat = props.mode === "sat";
+		const apply = () => {
+			const hasSat = !!map.getSource("sat");
+			if (sat && !hasSat) {
+				map.addSource("sat", SAT_SOURCE);
+				map.addLayer(SAT_LAYER);
+			} else if (!sat && hasSat) {
+				if (map.getLayer("sat")) map.removeLayer("sat");
+				map.removeSource("sat");
+				// rebuild the credits without the removed source
+				if (attribution) map.removeControl(attribution);
+				attribution = new maplibregl.AttributionControl({ compact: true });
+				map.addControl(attribution);
+			}
+		};
+		if (map.isStyleLoaded()) {
+			apply();
+			return;
+		}
+		// The basemap style is still loading (or its CDN is unreachable):
+		// adding a source now throws "Style is not done loading" and takes
+		// the app down. Apply once the style is in.
+		const onStyle = () => {
+			if (!map.isStyleLoaded()) return;
+			map.off("styledata", onStyle);
+			apply();
+		};
+		map.on("styledata", onStyle);
+		return () => {
+			map.off("styledata", onStyle);
+		};
+	}, [props.mode, props.globe]);
+
+	// cinema: a slow spin until toggled off or the map is grabbed
+	useEffect(() => {
+		const m = mapRef.current;
+		if (!m || !props.cinema) return;
+		const map: maplibregl.Map = m;
 		let stop = false;
 		let timer: ReturnType<typeof setTimeout>;
 		function spin() {
@@ -977,11 +1150,19 @@ export default function MapView(props: Props) {
 			timer = setTimeout(spin, 4100);
 		}
 		spin();
+		const grab = () => propsRef.current.onCinemaStop?.();
+		map.on("mousedown", grab);
+		map.on("touchstart", grab);
+		map.on("wheel", grab);
 		return () => {
 			stop = true;
 			clearTimeout(timer);
+			map.off("mousedown", grab);
+			map.off("touchstart", grab);
+			map.off("wheel", grab);
+			map.stop();
 		};
-	}, [props.mode, props.globe]);
+	}, [props.cinema]);
 
 	// visibility follows state
 	useEffect(() => {

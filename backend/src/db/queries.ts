@@ -108,6 +108,19 @@ export async function getAlerts(limit = 50, hours = 24) {
 	);
 }
 
+/**
+ * Live-track layers: one dot per moving object at its latest position, and
+ * only while it is still reporting. Value = minutes since the last report
+ * after which an object leaves the map (3 poll cycles of the slowest feed:
+ * ADS-B polls every 15 min). Without this every stored snapshot of a plane
+ * rendered as its own dot, days after it landed.
+ */
+export const TRACK_LAYERS: Record<string, number> = { flights: 45 };
+
+/** One object per track: ids minus a trailing per-minute stamp
+ * (`ivao:CALLSIGN:2026-09-28T12:34`, the pre-stable-id scheme). */
+const TRACK_KEY = `regexp_replace(id, ':\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$', '')`;
+
 // Readers hide reports judged duplicates of another (event_dups, P4): one
 // quake is one dot, not three.
 export async function getLayerSlice(
@@ -115,6 +128,22 @@ export async function getLayerSlice(
 	limit = 500,
 	since?: string,
 ) {
+	const track = TRACK_LAYERS[layer];
+	if (track) {
+		return query(
+			`SELECT * FROM (
+         SELECT DISTINCT ON (${TRACK_KEY})
+                id, ts, source, layer, title, body, url, severity, confidence,
+                ST_AsGeoJSON(geom)::json AS geom, entities, meta
+         FROM events WHERE layer = $1
+           AND ts > now() - make_interval(mins => $2::int)
+           AND ($3::timestamptz IS NULL OR ts > $3)
+           AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
+         ORDER BY ${TRACK_KEY}, ts DESC
+       ) t ORDER BY ts DESC LIMIT $4`,
+			[layer, track, since ?? null, limit],
+		);
+	}
 	if (since) {
 		return query(
 			`SELECT id, ts, source, layer, title, body, url, severity, confidence,
@@ -162,14 +191,27 @@ export async function getLayerView(
 		w <= e
 			? "geom && ST_MakeEnvelope($2, $3, $4, $5, 4326)"
 			: "(geom && ST_MakeEnvelope($2, $3, 180, $5, 4326) OR geom && ST_MakeEnvelope(-180, $3, $4, $5, 4326))";
-	const rows = await query<Record<string, unknown> & { n_total: string }>(
-		`WITH hit AS (
-       SELECT id, ts, source, layer, title, body, url, severity, confidence,
+	const track = TRACK_LAYERS[layer];
+	// Live tracks: latest report per object, within the freshness window.
+	const hit = track
+		? `SELECT DISTINCT ON (${TRACK_KEY})
+              id, ts, source, layer, title, body, url, severity, confidence,
               geom, entities, meta, ST_Centroid(geom) AS c
        FROM events
        WHERE layer = $1 AND geom IS NOT NULL AND ${envelopes}
          AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
          AND ($6::timestamptz IS NULL OR ts > $6)
+         AND ts > now() - make_interval(mins => ${Math.round(track)})
+       ORDER BY ${TRACK_KEY}, ts DESC`
+		: `SELECT id, ts, source, layer, title, body, url, severity, confidence,
+              geom, entities, meta, ST_Centroid(geom) AS c
+       FROM events
+       WHERE layer = $1 AND geom IS NOT NULL AND ${envelopes}
+         AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
+         AND ($6::timestamptz IS NULL OR ts > $6)`;
+	const rows = await query<Record<string, unknown> & { n_total: string }>(
+		`WITH hit AS (
+       ${hit}
      ), ranked AS (
        SELECT *, row_number() OVER (
                 PARTITION BY floor(ST_X(c) / $7), floor(ST_Y(c) / $7)
@@ -200,11 +242,12 @@ export async function getBrief() {
 		source: string;
 		layer: string;
 		title: string;
+		url: string | null;
 		severity: string;
 	};
 	const q = (sev: string, lim: number) =>
 		query<Row>(
-			`SELECT id, ts, source, layer, title, severity FROM events
+			`SELECT id, ts, source, layer, title, url, severity FROM events
        WHERE ts > now() - interval '24 hours' AND severity = $1
        ORDER BY ts DESC LIMIT $2`,
 			[sev, lim],
@@ -229,4 +272,77 @@ export async function getBrief() {
 		gaps,
 		counts,
 	};
+}
+
+/**
+ * Everything needed to check one record against its origin: the stored
+ * row (with when a poll last re-confirmed it), the health of the feed it
+ * came from and that feed's latest fetch, and the other reports judged to
+ * describe the same event (event_dups) — independent corroboration.
+ */
+export async function getEventProvenance(id: string) {
+	const [item] = await query<Record<string, unknown> & { source: string }>(
+		`SELECT id, ts, ingested_at, source, layer, title, body, url, severity,
+            confidence, ST_AsGeoJSON(geom)::json AS geom, entities, meta
+     FROM events WHERE id = $1`,
+		[id],
+	);
+	if (!item) return null;
+	const [feed] = await query(
+		`SELECT source, last_ok, last_attempt, content_ts, error
+     FROM feed_health WHERE source = $1`,
+		[item.source],
+	);
+	const [fetch] = await query(
+		`SELECT fetched_at, http_status FROM raw_events
+     WHERE source = $1 ORDER BY fetched_at DESC LIMIT 1`,
+		[item.source],
+	);
+	// This record's duplicates, or — if it is itself a duplicate — the
+	// primary report and that report's other duplicates.
+	const related = await query(
+		`WITH p AS (
+       SELECT COALESCE((SELECT primary_id FROM event_dups WHERE id = $1), $1) AS id
+     )
+     SELECT e.id, e.ts, e.source, e.layer, e.title, e.url, e.severity,
+            CASE WHEN e.id = p.id THEN 'primary' ELSE d.reason END AS reason
+     FROM p
+     JOIN events e ON e.id = p.id
+        OR e.id IN (SELECT id FROM event_dups WHERE primary_id = p.id)
+     LEFT JOIN event_dups d ON d.id = e.id
+     WHERE e.id <> $1
+     ORDER BY e.ts DESC LIMIT 25`,
+		[id],
+	);
+	return {
+		item,
+		feed: feed ?? null,
+		lastFetch: fetch ?? null,
+		related,
+	};
+}
+
+export type Watch = { id: string; kind: string; value: string };
+
+/**
+ * SQL condition for events matching one watch (keyword in title or body,
+ * layer, severity, or anything live inside an area watch). Pushes its
+ * parameter onto `params`. Shared by GET /api/watch/matches and the
+ * webhook pass, so both match the same way.
+ */
+export function watchCondition(w: Watch, params: unknown[]): string {
+	if (w.kind === "keyword") {
+		params.push(`%${w.value}%`);
+		return `(title ILIKE $${params.length} OR body ILIKE $${params.length})`;
+	}
+	if (w.kind === "area") {
+		// Anything live inside the area; catalogs (airports…) never.
+		params.push(w.id);
+		return `(source <> 'static' AND geom IS NOT NULL AND ST_Intersects(geom,
+		   (SELECT g.geom FROM watchlists g WHERE g.id = $${params.length})))`;
+	}
+	params.push(w.value);
+	return w.kind === "layer"
+		? `layer = $${params.length}`
+		: `severity = $${params.length}`;
 }

@@ -25,7 +25,7 @@ export default function OsintView({
 						setBody(
 							<>
 								<h3>Geo · {arg}</h3>
-								<div style={{ fontSize: 14 }}>
+								<div style={{ fontSize: "calc(14px * var(--fk))" }}>
 									{g.label || g.error || "unknown"}
 								</div>
 							</>,
@@ -347,7 +347,12 @@ export default function OsintView({
 										["DATE", String(e.date ?? "?")],
 									]}
 								/>
-								<div style={{ color: "var(--dim)", fontSize: 12 }}>
+								<div
+									style={{
+										color: "var(--dim)",
+										fontSize: "calc(12px * var(--fk))",
+									}}
+								>
 									FIRST.org exploit probability
 								</div>
 							</div>
@@ -372,7 +377,9 @@ export default function OsintView({
 						) : (
 							<div>
 								<h3>OSV · {String(o.id ?? arg).toUpperCase()}</h3>
-								<div style={{ fontSize: 13 }}>{o.summary}</div>
+								<div style={{ fontSize: "calc(13px * var(--fk))" }}>
+									{o.summary}
+								</div>
 								<KV
 									pairs={[
 										["SEVERITY", String(o.severity ?? "?")],
@@ -409,14 +416,21 @@ export default function OsintView({
 						) : (
 							<div>
 								<h3>CIRCL · {String(c.id ?? arg).toUpperCase()}</h3>
-								<div style={{ fontSize: 13 }}>{c.title ?? ""}</div>
+								<div style={{ fontSize: "calc(13px * var(--fk))" }}>
+									{c.title ?? ""}
+								</div>
 								<KV
 									pairs={[
 										["STATE", String(c.state ?? "?")],
 										["PUBLISHED", String(c.published ?? "?")],
 									]}
 								/>
-								<div style={{ color: "var(--dim)", fontSize: 12 }}>
+								<div
+									style={{
+										color: "var(--dim)",
+										fontSize: "calc(12px * var(--fk))",
+									}}
+								>
 									{String(c.summary ?? "").slice(0, 400)}
 								</div>
 							</div>
@@ -501,7 +515,9 @@ export default function OsintView({
 						) : (
 							<div>
 								<h3>MITRE · {String(mc.id ?? arg).toUpperCase()}</h3>
-								<div style={{ fontSize: 13 }}>{mc.title ?? ""}</div>
+								<div style={{ fontSize: "calc(13px * var(--fk))" }}>
+									{mc.title ?? ""}
+								</div>
 								<KV
 									pairs={[
 										["STATE", String(mc.state ?? "?")],
@@ -509,7 +525,12 @@ export default function OsintView({
 										["PUBLISHED", String(mc.published ?? "?")],
 									]}
 								/>
-								<div style={{ color: "var(--dim)", fontSize: 12 }}>
+								<div
+									style={{
+										color: "var(--dim)",
+										fontSize: "calc(12px * var(--fk))",
+									}}
+								>
 									{String(mc.summary ?? "").slice(0, 400)}
 								</div>
 							</div>
@@ -529,8 +550,15 @@ export default function OsintView({
 						) : (
 							<div>
 								<h3>GEOCODE · {arg}</h3>
-								<div style={{ fontSize: 14 }}>{gc.label ?? "unknown"}</div>
-								<div style={{ color: "var(--dim)", fontSize: 12 }}>
+								<div style={{ fontSize: "calc(14px * var(--fk))" }}>
+									{gc.label ?? "unknown"}
+								</div>
+								<div
+									style={{
+										color: "var(--dim)",
+										fontSize: "calc(12px * var(--fk))",
+									}}
+								>
 									Photon (Komoot) · second opinion next to Nominatim
 								</div>
 							</div>
@@ -559,7 +587,12 @@ export default function OsintView({
 											: Number(i.value).toLocaleString("en-US"),
 									])}
 								/>
-								<div style={{ color: "var(--dim)", fontSize: 12 }}>
+								<div
+									style={{
+										color: "var(--dim)",
+										fontSize: "calc(12px * var(--fk))",
+									}}
+								>
 									IMF DataMapper · latest available
 								</div>
 							</div>
@@ -755,17 +788,22 @@ export default function OsintView({
 									{kind.toUpperCase()} · {arg}
 								</h3>
 								{wj.title && (
-									<div style={{ fontSize: 14 }}>
+									<div style={{ fontSize: "calc(14px * var(--fk))" }}>
 										<b>{wj.title}</b>
 									</div>
 								)}
 								{wj.extract && (
-									<div style={{ color: "var(--dim)", fontSize: 12 }}>
+									<div
+										style={{
+											color: "var(--dim)",
+											fontSize: "calc(12px * var(--fk))",
+										}}
+									>
 										{String(wj.extract).slice(0, 400)}
 									</div>
 								)}
 								{(wj.items ?? []).slice(0, 8).map((x, i) => (
-									<div key={i} style={{ fontSize: 13 }}>
+									<div key={i} style={{ fontSize: "calc(13px * var(--fk))" }}>
 										<b>
 											{String(x.label ?? x.title ?? x.name ?? x.qid ?? "?")}
 										</b>{" "}
@@ -777,7 +815,7 @@ export default function OsintView({
 									</div>
 								))}
 								{wj.url && (
-									<div style={{ fontSize: 12 }}>
+									<div style={{ fontSize: "calc(12px * var(--fk))" }}>
 										<a href={String(wj.url)} target="_blank" rel="noreferrer">
 											open ↗
 										</a>
@@ -910,7 +948,12 @@ export default function OsintView({
 											: Number(i.value).toLocaleString("en-US"),
 									])}
 								/>
-								<div style={{ color: "var(--dim)", fontSize: 12 }}>
+								<div
+									style={{
+										color: "var(--dim)",
+										fontSize: "calc(12px * var(--fk))",
+									}}
+								>
 									World Bank · latest available
 								</div>
 							</div>
@@ -929,7 +972,12 @@ export default function OsintView({
 							<div style={{ color: "var(--dim)" }}>
 								{s.day ? `archived ${s.day}` : "no archive yet"}
 							</div>
-							<pre style={{ whiteSpace: "pre-wrap", fontSize: 11 }}>
+							<pre
+								style={{
+									whiteSpace: "pre-wrap",
+									fontSize: "calc(11px * var(--fk))",
+								}}
+							>
 								{String(s.md ?? "empty").slice(0, 4000)}
 							</pre>
 						</div>,

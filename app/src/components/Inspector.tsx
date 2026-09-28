@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
-import { STREAMS } from "../lib/layer-catalog";
-import { ageStr, Glyph, ItemRow, KV } from "../lib/ui";
+import { LAYERS, STREAMS } from "../lib/layer-catalog";
+import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
+import { SheetHead } from "../lib/sheet";
+import { ageStr, Glyph, ItemRow, KV, SourceLink } from "../lib/ui";
 import { CountryTab } from "./CountryTab";
 import { IncidentsTab } from "./IncidentsTab";
 import {
@@ -16,6 +18,7 @@ import {
 import type { ObjProps } from "./MapView";
 import { MonitorTab } from "./MonitorTab";
 import OsintView from "./OsintView";
+import { Provenance } from "./Provenance";
 import { NotesTab, PortfolioTab, PulseTab, ScreenerTab } from "./TerminalTabs";
 
 export type Tab =
@@ -35,6 +38,14 @@ export type Tab =
 	| "monitor"
 	| "notes";
 
+/** An ask from outside the panel (map right-click / long-press, command
+ * line, palette). `n` makes a repeat of the same ask run again. */
+export type InspRequest = { n: number } & (
+	| { kind: "area"; lat: string; lng: string }
+	| { kind: "sdn"; q: string }
+);
+export type LookupState = "idle" | "loading" | "error";
+
 function Sev({ s }: { s?: string }) {
 	return (
 		<span className={`sev-${s || "info"}`}>{(s || "info").toUpperCase()}</span>
@@ -49,6 +60,7 @@ export default function Inspector({
 	onClose,
 	onOsint,
 	country,
+	request,
 }: {
 	tab: Tab;
 	setTab: (t: Tab) => void;
@@ -58,6 +70,7 @@ export default function Inspector({
 	onOsint?: (kind: string, arg: string) => void;
 	/** Country the command line / palette asked for (country tab). */
 	country?: string;
+	request?: InspRequest | null;
 }) {
 	const [area, setArea] = useState<{
 		lat: string;
@@ -74,6 +87,30 @@ export default function Inspector({
 		items: Record<string, unknown>[];
 	} | null>(null);
 	const [video, setVideo] = useState<string>(STREAMS[0][1]);
+	const [areaState, setAreaState] = useState<LookupState>("idle");
+	// 15 tabs in a strip that shows about six: arrows say there is more.
+	const tabsRef = useRef<HTMLDivElement>(null);
+	const [edges, setEdges] = useState({ l: false, r: false });
+	const readEdges = () => {
+		const t = tabsRef.current;
+		if (!t) return;
+		setEdges({
+			l: t.scrollLeft > 2,
+			r: t.scrollLeft + t.clientWidth < t.scrollWidth - 2,
+		});
+	};
+	// biome-ignore lint/correctness/useExhaustiveDependencies: DOM measurement only
+	useEffect(() => {
+		const t = tabsRef.current;
+		if (!t) return;
+		readEdges();
+		const ro = new ResizeObserver(readEdges);
+		ro.observe(t);
+		return () => ro.disconnect();
+	}, []);
+	const nudge = (dx: number) =>
+		tabsRef.current?.scrollBy({ left: dx, behavior: "smooth" });
+	const [sdnState, setSdnState] = useState<LookupState>("idle");
 
 	async function openTab(t: Tab) {
 		setTab(t);
@@ -87,6 +124,7 @@ export default function Inspector({
 		}
 	}
 	async function goArea(lat: string, lng: string, r: string) {
+		setAreaState("loading");
 		try {
 			const [d, g] = await Promise.all([
 				api.dossier(lat, lng, Number(r)),
@@ -103,18 +141,35 @@ export default function Inspector({
 				items: d.items,
 				threat: d.threat,
 			});
+			setAreaState("idle");
 		} catch {
-			/* keep */
+			setAreaState("error");
 		}
 	}
 	async function goSdn(q: string) {
 		if (!q.trim()) return;
+		setSdnState("loading");
 		try {
 			setSdn({ q, items: (await api.sdn(q)).items });
+			setSdnState("idle");
 		} catch {
-			/* keep */
+			setSdn({ q, items: [] });
+			setSdnState("error");
 		}
 	}
+	// Outside asks: the map's right-click / long-press and the command
+	// line's `dossier lat,lng` / `sdn name` land here with their arguments.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the nonce is the trigger
+	useEffect(() => {
+		if (!request) return;
+		if (request.kind === "area") {
+			void openTab("area");
+			void goArea(request.lat, request.lng, "300");
+		} else {
+			void openTab("sdn");
+			void goSdn(request.q);
+		}
+	}, [request?.n]);
 
 	// Keep the active tab visible in the scrollable strip: deep links
 	// (pulse/portfolio/screen/notes via cmdbar) land off-screen on phone
@@ -133,8 +188,24 @@ export default function Inspector({
 
 	return (
 		<div className="inspector" id="inspector">
+			<SheetHead onClose={onClose} />
 			<div className="insp-head">
-				<div className="tabs" id="tabs">
+				{edges.l && (
+					<button
+						type="button"
+						className="tabs-arrow"
+						aria-label="earlier tabs"
+						onClick={() => nudge(-220)}
+					>
+						‹
+					</button>
+				)}
+				<div
+					className={`tabs${edges.r ? "" : " at-end"}`}
+					id="tabs"
+					ref={tabsRef}
+					onScroll={readEdges}
+				>
 					{(
 						[
 							"object",
@@ -164,6 +235,16 @@ export default function Inspector({
 						</button>
 					))}
 				</div>
+				{edges.r && (
+					<button
+						type="button"
+						className="tabs-arrow"
+						aria-label="more tabs"
+						onClick={() => nudge(220)}
+					>
+						›
+					</button>
+				)}
 				<button
 					className="insp-close"
 					aria-label="close panel"
@@ -181,8 +262,8 @@ export default function Inspector({
 						<h3>No object selected</h3>
 						<p>
 							Tap or click a dot on the map to inspect it. Right-click a spot
-							for its area dossier, or type <code>help</code> in the command
-							line.
+							(long-press on a touch screen) for its area dossier, or type{" "}
+							<code>help</code> in the command line.
 						</p>
 					</div>
 				)}
@@ -193,7 +274,7 @@ export default function Inspector({
 						</h3>
 						<div
 							style={{
-								fontSize: 14,
+								fontSize: "calc(14px * var(--fk))",
 								fontWeight: 600,
 								color: "var(--txt)",
 							}}
@@ -203,40 +284,36 @@ export default function Inspector({
 						<KV
 							pairs={[
 								["SEV", <Sev key="s" s={sel.severity} />],
-								["SRC", sel.source],
-								["TS", String(sel.ts).slice(0, 19).replace("T", " ")],
 								["AGE", ageStr(sel.ts)],
 								[
 									"POS",
 									`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
-								],
-								[
-									"ID",
-									<span key="i" style={{ wordBreak: "break-all" }}>
-										{sel.id}
-									</span>,
 								],
 								...(sel.airline
 									? [["AIRLINE", sel.airline] as [string, string]]
 									: []),
 							]}
 						/>
-						{sel.url && (
-							<a href={sel.url} target="_blank" rel="noreferrer">
-								SOURCE ↗
-							</a>
-						)}
-						<ObjectDetail sel={sel} />
+						<Provenance sel={sel} />
 						{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
 							<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
 						)}
 						{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-							<SatImage lat={sel.lat} lon={sel.lon} />
+							<SatImage lat={sel.lat} lon={sel.lon} layer={sel.layer} />
 						)}
 					</>
 				)}
-				{tab === "area" && <AreaTab area={area} goArea={goArea} />}
-				{tab === "sdn" && <SdnTab sdn={sdn} goSdn={goSdn} />}
+				{tab === "area" && (
+					<AreaTab
+						key={area ? `${area.lat},${area.lng}` : "none"}
+						area={area}
+						goArea={goArea}
+						state={areaState}
+					/>
+				)}
+				{tab === "sdn" && (
+					<SdnTab key={sdn?.q ?? ""} sdn={sdn} goSdn={goSdn} state={sdnState} />
+				)}
 				{tab === "alerts" && (
 					<>
 						<h3>Alerts · 24h · {(alerts ?? []).length}</h3>
@@ -246,7 +323,8 @@ export default function Inspector({
 								<br />
 								<span style={{ color: "var(--dim)" }}>
 									{a.source} · {String(a.ts).slice(0, 10)}
-								</span>
+								</span>{" "}
+								<SourceLink url={a.url} source={a.source} />
 							</ItemRow>
 						))}
 					</>
@@ -272,53 +350,18 @@ export default function Inspector({
 	);
 }
 
-// OBJECTDETAIL — full record for the selection: the map only carries the
-// render fields, so we pull the layer feed once and merge body + meta
-// (altitude/track/magnitude/ids — everything the collector stored).
-export function ObjectDetail({ sel }: { sel: ObjProps }) {
-	const [full, setFull] = useState<LayerItem | null | undefined>(undefined);
-	useEffect(() => {
-		let stop = false;
-		api
-			.layer(sel.layer)
-			.then((j) => {
-				if (!stop) setFull(j.items.find((i) => i.id === sel.id) ?? null);
-			})
-			.catch(() => {
-				if (!stop) setFull(null);
-			});
-		return () => {
-			stop = true;
-		};
-	}, [sel.layer, sel.id]);
-	if (full === undefined)
-		return <div style={{ color: "var(--dim)" }}>detail…</div>;
-	if (!full) return null;
-	const meta = Object.entries(full.meta ?? {}).filter(([k]) => k !== "airline");
-	return (
-		<>
-			{full.body && (
-				<div style={{ margin: "6px 0", lineHeight: 1.6 }}>{full.body}</div>
-			)}
-			{meta.length > 0 && (
-				<KV
-					pairs={meta
-						.slice(0, 12)
-						.map(([k, v]) => [
-							k.toUpperCase().slice(0, 10),
-							typeof v === "object"
-								? JSON.stringify(v).slice(0, 120)
-								: String(v),
-						])}
-				/>
-			)}
-		</>
-	);
-}
-
 // SATIMAGE — freshest Sentinel-2 true-color over the selection
 // (earth-search STAC via /api/imagery, keyless). Lazy, honest-empty.
-export function SatImage({ lat, lon }: { lat: number; lon: number }) {
+export function SatImage({
+	lat,
+	lon,
+	layer,
+}: {
+	lat: number;
+	lon: number;
+	layer: string;
+}) {
+	const moving = MOVING_LAYERS.has(layer);
 	const [s, setS] = useState<
 		| {
 				id: string;
@@ -330,10 +373,9 @@ export function SatImage({ lat, lon }: { lat: number; lon: number }) {
 		| null
 		| undefined
 	>(undefined);
-	const [imgOk, setImgOk] = useState(true);
 	useEffect(() => {
+		if (moving) return;
 		let stop = false;
-		setImgOk(true);
 		api
 			.imagery(lon, lat)
 			.then((j) => {
@@ -345,33 +387,53 @@ export function SatImage({ lat, lon }: { lat: number; lon: number }) {
 		return () => {
 			stop = true;
 		};
-	}, [lat, lon]);
-	if (s === undefined)
-		return <div style={{ color: "var(--dim)" }}>satellite…</div>;
-	if (!s) return null;
+	}, [lat, lon, moving]);
+	// Imagery under a plane or ship says nothing about it.
+	if (moving) return null;
+	const z = satZoom(layer, Boolean(LAYERS[layer]?.polygon));
 	return (
 		<>
-			<h3>
-				SATELLITE ·{" "}
-				{String(s.datetime).slice(0, 10) +
-					(s.cloud_cover != null
-						? ` · ${Number(s.cloud_cover).toFixed(0)}% cloud`
-						: "")}
-			</h3>
-			<a href={s.tci} target="_blank" rel="noreferrer">
-				{imgOk && (
-					// biome-ignore lint/performance/noImgElement: remote STAC thumbnail, next/image has no optimizer for it
+			<h3>Imagery · {fmtKm(tileKm(lat, z))} across</h3>
+			<div className="hov-shot sat-view">
+				{mosaic(lat, lon, z).map((t) => (
+					// biome-ignore lint/performance/noImgElement: raw map tiles, positioned by hand
 					<img
-						src={s.thumbnail}
-						alt={`Sentinel-2 ${s.id}`}
-						style={{ width: "100%", borderRadius: "var(--r-md)" }}
+						key={t.url}
+						className="on"
+						alt=""
 						loading="lazy"
-						onError={() => setImgOk(false)}
+						referrerPolicy="no-referrer"
+						src={t.url}
+						style={{
+							left: `calc(50% + ${t.left}px)`,
+							top: `calc(50% + ${t.top}px)`,
+						}}
 					/>
+				))}
+				<span className="hov-x" aria-hidden="true" />
+			</div>
+			<div
+				style={{
+					color: "var(--dim)",
+					fontSize: "calc(12px * var(--fk))",
+					marginTop: 4,
+				}}
+			>
+				Esri World Imagery, centred on the object (basemap, not live).
+				{s === undefined && " Looking for the latest Sentinel-2 pass…"}
+				{s && (
+					<>
+						{" "}
+						Latest Sentinel-2 pass:{" "}
+						<a href={s.tci} target="_blank" rel="noreferrer">
+							{String(s.datetime).slice(0, 10)}
+							{s.cloud_cover != null
+								? ` · ${Number(s.cloud_cover).toFixed(0)}% cloud`
+								: ""}{" "}
+							↗
+						</a>
+					</>
 				)}
-			</a>
-			<div style={{ color: "var(--dim)", fontSize: 12 }}>
-				Sentinel-2 · {s.id} · click opens full-res COG
 			</div>
 		</>
 	);
@@ -390,48 +452,44 @@ export function CompleteView({
 	return (
 		<div className="fullview-wrap" id="fullview">
 			<div className="fullview" role="dialog" aria-label="full preview">
+				<SheetHead onClose={onClose} />
 				<button className="fv-close" onClick={onClose} aria-label="close">
 					✕
 				</button>
-				<h3>
-					Full view · <Glyph layer={sel.layer} size={14} /> {sel.layer}
-				</h3>
-				<div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>
-					{sel.title}
+				<div className="fv-body">
+					<h3>
+						Full view · <Glyph layer={sel.layer} size={14} /> {sel.layer}
+					</h3>
+					<div
+						style={{
+							fontSize: "calc(14px * var(--fk))",
+							fontWeight: 600,
+							color: "var(--txt)",
+						}}
+					>
+						{sel.title}
+					</div>
+					<KV
+						pairs={[
+							["SEV", <Sev key="s" s={sel.severity} />],
+							["AGE", ageStr(sel.ts)],
+							[
+								"POS",
+								`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
+							],
+							...(sel.airline
+								? [["AIRLINE", sel.airline] as [string, string]]
+								: []),
+						]}
+					/>
+					<Provenance sel={sel} />
+					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
+						<SatImage lat={sel.lat} lon={sel.lon} layer={sel.layer} />
+					)}
+					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
+						<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
+					)}
 				</div>
-				<KV
-					pairs={[
-						["SEV", <Sev key="s" s={sel.severity} />],
-						["SRC", sel.source],
-						["TS", String(sel.ts).slice(0, 19).replace("T", " ")],
-						["AGE", ageStr(sel.ts)],
-						[
-							"POS",
-							`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
-						],
-						[
-							"ID",
-							<span key="i" style={{ wordBreak: "break-all" }}>
-								{sel.id}
-							</span>,
-						],
-						...(sel.airline
-							? [["AIRLINE", sel.airline] as [string, string]]
-							: []),
-					]}
-				/>
-				{sel.url && (
-					<a href={sel.url} target="_blank" rel="noreferrer">
-						SOURCE ↗
-					</a>
-				)}
-				<ObjectDetail sel={sel} />
-				{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-					<SatImage lat={sel.lat} lon={sel.lon} />
-				)}
-				{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-					<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
-				)}
 			</div>
 		</div>
 	);
@@ -480,7 +538,8 @@ export function Nearby({
 			</div>
 			{others.map((i) => (
 				<ItemRow key={i.id}>
-					<b>{i.layer}</b> · {i.title}
+					<b>{i.layer}</b> · {i.title}{" "}
+					<SourceLink url={i.url} source={i.source} />
 				</ItemRow>
 			))}
 		</>

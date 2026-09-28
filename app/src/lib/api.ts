@@ -1,9 +1,28 @@
 // Empty string = same-origin (/api/* served by the Next rewrite proxy).
 export const API = process.env.NEXT_PUBLIC_THOTH_API ?? "";
 
+/** A non-2xx answer, with what a caller needs to decide on a retry. */
+export class ApiError extends Error {
+	constructor(
+		readonly path: string,
+		readonly status: number,
+		/** seconds, from Retry-After (429/503) */
+		readonly retryAfter: number | null,
+	) {
+		super(`${path}: HTTP ${status}`);
+	}
+}
+
 async function get<T>(path: string): Promise<T> {
 	const r = await fetch(`${API}${path}`, { cache: "no-store" });
-	if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+	if (!r.ok) {
+		const ra = Number(r.headers.get("retry-after"));
+		throw new ApiError(
+			path,
+			r.status,
+			Number.isFinite(ra) && ra > 0 ? ra : null,
+		);
+	}
 	return (await r.json()) as T;
 }
 
@@ -22,6 +41,31 @@ export interface LayerItem {
 	severity?: string;
 	meta?: Record<string, unknown>;
 	geom?: { type: string; coordinates?: number[] } | null;
+}
+
+export interface EventProvenance {
+	item: LayerItem & { ingested_at: string; confidence?: number | null };
+	feed: {
+		source: string;
+		last_ok?: string | null;
+		last_attempt?: string | null;
+		content_ts?: string | null;
+		error?: string | null;
+		collector?: string;
+		intervalSec?: number;
+	} | null;
+	lastFetch: { fetched_at: string; http_status: number | null } | null;
+	related: {
+		id: string;
+		ts: string;
+		source: string;
+		layer: string;
+		title: string | null;
+		url: string | null;
+		severity: string | null;
+		reason: string;
+	}[];
+	serverTs: string;
 }
 
 // ── monitor (ROADMAP P1) ──────────────────────────────────────────────────
@@ -158,6 +202,9 @@ export const api = {
 			truncated?: boolean;
 		}>(`/api/layers/${name}${qs ? `?${qs}` : ""}`);
 	},
+	/** One record with its provenance (see GET /api/event). */
+	event: (id: string) =>
+		get<EventProvenance>(`/api/event?id=${encodeURIComponent(id)}`),
 	layerHistory: (name: string) =>
 		get<{ buckets: { bucket: string; count: string; n?: number }[] }>(
 			`/api/layers/${name}/history?bucket=day`,

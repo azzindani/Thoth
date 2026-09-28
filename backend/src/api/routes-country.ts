@@ -1,8 +1,8 @@
 import type express from "express";
-import { z } from "zod";
 import { query } from "../db/client.js";
 import { log } from "../lib/logger.js";
 import { countryNames, locateCountry } from "../workers/lib/countries.js";
+import { CountryParams } from "./schemas.js";
 
 // Country page (ROADMAP P5): one country, all layers. Anchored on the
 // capital (lib/countries.ts): travel advisories (US + UK) and UNHCR
@@ -11,18 +11,13 @@ import { countryNames, locateCountry } from "../workers/lib/countries.js";
 // country is matched by text. Capital + radius is coarse for very large
 // countries — the radius is a parameter and the response says so.
 
-const Q = z.object({
-	q: z.string().trim().min(2).max(80),
-	radius_km: z.coerce.number().min(50).max(2000).default(500),
-});
-
 export function registerCountry(app: express.Express): void {
 	app.get("/api/country/list", (_req, res) => {
 		res.json({ ok: true, items: countryNames() });
 	});
 
 	app.get("/api/country", async (req, res) => {
-		const p = Q.safeParse(req.query);
+		const p = CountryParams.safeParse(req.query);
 		if (!p.success) {
 			res.status(400).json({ ok: false, error: "q (country name) required" });
 			return;

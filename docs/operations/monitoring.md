@@ -64,10 +64,46 @@ During a mass failure, per-source pushes are suppressed, so an outbound
 network outage sends **one** message, not hundreds.
 
 For Telegram delivery, the **worker** needs `TELEGRAM_BOT_TOKEN` and
-`TELEGRAM_CHAT_ID`. See
+`TELEGRAM_CHAT_ID`; Compose passes them from `backend/.env`. See
 [Configuration › How variables reach the containers](configuration.md#how-variables-reach-the-containers).
 Test delivery with `notify hello` in the command bar, which goes through
 the API.
+
+## Outbound webhooks
+
+Set `WEBHOOK_URLS` (comma-separated) on the worker and every URL receives a
+JSON `POST` for each new **critical alert** and each new **watch match**.
+The worker checks once a minute. An item counts as new when a collector saw
+it in the last 30 minutes, it was observed in the last 24 hours, and it
+has not yet been delivered to that URL. When a URL is first configured,
+what is already live is recorded as a baseline and not sent.
+
+```json
+{
+  "type": "alert.critical",
+  "delivery": "5f0c…",
+  "sent_at": "2026-09-28T10:12:40Z",
+  "event": { "id": "usgs:us7000abcd", "ts": "…", "layer": "quakes", "title": "…", "url": "…", "severity": "critical", "geom": {…}, "meta": {…} },
+  "watch": { "id": "…", "kind": "keyword", "value": "pipeline" }
+}
+```
+
+`type` is `alert.critical` or `watch.match`; `watch` is present only on
+matches. Headers: `X-Thoth-Event` (the type), `X-Thoth-Delivery` (unique
+per attempt) and `X-Thoth-Timestamp` (Unix seconds). With
+`WEBHOOK_SECRET` set, `X-Thoth-Signature` is
+`sha256=` + hex HMAC-SHA256 of `<timestamp>.<body>`. Verify it, and reject
+old timestamps:
+
+```js
+const expected = "sha256=" + crypto.createHmac("sha256", secret)
+  .update(`${req.headers["x-thoth-timestamp"]}.${rawBody}`).digest("hex");
+```
+
+Any `2xx` answer counts as delivered. Anything else, a redirect or a
+timeout (10 s) is retried on the next passes, up to 5 attempts. Each URL
+gets at most 50 deliveries per pass. Delivery history is kept for 7 days
+in the `webhook_deliveries` table.
 
 ## Prometheus metrics
 
@@ -132,6 +168,7 @@ In development, use `npx tsx src/workers/run.ts --once <name>` or
 
 | Job | Cadence | Notes |
 |---|---|---|
+| Ops alerts and webhooks | 1 min | Feed alerts, then outbound webhook deliveries (only with `WEBHOOK_URLS`). |
 | Intelligence pass | 5 min | Duplicates, incidents, anomalies. Anomaly baselines need about a day of samples before anything is flagged. |
 | Retention | 2 min after start, then hourly | Batches of 5,000 rows. See [Database › Retention](../architecture/database.md#retention). |
 | Daily sitrep archive | Host cron, 00:05 UTC | See [Backup & restore](backup-and-restore.md#scheduled-jobs). |

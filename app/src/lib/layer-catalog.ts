@@ -1,3 +1,4 @@
+import { PALETTE } from "./palette";
 // Layer catalog: the single source of truth for every map layer (global-monitor pattern).
 // Symbols: Lucide icon paths (ISC licence). Colors must stay in primitives tokens.
 export interface LayerDef {
@@ -417,7 +418,7 @@ export async function bakeIcon(name: string, ink: string): Promise<ImageData> {
 	const L = LAYERS[name];
 	const svg =
 		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">` +
-		`<circle cx="12" cy="12" r="11" fill="rgba(11,11,10,0.86)" stroke="${ink}" stroke-opacity="0.35" stroke-width="0.75"/>` +
+		`<circle cx="12" cy="12" r="11" fill="${PALETTE.panel}" fill-opacity="0.9" stroke="${ink}" stroke-opacity="0.35" stroke-width="0.75"/>` +
 		`<g transform="translate(4.2 4.2) scale(0.65)" fill="none" stroke="${ink}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${L.svg}</g></svg>`;
 	const img = new Image();
 	await new Promise<void>((resolve, reject) => {

@@ -125,6 +125,12 @@ export function PortfolioTab() {
 					ADD
 				</button>
 			</div>
+			{pfs.length === 0 && (
+				<div className="dim">
+					Track holdings against live quotes: name a portfolio, ADD it, then add
+					symbols to it.
+				</div>
+			)}
 			{pfs.map((p) => (
 				<div key={p.id}>
 					<h3>
@@ -304,6 +310,12 @@ export function NotesTab() {
 					ADD
 				</button>
 			</div>
+			{notes.length === 0 && (
+				<div className="dim">
+					An analyst journal kept on the server: give a note a title (and
+					tickers, if any) and ADD it.
+				</div>
+			)}
 			{notes.map((n) => (
 				<ItemRow key={n.id}>
 					<b>{n.tickers || n.category}</b> · {n.title} · {n.sentiment}{" "}

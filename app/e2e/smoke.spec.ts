@@ -1,5 +1,11 @@
 // Thoth app smoke: boots, counts, tabs, OSINT command. Needs backend on :4000 + app on :3000.
+
+import { readFileSync } from "node:fs";
 import { expect, test } from "./fixtures";
+
+const VERSION: string = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 test("terminal boots with counts + globe", async ({ page }) => {
 	await page.goto("/");
@@ -33,7 +39,8 @@ test("tabs + osint command work", async ({ page }) => {
 	});
 	await page.fill("#cmd", "changelog");
 	await page.keyboard.press("Enter");
-	await expect(page.locator(".modal")).toContainText("Phase 4", {
+	// The dialog heads with the release version from package.json.
+	await expect(page.locator("#changelog-h")).toContainText(VERSION, {
 		timeout: 15000,
 	});
 });
@@ -52,6 +59,10 @@ test("new widgets render: threatclock + minimap + graph", async ({ page }) => {
 	await page.goto("/");
 	await expect(page.locator(".threatclock")).toBeVisible({ timeout: 30000 });
 	await expect(page.locator(".minimap")).toBeVisible({ timeout: 30000 });
+	// The page is server-rendered: the minimap is in the HTML before React
+	// hydrates. Wait for a client-only mark (set in an effect) so the key
+	// lands on an attached listener, not on static markup.
+	await page.waitForFunction(() => !!document.body.dataset.bp);
 	await page.keyboard.press("e");
 	await expect(page.locator(".entitygraph")).toBeVisible({ timeout: 15000 });
 });
