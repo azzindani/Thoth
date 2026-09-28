@@ -21,6 +21,28 @@ curl -sf localhost:4000/api/readyz && curl -sf localhost:3000/healthz
 Releases are tagged `vX.Y.Z` from `main`. The dated notes below come from
 before the first release and are all included in v0.1.0.
 
+### v0.2.0
+
+No manual steps are required. The migration (`011_webhooks.sql`) runs
+automatically, and every new variable is optional.
+
+- **The app now sends a Content-Security-Policy.** If you serve Thoth with
+  extra scripts, frames or a different map or tile host, the browser will
+  block them; the console names the directive. Diagnose with
+  `APP_CSP=report` (or `off`) on the app, then report the missing origin.
+  If browsers call the API directly (`NEXT_PUBLIC_THOTH_API`), that origin
+  is allowed automatically.
+- **Pages render per request** (the CSP nonce needs it). Expect slightly
+  more CPU on the app per page load, none per API call.
+- **New, optional:** `API_READ_KEYS`, `API_READ_KEYS_FILE` and
+  `API_READ_REQUIRED` on the API; `API_READ_KEY` and `APP_CSP` on the app;
+  `WEBHOOK_URLS` and `WEBHOOK_SECRET` on the worker. Compose passes them
+  all. See [Configuration](configuration.md).
+- If you turn on `API_READ_REQUIRED`, give the app a reader key through
+  `API_READ_KEY` in the same change, or the app loses its data.
+- The install files (`/manifest.webmanifest`, `/sw.js`, `/icons/*`) are
+  served without the access token, like `/healthz`. They contain no data.
+
 ### v0.1.0
 
 No manual steps: there are no new migrations or required variables.

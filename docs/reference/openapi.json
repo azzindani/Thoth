@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thoth API",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Live OSINT layers, intelligence, watches and on-demand lookups. See docs/reference/api.md for conventions (authentication, list and error shapes, the event object).",
     "license": {
       "name": "MIT",

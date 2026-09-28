@@ -6,22 +6,16 @@ priority order within each group. Shipped work is recorded in the
 
 Status: `[ ]` open · `[~]` in progress
 
-## Next release: v0.2.0
+## Next release: v0.3.0
 
-Planned scope, in the order it lands (`[x]` = done). Open items also keep
-their entry in the themed lists below.
+1. [ ] Removal of the deprecated single-file terminal
+   (`backend/public/index.html`) and its e2e suite, on or after 2026-10-09
+   as announced (Frontend).
 
-1. [x] Content-Security-Policy for the app (Security and operations).
-2. [x] OpenAPI specification (Platform and integrations).
-3. [x] Reader API keys with per-key rate limits (Platform and integrations).
-4. [x] Outbound webhooks for alerts and watch matches (Platform and
-   integrations).
-5. [x] Installable PWA with critical-alert notifications (Frontend).
-6. [x] Light "paper" theme (Frontend).
-7. [x] Pop-out windows saved with workspaces (Analyst workflow).
-8. [x] Explicit cross-layer rules (Intelligence).
-9. [ ] Removal of the deprecated single-file terminal, on or after
-   2026-10-09 as announced (Frontend).
+v0.2.0 shipped the CSP, the OpenAPI document, reader API keys, outbound
+webhooks, the installable app, the paper theme, pop-out windows in
+workspaces and the first cross-layer rules (see the
+[Changelog](../CHANGELOG.md)).
 
 ## Guiding principles
 
