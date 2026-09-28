@@ -272,3 +272,51 @@ export async function getBrief() {
 		counts,
 	};
 }
+
+/**
+ * Everything needed to check one record against its origin: the stored
+ * row (with when a poll last re-confirmed it), the health of the feed it
+ * came from and that feed's latest fetch, and the other reports judged to
+ * describe the same event (event_dups) — independent corroboration.
+ */
+export async function getEventProvenance(id: string) {
+	const [item] = await query<Record<string, unknown> & { source: string }>(
+		`SELECT id, ts, ingested_at, source, layer, title, body, url, severity,
+            confidence, ST_AsGeoJSON(geom)::json AS geom, entities, meta
+     FROM events WHERE id = $1`,
+		[id],
+	);
+	if (!item) return null;
+	const [feed] = await query(
+		`SELECT source, last_ok, last_attempt, content_ts, error
+     FROM feed_health WHERE source = $1`,
+		[item.source],
+	);
+	const [fetch] = await query(
+		`SELECT fetched_at, http_status FROM raw_events
+     WHERE source = $1 ORDER BY fetched_at DESC LIMIT 1`,
+		[item.source],
+	);
+	// This record's duplicates, or — if it is itself a duplicate — the
+	// primary report and that report's other duplicates.
+	const related = await query(
+		`WITH p AS (
+       SELECT COALESCE((SELECT primary_id FROM event_dups WHERE id = $1), $1) AS id
+     )
+     SELECT e.id, e.ts, e.source, e.layer, e.title, e.url, e.severity,
+            CASE WHEN e.id = p.id THEN 'primary' ELSE d.reason END AS reason
+     FROM p
+     JOIN events e ON e.id = p.id
+        OR e.id IN (SELECT id FROM event_dups WHERE primary_id = p.id)
+     LEFT JOIN event_dups d ON d.id = e.id
+     WHERE e.id <> $1
+     ORDER BY e.ts DESC LIMIT 25`,
+		[id],
+	);
+	return {
+		item,
+		feed: feed ?? null,
+		lastFetch: fetch ?? null,
+		related,
+	};
+}

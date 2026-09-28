@@ -114,6 +114,7 @@ curl -N http://127.0.0.1:4000/api/stream
 | Method & path | Parameters | Description |
 |---|---|---|
 | `GET /api/brief` | — | Deterministic brief: counts and top items from critical down to info |
+| `GET /api/event` | `id` | One event with its provenance: the stored record (observed `ts`, `ingested_at` = last poll that re-confirmed it, `url`, confidence), its source feed's health and latest fetch (`feed`, `lastFetch`), and other reports of the same event (`related`, from duplicate detection) |
 | `GET /api/alerts` | `hours` (1–168, default 24), `limit` (default 50) | Critical and watch events in the window |
 | `GET /api/dossier` | `lat`, `lng` (or `lon`), `radius_km` (1–1000, default 100) | Everything near a point: events by layer, geo context, threat score |
 | `GET /api/country` | `q` (name, ≥2 chars), `radius_km` (50–2000, default 500) | Country page: advisories, displacement, per-layer counts, critical and watch items, news |

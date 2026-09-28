@@ -55,6 +55,7 @@ function toGeoJSON(items: LayerItem[], sev: string) {
 					rot: Number(i.meta?.track ?? 0) || 0,
 					facts: factsOf(i.meta, i.title ?? ""),
 					desc: i.body ? i.body.replace(/\s+/g, " ").slice(0, 180) : "",
+					img: typeof i.meta?.image === "string" ? i.meta.image : "",
 				},
 			})),
 	};

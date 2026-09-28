@@ -6,7 +6,7 @@
 // Both are ordinary layers (`incidents`, `anomalies`) built by the worker.
 import { useEffect, useMemo, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
-import { ageStr } from "../lib/ui";
+import { ageStr, SourceLink } from "../lib/ui";
 import { type Column, DataTable } from "./DataTable";
 import { flyTo } from "./MapView";
 
@@ -21,6 +21,7 @@ type Timeline = {
 	source: string;
 	severity: string;
 	title: string | null;
+	url?: string | null;
 	dups: number;
 }[];
 type IncMeta = {
@@ -83,7 +84,8 @@ function TimelineView({ t }: { t: Timeline }) {
 						{e.dups
 							? ` · +${e.dups} duplicate report${e.dups > 1 ? "s" : ""}`
 							: ""}
-					</span>
+					</span>{" "}
+					<SourceLink url={e.url} source={e.source} />
 				</div>
 			))}
 		</div>
