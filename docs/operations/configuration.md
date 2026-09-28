@@ -20,7 +20,7 @@ only **passes a fixed set to each service**, as listed in
 | Service | Receives |
 |---|---|
 | `api` | `DATABASE_URL`, `API_WRITE_KEY`, `API_READ_KEYS`, `API_READ_REQUIRED`, `CORS_ORIGIN`, `TRUST_PROXY`, `REQUESTS_PER_MIN`, `LOG_LEVEL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
-| `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOG_LEVEL` |
+| `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `WEBHOOK_URLS`, `WEBHOOK_SECRET`, `LOG_LEVEL` |
 | `app` | `API_WRITE_KEY`, `API_READ_KEY`, `APP_ACCESS_KEY`, `APP_TOKENS`, `APP_JWT_SECRET`, `APP_SESSION_TTL_MS`, `APP_TRUST_UPSTREAM_AUTH`, `APP_CSP` |
 
 To set anything else in a container (for example the `*_RETENTION_DAYS`
@@ -100,6 +100,7 @@ Every keyed integration is off by default. With no key it reports itself as
 | `OTX_API_KEY` | AlienVault OTX pulse intel on the `cyber` layer | Free signup at otx.alienvault.com |
 | `FINNHUB_KEY` | Earnings calendar on the `markets` layer | Free signup at finnhub.io |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Push delivery for ops alerts (worker) and `POST /api/notify` (API) | Create a bot with @BotFather, message it once, then read the chat id from `https://api.telegram.org/bot<token>/getUpdates` |
+| `WEBHOOK_URLS`, `WEBHOOK_SECRET` | Outbound webhooks (worker): a signed JSON POST to each URL for every new critical alert and watch match. See [Monitoring › Outbound webhooks](monitoring.md#outbound-webhooks) | Your receiver's URLs, comma-separated. Generate the secret with `openssl rand -hex 32` |
 
 ### Compose-only
 

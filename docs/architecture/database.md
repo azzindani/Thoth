@@ -46,6 +46,7 @@ Write migrations to be idempotent (`IF NOT EXISTS`, `ON CONFLICT`).
 | `008_intel.sql` | `event_dups`, `layer_samples` |
 | `009_area_watch.sql` | `watchlists.geom` and the `area` watch kind |
 | `010_map_notes.sql` | `notes.lat`, `notes.lon` |
+| `011_webhooks.sql` | `webhook_deliveries`: one row per delivered item and webhook URL |
 
 ## Core tables
 

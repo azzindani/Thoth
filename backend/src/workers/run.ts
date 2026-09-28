@@ -16,6 +16,7 @@ import {
 	scheduleStart,
 } from "./ops.js";
 import { COLLECTORS, type CollectorName } from "./registry.js";
+import { webhookPass } from "./webhooks.js";
 
 // BP7: staggered + jittered intervals, overlap guard, --once mode for cron/CI.
 // Usage: npm run dev:worker | node dist/workers/run.js --once quakes
@@ -181,6 +182,13 @@ async function main() {
 				})
 				.catch((e: unknown) =>
 					log.warn("ops alerts failed", { error: errMsg(e) }),
+				);
+			webhookPass()
+				.then((r) => {
+					if (r.sent || r.failed || r.baseline) log.info("webhooks", r);
+				})
+				.catch((e: unknown) =>
+					log.warn("webhooks failed", { error: errMsg(e) }),
 				);
 		}, ALERT_MS),
 	);

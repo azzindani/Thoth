@@ -321,3 +321,28 @@ export async function getEventProvenance(id: string) {
 		related,
 	};
 }
+
+export type Watch = { id: string; kind: string; value: string };
+
+/**
+ * SQL condition for events matching one watch (keyword in title or body,
+ * layer, severity, or anything live inside an area watch). Pushes its
+ * parameter onto `params`. Shared by GET /api/watch/matches and the
+ * webhook pass, so both match the same way.
+ */
+export function watchCondition(w: Watch, params: unknown[]): string {
+	if (w.kind === "keyword") {
+		params.push(`%${w.value}%`);
+		return `(title ILIKE $${params.length} OR body ILIKE $${params.length})`;
+	}
+	if (w.kind === "area") {
+		// Anything live inside the area; catalogs (airports…) never.
+		params.push(w.id);
+		return `(source <> 'static' AND geom IS NOT NULL AND ST_Intersects(geom,
+		   (SELECT g.geom FROM watchlists g WHERE g.id = $${params.length})))`;
+	}
+	params.push(w.value);
+	return w.kind === "layer"
+		? `layer = $${params.length}`
+		: `severity = $${params.length}`;
+}
