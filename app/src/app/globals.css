@@ -1020,15 +1020,16 @@ details.gaps[open] summary::before {
 	max-width: 340px;
 	position: relative;
 	overflow: hidden;
-	padding-left: 12px;
 }
-.hov-bar {
-	position: absolute;
-	left: 0;
-	top: 3px;
-	bottom: 3px;
-	width: 2px;
-	border-radius: 2px;
+/* severity reads as a dot beside its label (a full-height stripe cost the
+   card 12px of width for the same information) */
+.sev-dot {
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	margin-right: 6px;
+	vertical-align: 1px;
 }
 .hov-t {
 	font-weight: 600;

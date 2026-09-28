@@ -221,9 +221,9 @@ export function hoverCard(
 	const row = (k: string, v: string, wide = false) =>
 		`<span>${esc(k)}</span><span${wide ? ' class="w"' : ""}>${esc(v)}</span>`;
 	return (
-		`<div class="hov"><div class="hov-bar" style="background:${sevCol}"></div>` +
+		`<div class="hov">` +
 		`<div class="hov-t">${esc(p.title || p.id || layer)}</div>` +
-		`<div class="hov-m"><span class="sev-tag" style="color:${sevCol}">${esc(sev.toUpperCase())}</span>` +
+		`<div class="hov-m"><span class="sev-dot" style="background:${sevCol}"></span><span class="sev-tag" style="color:${sevCol}">${esc(sev.toUpperCase())}</span>` +
 		` · ${esc(layer)}${p.airline ? ` · ${esc(p.airline)}` : ""}</div>` +
 		(p.desc ? `<div class="hov-d">${esc(p.desc)}</div>` : "") +
 		`<div class="hov-grid">` +
