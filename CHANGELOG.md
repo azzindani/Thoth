@@ -9,28 +9,30 @@ operator action are also listed in
 ## [Unreleased]
 
 ### Added
-- Phone bottom sheets (Layers, Inspector, Full view) snap between half and
-  full height: swipe up on the grabber to expand, swipe down to step back
-  to half and then close; a tap on the grabber toggles half/full. The
-  Layers sheet has a header with a close (✕) button.
+- **Phone navigation.** A bottom bar (Layers · Intel · Search · Alerts ·
+  More) reaches every tool on a phone. Search shows the command line on
+  demand; Alerts badges new criticals; More holds map style, globe,
+  cinema, missions, replay, entity graph, sitrep, area dossier, saved
+  views and every command. The ticker has a ⌘K button for the command
+  palette on desk and tablet, and tablet has INTEL to open the inspector.
+- Phone bottom sheets (Layers, Inspector, Full view, Tools) snap between
+  half and full height: swipe up on the grabber to expand, swipe down to
+  step back to half and then close; a tap on the grabber toggles
+  half/full. The Layers sheet has a close (✕) button.
+- The tablet layer rail expands (☰) into the full panel with names,
+  switches, severity filter, theater, mission and layer search; toggling
+  from the folded rail says what changed.
+- Long-press on the map opens the area dossier on touch screens.
 - On/off switches on every layer row, plus a switch on each layer group
   header that shows or hides the whole group.
+- A map legend (severity rings, grouped counts) and ‹ › arrows on the
+  inspector's tab strip when tabs are hidden.
 - Map preview cards show the record's telemetry and details (altitude,
   speed, heading, route, magnitude and similar fields) and the last-seen
   time in UTC. On phones the pinned card is a full-width sheet at the top
   of the screen, and the map pans so the object stays visible below it.
-
-### Fixed
-- The flights layer showed every stored snapshot of an aircraft, including
-  positions days old. The map and API now return each aircraft's latest
-  position only, for aircraft seen in the last 45 minutes.
-- The "Full view" button in map cards no longer wraps and gets cut off.
-
-### Removed
-- Dependabot version-update configuration (`.github/dependabot.yml`).
-
-- Source and verification on every object. Map cards and popped-out
-  windows have a **Source ↗** button (the record's own link, or the
+- **Source and verification on every object.** Map cards and popped-out
+  windows have a Source ↗ button (the record's own link, or the
   publisher's site when the feed has no per-item link), show the
   record's host next to its source, and link aircraft, vessels and
   satellites to public trackers by their own identifier (ADS-B Exchange,
@@ -43,8 +45,8 @@ operator action are also listed in
   the same event (or a clear "single source" warning), incident member
   reports with their links, OpenStreetMap/Google Maps at the spot, and
   the raw stored record.
-- Alerts, nearby items and incident timelines link each item to its
-  source.
+- Alerts, nearby items, news brief items and incident timelines link each
+  item to its source.
 - `GET /api/event?id=` returns one event with its provenance.
 
 ### Changed
@@ -54,10 +56,49 @@ operator action are also listed in
   links the latest Sentinel-2 pass. Moving objects show no imagery.
 - VATSIM and IVAO flights are stored once per callsign and updated in
   place; pilots who disconnect or land are removed on the next poll.
+- CINEMA is an on/off toggle that spins over the chosen basemap (it used
+  to replace SAT/NVG and could only be left through DARK); pressing the
+  map stops it.
+- Every command answers: replies show on phones too (as a bubble over
+  the command line), `help` is a grouped panel, and unknown input names
+  the command. `sat` switches the basemap instead of toggling the
+  satellites layer.
+- Critical toasts can be tapped to open the event and dismissed; watch
+  toasts open the watch matches; notices are neutral, not red.
+- A phone on its side (≤500 px tall, <1024 px wide) keeps the phone
+  layout.
+- With a severity filter on, layer counts show what the map holds for
+  that severity.
+- `REQUESTS_PER_MIN` defaults to 300 (was 120), matching compose.
 - Reorganized the documentation into a structured `docs/` tree
   (architecture, operations, reference, development). Added `CONTRIBUTING.md`,
   `SECURITY.md` and this changelog. Removed the build ledgers, the
   per-batch endpoint log and the upstream-project research notes.
+
+### Fixed
+- The card's Zoom button (and any fly-to the spot already in view) froze
+  the map for good in globe view: MapLibre computed a NaN zoom. Such
+  moves ease instead, and a watchdog restores the last good camera.
+- Right-click on the map and `dossier lat,lng` opened an empty Area tab,
+  and `sdn name` an empty sanctions search: their arguments were dropped.
+  Both lookups now run and show loading, failure and no-match states.
+- Layers refused by the rate limit (HTTP 429, easy to hit by reloading)
+  stayed empty with no sign. Failed layers are flagged "!" in the layer
+  list and retried after `Retry-After`.
+- A page load toasted every critical alert of the last 24 hours at once.
+- The flights layer showed every stored snapshot of an aircraft, including
+  positions days old. The map and API now return each aircraft's latest
+  position only, for aircraft seen in the last 45 minutes.
+- "Esri World Imagery" stayed in the map credits after leaving SAT.
+- Tables on phones and tablets hid their extra columns without a hint
+  (they now fade at the scrollable edge); the tablet inspector covered
+  the dock's REPLAY/GRAPH buttons; the Monitor was squeezed on tablet.
+- The changelog and sitrep dialogs now take focus, trap Tab, close on
+  Escape and hand focus back.
+- The "Full view" button in map cards no longer wraps and gets cut off.
+
+### Removed
+- Dependabot version-update configuration (`.github/dependabot.yml`).
 
 ## 2026-09-24
 
