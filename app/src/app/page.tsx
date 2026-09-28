@@ -1463,6 +1463,10 @@ function ChangelogModal({ onClose }: { onClose: () => void }) {
 				</h3>
 				<div className="ibody" style={{ maxHeight: "60vh" }}>
 					<div className="item">
+						<b>0.2.0</b> · content security policy · OpenAPI · reader keys ·
+						webhooks · installable app · paper theme · cross-layer rules
+					</div>
+					<div className="item">
 						<b>0.1.0</b> · first release · settings with five layout and text
 						sizes · phone navigation · source and provenance on every object ·
 						half/full sheets

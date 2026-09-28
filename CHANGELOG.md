@@ -9,26 +9,19 @@ listed in [Upgrading](docs/operations/upgrading.md).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
+Hardening, integrations, an installable app with a light theme, and the
+first cross-layer rules. One new migration (`011_webhooks.sql`), applied
+automatically; every new setting is optional. See
+[Upgrading](docs/operations/upgrading.md#v020).
+
 ### Added
-- **Cross-layer rules** in the intelligence pass, shown as incidents with
-  their evidence linked: an internet outage in a country where submarine
-  cables land, and an air traffic drop within 300 km of recent conflict
-  reports.
-- Workspaces save the open pop-out windows (position, minimised state,
-  the object) and reopen them, shared links included. Workspaces saved
-  before leave the open windows alone.
-- **Paper theme.** Settings → Display → Theme: Dark, Paper (warm paper
-  and ink, on the CARTO Positron basemap) or Follow system. It is a token
-  swap: the same layout and components, applied before first paint.
-- **Installable app.** A web app manifest, icons and a service worker
-  (which caches nothing, so data is never stale) let Chrome, Edge, Android
-  and iOS install Thoth as an app. Settings → Alerts → *Critical alert
-  notifications* shows system notifications for new criticals while Thoth
-  is in the background; tapping one opens the alert.
-- **Outbound webhooks** (`WEBHOOK_URLS`, `WEBHOOK_SECRET`): each URL gets
-  a signed JSON POST for every new critical alert and watch match, with
-  retries and a baseline so switching them on does not replay what is
-  already live. Migration `011_webhooks.sql` adds the delivery log.
+- **Content-Security-Policy** on every app page. Scripts run only with a
+  per-request nonce; styles, fonts, images, map data, frames and
+  connections are limited to an audited allowlist (CARTO basemap, Esri
+  imagery, Google Fonts, YouTube embeds, CCTV stills over HTTPS), and
+  framing is refused. `APP_CSP=report` or `off` is there for diagnosis.
 - **Reader API keys** (`API_READ_KEYS`, or `API_READ_KEYS_FILE` re-read
   on change): named read-only keys that identify their caller in the access
   log and can carry their own per-minute limit. `API_READ_REQUIRED=1`
@@ -38,11 +31,25 @@ listed in [Upgrading](docs/operations/upgrading.md).
   `docs/reference/openapi.json`, covering all 120 routes. Parameters and
   bodies come from the zod schemas the routes validate with; a unit test
   fails when a route is undocumented or the committed spec is stale.
-- **Content-Security-Policy** on every app page. Scripts run only with a
-  per-request nonce; styles, fonts, images, map data, frames and
-  connections are limited to an audited allowlist (CARTO basemap, Esri
-  imagery, Google Fonts, YouTube embeds, CCTV stills over HTTPS), and
-  framing is refused. `APP_CSP=report` or `off` is there for diagnosis.
+- **Outbound webhooks** (`WEBHOOK_URLS`, `WEBHOOK_SECRET`): each URL gets
+  a signed JSON POST for every new critical alert and watch match, with
+  retries and a baseline so switching them on does not replay what is
+  already live. Migration `011_webhooks.sql` adds the delivery log.
+- **Installable app.** A web app manifest, icons and a service worker
+  (which caches nothing, so data is never stale) let Chrome, Edge, Android
+  and iOS install Thoth as an app. Settings → Alerts → *Critical alert
+  notifications* shows system notifications for new criticals while Thoth
+  is in the background; tapping one opens the alert.
+- **Paper theme.** Settings → Display → Theme: Dark, Paper (warm paper
+  and ink, on the CARTO Positron basemap) or Follow system. It is a token
+  swap: the same layout and components, applied before first paint.
+- Workspaces save the open pop-out windows (position, minimised state,
+  the object) and reopen them, shared links included. Workspaces saved
+  before leave the open windows alone.
+- **Cross-layer rules** in the intelligence pass, shown as incidents with
+  their evidence linked: an internet outage in a country where submarine
+  cables land, and an air traffic drop within 300 km of recent conflict
+  reports.
 
 ### Changed
 - Pages render per request (a CSP nonce cannot be baked into prerendered
@@ -256,5 +263,6 @@ below, and the dated pre-release entries after this section.
 - CI (typecheck, lint, unit, collector contracts, route and alive suites,
   Playwright e2e, Docker build) and Dependabot.
 
-[Unreleased]: https://github.com/azzindani/Thoth/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/azzindani/Thoth/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/azzindani/Thoth/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/azzindani/Thoth/releases/tag/v0.1.0
