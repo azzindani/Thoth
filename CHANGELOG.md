@@ -15,11 +15,27 @@ operator action are also listed in
   Layers sheet has a header with a close (✕) button.
 - On/off switches on every layer row, plus a switch on each layer group
   header that shows or hides the whole group.
+- Map preview cards show the record's telemetry and details (altitude,
+  speed, heading, route, magnitude and similar fields) and the last-seen
+  time in UTC. On phones the pinned card is a full-width sheet at the top
+  of the screen, and the map pans so the object stays visible below it.
+
+### Fixed
+- The flights layer showed every stored snapshot of an aircraft, including
+  positions days old. The map and API now return each aircraft's latest
+  position only, for aircraft seen in the last 45 minutes.
+- The "Full view" button in map cards no longer wraps and gets cut off.
 
 ### Removed
 - Dependabot version-update configuration (`.github/dependabot.yml`).
 
 ### Changed
+- Card and full-view imagery is Esri World Imagery centred on the object
+  under a crosshair, replacing the Sentinel-2 scene thumbnail (which
+  showed the whole ~110 km scene, not the point). The full view still
+  links the latest Sentinel-2 pass. Moving objects show no imagery.
+- VATSIM and IVAO flights are stored once per callsign and updated in
+  place; pilots who disconnect or land are removed on the next poll.
 - Reorganized the documentation into a structured `docs/` tree
   (architecture, operations, reference, development). Added `CONTRIBUTING.md`,
   `SECURITY.md` and this changelog. Removed the build ledgers, the

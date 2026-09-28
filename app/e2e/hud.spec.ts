@@ -212,17 +212,19 @@ test.describe
 			}
 			expect(at, "hover card converges").toBeTruthy();
 			await expect(pointCards().first()).toContainText("ago");
-			// Rich preview: structured card + lazy satellite thumbnail.
+			// Rich preview: structured card; fixed sites and events also get
+			// imagery centred on the point (moving objects: telemetry only).
 			await expect(
 				page.locator(".maplibregl-popup-content .hov-grid").first(),
 			).toBeVisible({ timeout: 5000 });
-			await expect(
-				page
-					.locator(
-						".maplibregl-popup-content .hov-shot img.on, .maplibregl-popup-content .hov-shot.empty",
-					)
-					.first(),
-			).toBeVisible({ timeout: 25000 });
+			const hovLayer = await page
+				.locator(".maplibregl-popup-content .hov-m")
+				.first()
+				.innerText();
+			if (!/flights|vessels|satellites|drones/.test(hovLayer))
+				await expect(
+					page.locator(".maplibregl-popup-content .hov-shot .hov-x").first(),
+				).toBeVisible({ timeout: 5000 });
 			// Exactly one hover card: overlapping layers must not stack two.
 			await expect(page.locator("#map .maplibregl-popup")).toHaveCount(1);
 			// Every open card must name a feature actually under the cursor.

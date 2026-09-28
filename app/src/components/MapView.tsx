@@ -7,9 +7,9 @@ import { api, type CameraView, type LayerItem } from "../lib/api";
 import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
 import { PALETTE, SEV_INK } from "../lib/palette";
 import {
-	armThumb,
 	ensurePickHandler,
 	esc,
+	factsOf,
 	hoverCard,
 	type ObjProps,
 	pickedRecently,
@@ -53,6 +53,8 @@ function toGeoJSON(items: LayerItem[], sev: string) {
 					lat: i.geom?.coordinates?.[1],
 					airline: (i.meta?.airline as string) || "",
 					rot: Number(i.meta?.track ?? 0) || 0,
+					facts: factsOf(i.meta, i.title ?? ""),
+					desc: i.body ? i.body.replace(/\s+/g, " ").slice(0, 180) : "",
 				},
 			})),
 	};
@@ -486,10 +488,10 @@ export async function loadLayer(
 			closeOnClick: false,
 			offset: 12,
 			className: "hov-pop",
+			maxWidth: "360px",
 		});
 		const phovCtl = steadyHover(map, phov, (p) => {
 			phov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
-			armThumb(phov, p);
 		});
 		// Fill, points, and the line hit band (lines have no fill to hover).
 		for (const hoverId of [name, `${name}-p`, `${name}-h`]) {
@@ -630,10 +632,10 @@ export async function loadLayer(
 			closeOnClick: false,
 			offset: 12,
 			className: "hov-pop",
+			maxWidth: "360px",
 		});
 		const hovCtl = steadyHover(map, hov, (p) => {
 			hov.setHTML(hoverCard(p as ObjProps & { ts?: string }, name));
-			armThumb(hov, p);
 		});
 		map.on("mousemove", name, (e) => {
 			const f = e.features?.[0];

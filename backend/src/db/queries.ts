@@ -108,6 +108,19 @@ export async function getAlerts(limit = 50, hours = 24) {
 	);
 }
 
+/**
+ * Live-track layers: one dot per moving object at its latest position, and
+ * only while it is still reporting. Value = minutes since the last report
+ * after which an object leaves the map (3 poll cycles of the slowest feed:
+ * ADS-B polls every 15 min). Without this every stored snapshot of a plane
+ * rendered as its own dot, days after it landed.
+ */
+export const TRACK_LAYERS: Record<string, number> = { flights: 45 };
+
+/** One object per track: ids minus a trailing per-minute stamp
+ * (`ivao:CALLSIGN:2026-09-28T12:34`, the pre-stable-id scheme). */
+const TRACK_KEY = `regexp_replace(id, ':\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$', '')`;
+
 // Readers hide reports judged duplicates of another (event_dups, P4): one
 // quake is one dot, not three.
 export async function getLayerSlice(
@@ -115,6 +128,22 @@ export async function getLayerSlice(
 	limit = 500,
 	since?: string,
 ) {
+	const track = TRACK_LAYERS[layer];
+	if (track) {
+		return query(
+			`SELECT * FROM (
+         SELECT DISTINCT ON (${TRACK_KEY})
+                id, ts, source, layer, title, body, url, severity, confidence,
+                ST_AsGeoJSON(geom)::json AS geom, entities, meta
+         FROM events WHERE layer = $1
+           AND ts > now() - make_interval(mins => $2::int)
+           AND ($3::timestamptz IS NULL OR ts > $3)
+           AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
+         ORDER BY ${TRACK_KEY}, ts DESC
+       ) t ORDER BY ts DESC LIMIT $4`,
+			[layer, track, since ?? null, limit],
+		);
+	}
 	if (since) {
 		return query(
 			`SELECT id, ts, source, layer, title, body, url, severity, confidence,
@@ -162,14 +191,27 @@ export async function getLayerView(
 		w <= e
 			? "geom && ST_MakeEnvelope($2, $3, $4, $5, 4326)"
 			: "(geom && ST_MakeEnvelope($2, $3, 180, $5, 4326) OR geom && ST_MakeEnvelope(-180, $3, $4, $5, 4326))";
-	const rows = await query<Record<string, unknown> & { n_total: string }>(
-		`WITH hit AS (
-       SELECT id, ts, source, layer, title, body, url, severity, confidence,
+	const track = TRACK_LAYERS[layer];
+	// Live tracks: latest report per object, within the freshness window.
+	const hit = track
+		? `SELECT DISTINCT ON (${TRACK_KEY})
+              id, ts, source, layer, title, body, url, severity, confidence,
               geom, entities, meta, ST_Centroid(geom) AS c
        FROM events
        WHERE layer = $1 AND geom IS NOT NULL AND ${envelopes}
          AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
          AND ($6::timestamptz IS NULL OR ts > $6)
+         AND ts > now() - make_interval(mins => ${Math.round(track)})
+       ORDER BY ${TRACK_KEY}, ts DESC`
+		: `SELECT id, ts, source, layer, title, body, url, severity, confidence,
+              geom, entities, meta, ST_Centroid(geom) AS c
+       FROM events
+       WHERE layer = $1 AND geom IS NOT NULL AND ${envelopes}
+         AND NOT EXISTS (SELECT 1 FROM event_dups d WHERE d.id = events.id)
+         AND ($6::timestamptz IS NULL OR ts > $6)`;
+	const rows = await query<Record<string, unknown> & { n_total: string }>(
+		`WITH hit AS (
+       ${hit}
      ), ranked AS (
        SELECT *, row_number() OVER (
                 PARTITION BY floor(ST_X(c) / $7), floor(ST_Y(c) / $7)
