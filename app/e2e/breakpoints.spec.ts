@@ -244,7 +244,7 @@ test.describe
 
 		test("sheet opens, layer toggles, tap selects", async () => {
 			await expect(page.locator("#explorer.open")).toBeHidden();
-			await page.locator(".sheet-toggle").click();
+			await page.locator("#nav-layers").click();
 			await expect(page.locator("#explorer.open")).toBeVisible({
 				timeout: 5000,
 			});
@@ -252,7 +252,7 @@ test.describe
 			await news.click();
 			await expect(news).toHaveClass(/off/);
 			await page.screenshot({ path: "e2e/shots/phone-sheet.png" });
-			await page.locator(".sheet-toggle").click();
+			await page.locator("#nav-layers").click();
 			const pinned = () =>
 				page.locator(".maplibregl-popup-content .hov", {
 					has: page.locator(".hov-act"),
@@ -315,6 +315,8 @@ test.describe
 			await expect(page.locator("#health-pill")).toContainText("LIVE");
 			// Extras are desk-only CSS (display:none still carries text content).
 			await expect(page.locator("#health-pill .pill-ext")).toBeHidden();
+			// Phones reach the command line from the bottom nav (Search).
+			await page.locator("#nav-search").click();
 			await page.fill("#cmd", "trend quakes 7");
 			await page.keyboard.press("Enter");
 			await expect(page.locator("#insp-body")).toContainText("daily counts", {

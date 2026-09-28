@@ -5,7 +5,7 @@
 ```bash
 cd backend
 docker compose exec -T db pg_dump -U thoth -Fc thoth > thoth-pre-upgrade.dump   # always
-git fetch && git checkout <release-or-commit>
+git fetch --tags && git checkout <release-tag-or-commit>   # e.g. v0.1.0
 docker compose up -d --build          # runs migrate + seed, then restarts services
 curl -sf localhost:4000/api/readyz && curl -sf localhost:3000/healthz
 ```
@@ -17,6 +17,44 @@ curl -sf localhost:4000/api/readyz && curl -sf localhost:3000/healthz
   those that need manual action.
 
 ## Version-specific notes
+
+Releases are tagged `vX.Y.Z` from `main`. The dated notes below come from
+before the first release and are all included in v0.1.0.
+
+### v0.2.0
+
+No manual steps are required. The migration (`011_webhooks.sql`) runs
+automatically, and every new variable is optional.
+
+- **The app now sends a Content-Security-Policy.** If you serve Thoth with
+  extra scripts, frames or a different map or tile host, the browser will
+  block them; the console names the directive. Diagnose with
+  `APP_CSP=report` (or `off`) on the app, then report the missing origin.
+  If browsers call the API directly (`NEXT_PUBLIC_THOTH_API`), that origin
+  is allowed automatically.
+- **Pages render per request** (the CSP nonce needs it). Expect slightly
+  more CPU on the app per page load, none per API call.
+- **New, optional:** `API_READ_KEYS`, `API_READ_KEYS_FILE` and
+  `API_READ_REQUIRED` on the API; `API_READ_KEY` and `APP_CSP` on the app;
+  `WEBHOOK_URLS` and `WEBHOOK_SECRET` on the worker. Compose passes them
+  all. See [Configuration](configuration.md).
+- If you turn on `API_READ_REQUIRED`, give the app a reader key through
+  `API_READ_KEY` in the same change, or the app loses its data.
+- The install files (`/manifest.webmanifest`, `/sw.js`, `/icons/*`) are
+  served without the access token, like `/healthz`. They contain no data.
+
+### v0.1.0
+
+No manual steps: there are no new migrations or required variables.
+
+- Native (non-compose) runs now default `REQUESTS_PER_MIN` to `300`, the
+  value compose already used. If you set a lower limit yourself, keep it
+  well above about 45 requests per page load, or layers load on retry.
+- Display settings are new and kept per browser, so nothing needs to be
+  migrated.
+- Compose now passes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to the
+  worker. If you added them in a `docker-compose.override.yml`, that
+  override can go.
 
 ### 2026-09-24: access-token gate and compose project name
 

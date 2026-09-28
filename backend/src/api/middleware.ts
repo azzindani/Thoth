@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type {
 	ErrorRequestHandler,
 	NextFunction,
@@ -8,6 +8,7 @@ import type {
 } from "express";
 import { config, isProduction } from "../config.js";
 import { log } from "../lib/logger.js";
+import { type Client, presentedKey, safeEqual } from "./keys.js";
 
 // Cross-cutting HTTP concerns, in mount order (see app.ts). Each is small,
 // dependency-free and individually testable.
@@ -36,6 +37,7 @@ export const requestLog: RequestHandler = (req, res, next) => {
 			status: res.statusCode,
 			ms: Math.round(ms * 10) / 10,
 			ip: req.ip,
+			...(res.locals.client ? { key: (res.locals.client as Client).name } : {}),
 		};
 		if (res.statusCode >= 500) log.error("http", fields);
 		else if (res.statusCode >= 400) log.warn("http", fields);
@@ -101,9 +103,10 @@ export function cors(origins = config.CORS_ORIGIN): RequestHandler {
 }
 
 /**
- * Fixed-window per-IP limiter (no deps). Keys on req.ip, which honours
- * TRUST_PROXY — without that every request behind the Next proxy shares one
- * bucket. Long-lived SSE and probes are exempt.
+ * Fixed-window limiter (no deps). A reader key with its own limit
+ * (keys.ts, identify) gets its own bucket; everyone else is limited per
+ * req.ip, which honours TRUST_PROXY — without that every request behind the
+ * Next proxy shares one bucket. Long-lived SSE and probes are exempt.
  */
 export function rateLimit(perMin = config.REQUESTS_PER_MIN): RequestHandler {
 	const WINDOW_MS = 60_000;
@@ -119,7 +122,11 @@ export function rateLimit(perMin = config.REQUESTS_PER_MIN): RequestHandler {
 			req.path === "/readyz"
 		)
 			return next();
-		const key = req.ip ?? "unknown";
+		const client = res.locals.client as Client | undefined;
+		const limit = client?.perMin ?? perMin;
+		const key = client?.perMin
+			? `key:${client.name}`
+			: `ip:${req.ip ?? "unknown"}`;
 		const now = Date.now();
 		let slot = hits.get(key);
 		if (!slot || now > slot.reset) {
@@ -127,9 +134,9 @@ export function rateLimit(perMin = config.REQUESTS_PER_MIN): RequestHandler {
 			hits.set(key, slot);
 		}
 		slot.n++;
-		res.setHeader("RateLimit-Limit", String(perMin));
-		res.setHeader("RateLimit-Remaining", String(Math.max(0, perMin - slot.n)));
-		if (slot.n > perMin) {
+		res.setHeader("RateLimit-Limit", String(limit));
+		res.setHeader("RateLimit-Remaining", String(Math.max(0, limit - slot.n)));
+		if (slot.n > limit) {
 			const retry = Math.ceil((slot.reset - now) / 1000);
 			res.setHeader("Retry-After", String(retry));
 			res
@@ -142,18 +149,6 @@ export function rateLimit(perMin = config.REQUESTS_PER_MIN): RequestHandler {
 }
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
-function presentedKey(req: Request): string {
-	const auth = req.get("authorization") ?? "";
-	if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
-	return req.get("x-thoth-key") ?? "";
-}
-
-function safeEqual(a: string, b: string): boolean {
-	const ab = Buffer.from(a);
-	const bb = Buffer.from(b);
-	return ab.length === bb.length && timingSafeEqual(ab, bb);
-}
 
 /**
  * Write gate for mutating /api routes. Key set → required (Bearer or

@@ -1,5 +1,6 @@
 import express from "express";
 import { config } from "../config.js";
+import { identify } from "./keys.js";
 import {
 	cors,
 	errorHandler,
@@ -9,6 +10,7 @@ import {
 	requireWriteKey,
 	securityHeaders,
 } from "./middleware.js";
+import { registerOpenApi } from "./openapi.js";
 import { registerCore } from "./routes-core.js";
 import { registerCountry } from "./routes-country.js";
 import { registerIntel } from "./routes-intel.js";
@@ -27,7 +29,7 @@ export function trustProxyValue(v: string): boolean | number | string {
 
 /**
  * Builds the API app without listening, so tests and tooling can mount it.
- * Order matters: observability → headers → CORS → rate limit → write gate
+ * Order matters: observability → headers → CORS → caller key → rate limit → write gate
  * (before body parsing, so rejected writes cost nothing) → body → routes →
  * JSON 404 → error handler.
  */
@@ -39,6 +41,7 @@ export function createApp(): express.Express {
 	app.use(requestLog);
 	app.use(securityHeaders);
 	app.use("/api", cors());
+	app.use("/api", identify());
 	app.use("/api", rateLimit());
 	app.use("/api", requireWriteKey());
 	app.use("/api", express.json({ limit: "100kb" }));
@@ -51,6 +54,7 @@ export function createApp(): express.Express {
 	registerIntel(app);
 	registerMonitor(app);
 	registerCountry(app);
+	registerOpenApi(app);
 
 	app.use("/api", notFound);
 	app.use(errorHandler);

@@ -19,9 +19,9 @@ only **passes a fixed set to each service**, as listed in
 
 | Service | Receives |
 |---|---|
-| `api` | `DATABASE_URL`, `API_WRITE_KEY`, `CORS_ORIGIN`, `TRUST_PROXY`, `REQUESTS_PER_MIN`, `LOG_LEVEL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
-| `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `LOG_LEVEL` |
-| `app` | `API_WRITE_KEY`, `APP_ACCESS_KEY`, `APP_TOKENS`, `APP_JWT_SECRET`, `APP_SESSION_TTL_MS`, `APP_TRUST_UPSTREAM_AUTH` |
+| `api` | `DATABASE_URL`, `API_WRITE_KEY`, `API_READ_KEYS`, `API_READ_REQUIRED`, `CORS_ORIGIN`, `TRUST_PROXY`, `REQUESTS_PER_MIN`, `LOG_LEVEL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
+| `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `WEBHOOK_URLS`, `WEBHOOK_SECRET`, `LOG_LEVEL` |
+| `app` | `API_WRITE_KEY`, `API_READ_KEY`, `APP_ACCESS_KEY`, `APP_TOKENS`, `APP_JWT_SECRET`, `APP_SESSION_TTL_MS`, `APP_TRUST_UPSTREAM_AUTH`, `APP_CSP` |
 
 To set anything else in a container (for example the `*_RETENTION_DAYS`
 variables on the worker, or `PG_POOL_MAX`), add it to that service with a
@@ -33,14 +33,12 @@ services:
   worker:
     environment:
       EVENTS_RETENTION_DAYS: "365"
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}   # needed for ops-alert pushes
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
 ```
 
-> **Telegram alerts:** ops-alert pushes are sent by the **worker**, but the
-> default compose file only passes the Telegram bot variables to the `api`
-> (which uses them for `POST /api/notify`). Add them to the worker as shown
-> above if you want alert delivery.
+> **Telegram alerts:** set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` once
+> in `backend/.env`. Compose passes them to the `worker`, which sends
+> ops-alert pushes, and to the `api`, which uses them for
+> `POST /api/notify`.
 
 ## Backend: API and worker
 
@@ -58,8 +56,11 @@ services:
 | Variable | Default | Description |
 |---|---|---|
 | `API_WRITE_KEY` | *(empty)* | Shared secret for POST, PUT, PATCH and DELETE on `/api`, sent as `Authorization: Bearer <key>` or `X-Thoth-Key`. When empty, writes are open in development and **refused** in production. Compose requires it. Generate with `openssl rand -hex 32`. |
+| `API_READ_KEYS` | *(empty)* | Named reader keys for scripts and integrations, `name:key[:perMin],…` (keys at least 16 characters). A key identifies its caller in the access log. With `perMin`, it gets its own rate-limit bucket; without it, its callers are limited per IP. A presented key that matches nothing gets `401`. Reader keys never write. |
+| `API_READ_KEYS_FILE` | *(empty)* | The same as JSON, `{"name": "key"}` or `{"name": {"key": "…", "perMin": 600}}`. Re-read when it changes, so you can add or revoke keys without a restart. Needs a volume mount in compose. |
+| `API_READ_REQUIRED` | *(empty)* | `1` requires a reader key (or the write key) on every `GET /api` except the `livez` and `readyz` probes. Give the app a key through `API_READ_KEY`. |
 | `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting. It decides `req.ip`, which is used for rate limits and logs. Widen it only for proxy hops you know. |
-| `REQUESTS_PER_MIN` | `120` (compose: `300`) | Fixed-window rate limit per client IP. SSE and probes are exempt. Raise it only for load tests from a single IP. |
+| `REQUESTS_PER_MIN` | `300` | Fixed-window rate limit per client IP. SSE and probes are exempt. One page load requests every layer (about 45 calls), so keep this well above that; the app retries a limited layer after `Retry-After`. Raise it only for load tests from a single IP. |
 | `CORS_ORIGIN` | `*` | `*` or a comma-separated list of origins. Only matters when browsers call the API cross-origin. |
 | `SSE_MAX_CLIENTS` | `500` | Concurrent `/api/stream` clients. Beyond this, the API answers `503` with `Retry-After`. |
 
@@ -99,6 +100,7 @@ Every keyed integration is off by default. With no key it reports itself as
 | `OTX_API_KEY` | AlienVault OTX pulse intel on the `cyber` layer | Free signup at otx.alienvault.com |
 | `FINNHUB_KEY` | Earnings calendar on the `markets` layer | Free signup at finnhub.io |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Push delivery for ops alerts (worker) and `POST /api/notify` (API) | Create a bot with @BotFather, message it once, then read the chat id from `https://api.telegram.org/bot<token>/getUpdates` |
+| `WEBHOOK_URLS`, `WEBHOOK_SECRET` | Outbound webhooks (worker): a signed JSON POST to each URL for every new critical alert and watch match. See [Monitoring › Outbound webhooks](monitoring.md#outbound-webhooks) | Your receiver's URLs, comma-separated. Generate the secret with `openssl rand -hex 32` |
 
 ### Compose-only
 
@@ -114,13 +116,15 @@ Every keyed integration is off by default. With no key it reports itself as
 
 | Variable | When read | Description |
 |---|---|---|
-| `APP_ACCESS_KEY` | runtime | Operator access key. Gates every page and `/api` call. `/healthz` and static assets stay open. |
+| `APP_ACCESS_KEY` | runtime | Operator access key. Gates every page and `/api` call. `/healthz`, static assets and the install files (manifest, service worker, icons) stay open. |
 | `APP_TOKENS` | runtime | Extra named keys, `name:key,name2:key2`. To revoke one, remove it. |
 | `APP_TOKENS_FILE` | runtime | Extra keys as JSON `{"name": "key"}`. Re-read on every check, so you can add or revoke keys without a restart. Needs a volume mount in compose. |
 | `APP_JWT_SECRET` | runtime | Session-cookie signing secret. Defaults to `APP_ACCESS_KEY`. Rotating it signs every browser out. |
 | `APP_SESSION_TTL_MS` | runtime | Session cookie lifetime. Default 30 days. |
 | `APP_TRUST_UPSTREAM_AUTH` | runtime | `1` means an authenticating proxy in front has already vetted every request, so the write key is attached for all callers. |
+| `APP_CSP` | runtime | `enforce` (default) sends the Content-Security-Policy. `report` sends it as Report-Only, and `off` drops it. Use them only to diagnose something the policy blocks, then report the missing origin. |
 | `API_WRITE_KEY` | runtime | Must match the API's value. Attached server-side to writes from vetted callers only. |
+| `API_READ_KEY` | runtime | A reader key from the API's `API_READ_KEYS`, attached server-side to reads. Needed only when the API sets `API_READ_REQUIRED`. Give it no `perMin`, so the app's users stay limited per IP. |
 | `THOTH_API_INTERNAL` | **build** | Rewrite target for `/api/*`. Compose sets `http://api:4000`. The default is `http://localhost:4000`. |
 | `NEXT_PUBLIC_THOTH_API` | **build** | Leave empty (same-origin). Set it only if browsers must call the API directly. |
 

@@ -7,8 +7,9 @@
 // the same report as Markdown tables. Built in the browser from the
 // public API: nothing is stored.
 import type * as maplibregl from "maplibre-gl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
+import { useDialog } from "../lib/dialog";
 import { where } from "./IncidentsTab";
 import { snapshotMap } from "./MapView";
 
@@ -248,6 +249,8 @@ export default function Sitrep({
 	getMap: () => maplibregl.Map | null;
 	onClose: () => void;
 }) {
+	const box = useRef<HTMLElement>(null);
+	useDialog(box, true, onClose);
 	const [d, setD] = useState<SitrepData | null>(null);
 	const [err, setErr] = useState<string | null>(null);
 
@@ -303,7 +306,15 @@ export default function Sitrep({
 	};
 
 	return (
-		<section className="sitrep" id="sitrep" aria-label="sitrep report">
+		<section
+			className="sitrep"
+			id="sitrep"
+			role="dialog"
+			aria-modal="true"
+			aria-label="sitrep report"
+			ref={box}
+			tabIndex={-1}
+		>
 			<div className="sitrep-bar no-print">
 				<b>SITREP</b>
 				<span className="dim">

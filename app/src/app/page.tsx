@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import CmdBar from "../components/CmdBar";
 import EntityGraph from "../components/EntityGraph";
 import Explorer from "../components/Explorer";
-import Inspector, { CompleteView, type Tab } from "../components/Inspector";
+import Inspector, {
+	CompleteView,
+	type InspRequest,
+	type Tab,
+} from "../components/Inspector";
 import MapView, {
 	loadAll,
 	MAP_NOTES_EVENT,
@@ -20,18 +24,37 @@ import {
 	CommandPalette,
 	ShortcutSheet,
 } from "../components/Palette";
-import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
+import PhoneNav, { type NavKey } from "../components/PhoneNav";
+import PopWindows, {
+	currentPops,
+	LAYERS_EVENT,
+	POPS_EVENT,
+} from "../components/PopWindows";
 import Replay from "../components/Replay";
+import SettingsPanel from "../components/SettingsPanel";
 import SinceDigest from "../components/SinceDigest";
 import Sitrep from "../components/Sitrep";
 import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
-import { API, api } from "../lib/api";
+import ToolsSheet from "../components/ToolsSheet";
+import { API, api, type LayerItem } from "../lib/api";
+import { useDialog } from "../lib/dialog";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
+import { notifyCritical, OPEN_ALERT, registerServiceWorker } from "../lib/pwa";
+import {
+	applySettings,
+	loadSettings,
+	SETTINGS_EVENT,
+	saveView,
+	settings,
+	watchSystemTheme,
+} from "../lib/settings";
+import { useSettings } from "../lib/useSettings";
 import {
 	deleteWorkspace,
 	listWorkspaces,
+	packPop,
 	saveWorkspace,
 	type Workspace,
 	workspaceFromHash,
@@ -54,6 +77,14 @@ export default function Terminal() {
 	const [sev, setSev] = useState("");
 	const [since, setSince] = useState<string | null>(null);
 	const [mode, setMode] = useState("default");
+	// Cinema is a slow spin over whichever basemap is chosen, toggled on its
+	// own (it used to be a basemap: clicking it again did nothing, and it
+	// replaced SAT/NVG). Grabbing the map stops it.
+	const [cinema, setCinema] = useState(false);
+	const pickMode = useCallback((m: string) => {
+		if (m === "cinema") setCinema((c) => !c);
+		else setMode(m === "dark" ? "default" : m);
+	}, []);
 	const [globe, setGlobe] = useState(true);
 	const [tab, setTab] = useState<Tab>("object");
 	const [sel, setSel] = useState<ObjProps | null>(null);
@@ -75,6 +106,33 @@ export default function Terminal() {
 	const [palOpen, setPalOpen] = useState(false);
 	const [replayOn, setReplayOn] = useState(false);
 	const [countryQ, setCountryQ] = useState<string | undefined>(undefined);
+	const [inspReq, setInspReq] = useState<InspRequest | null>(null);
+	// Phone navigation: the More sheet, the command line (shown on demand
+	// above the nav) and new critical alerts since Alerts was last opened.
+	const [toolsOpen, setToolsOpen] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [prefs] = useSettings();
+	useEffect(() => applySettings(loadSettings()), []);
+	// The theme the maps were built with (<html data-theme>, set before
+	// paint). A change remounts them with the new basemap and palette; the
+	// camera survives through the #c= hash.
+	const [mapTheme, setMapTheme] = useState(() =>
+		typeof document === "undefined"
+			? "dark"
+			: (document.documentElement.dataset.theme ?? "dark"),
+	);
+	useEffect(() => {
+		const on = () =>
+			setMapTheme(document.documentElement.dataset.theme ?? "dark");
+		window.addEventListener(SETTINGS_EVENT, on);
+		const unwatch = watchSystemTheme();
+		return () => {
+			window.removeEventListener(SETTINGS_EVENT, on);
+			unwatch();
+		};
+	}, []);
+	const [cmdOpen, setCmdOpen] = useState(false);
+	const [alertBadge, setAlertBadge] = useState(0);
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 	const [keysOpen, setKeysOpen] = useState(false);
 	const [sitrepOn, setSitrepOn] = useState(false);
@@ -84,8 +142,15 @@ export default function Terminal() {
 	);
 	// kind: critical (red badge, the default), watch (amber), notice (none).
 	const [toasts, setToasts] = useState<
-		{ id: string; title: string; kind?: "critical" | "watch" | "notice" }[]
+		{
+			id: string;
+			title: string;
+			kind?: "critical" | "watch" | "notice";
+			/** the event behind a critical toast: a tap opens it */
+			item?: LayerItem;
+		}[]
 	>([]);
+	const critSeeded = useRef(false);
 	// Link state only (up/down, reconnects). The last-message time changes
 	// on every 5 s heartbeat, so it lives in a ref: a heartbeat must not
 	// re-render the whole page.
@@ -229,6 +294,9 @@ export default function Terminal() {
 				e.preventDefault();
 				setKeysOpen(false);
 				setPalOpen((o) => !o);
+			} else if (!typing && e.key === ",") {
+				e.preventDefault();
+				setSettingsOpen((o) => !o);
 			} else if (!typing && e.key === "?") {
 				e.preventDefault();
 				setPalOpen(false);
@@ -244,6 +312,8 @@ export default function Terminal() {
 			} else if (e.key === "Escape") {
 				setPalOpen(false);
 				setKeysOpen(false);
+				setToolsOpen(false);
+				setCmdOpen(false);
 				document.getElementById("inspector")?.classList.remove("open");
 				setOsint(null);
 				setFull(null);
@@ -272,13 +342,74 @@ export default function Terminal() {
 		return () => document.removeEventListener("keydown", onKey);
 	}, [mission, applyMission, setPanel, togglePanel, toggleClear]);
 
+	// Phone nav: one sheet at a time. A tap on the active item closes it.
+	const navPick = useCallback(
+		(k: NavKey) => {
+			const ex = document.getElementById("explorer");
+			const insp = document.getElementById("inspector");
+			const exOpen = !!ex?.classList.contains("open");
+			const inOpen = !!insp?.classList.contains("open");
+			const was =
+				k === "layers"
+					? exOpen
+					: k === "intel"
+						? inOpen && tab !== "alerts"
+						: k === "alerts"
+							? inOpen && tab === "alerts"
+							: k === "search"
+								? cmdOpen
+								: toolsOpen;
+			ex?.classList.remove("open");
+			insp?.classList.remove("open");
+			setToolsOpen(false);
+			setCmdOpen(false);
+			setFull(null);
+			if (was) return;
+			if (k === "layers") ex?.classList.add("open");
+			else if (k === "intel") {
+				if (tab === "alerts") setTab("object");
+				insp?.classList.add("open");
+			} else if (k === "alerts") {
+				setTab("alerts");
+				setAlertBadge(0);
+				insp?.classList.add("open");
+			} else if (k === "search") {
+				setCmdOpen(true);
+				requestAnimationFrame(() => document.getElementById("cmd")?.focus());
+			} else setToolsOpen(true);
+		},
+		[tab, cmdOpen, toolsOpen],
+	);
+	// A sheet opened any other way (a command, the status pill) takes the
+	// screen from the command line and the More sheet.
+	useEffect(() => {
+		const els = ["explorer", "inspector"]
+			.map((id) => document.getElementById(id))
+			.filter((e): e is HTMLElement => !!e);
+		const mo = new MutationObserver(() => {
+			if (els.some((e) => e.classList.contains("open"))) {
+				setToolsOpen(false);
+				setCmdOpen(false);
+			}
+		});
+		for (const e of els)
+			mo.observe(e, { attributes: true, attributeFilter: ["class"] });
+		return () => mo.disconnect();
+	}, []);
+	useEffect(() => {
+		document.body.classList.toggle("cmd-open", cmdOpen);
+		document.body.classList.toggle("replay-on", replayOn);
+	}, [cmdOpen, replayOn]);
+
 	// breakpoint mirror (responsive contract)
 	useEffect(() => {
 		function bp() {
 			const w = window.innerWidth;
-			document.body.dataset.bp =
-				w >= 1200 ? "desk" : w >= 768 ? "tab" : "phone";
-			setPhone(w < 768);
+			// A phone on its side is still a phone: short screens below
+			// 1024 wide get the phone layout (same rule as the CSS).
+			const phone = w < 768 || (window.innerHeight <= 500 && w < 1024);
+			document.body.dataset.bp = w >= 1200 ? "desk" : phone ? "phone" : "tab";
+			setPhone(phone);
 		}
 		bp();
 		window.addEventListener("resize", bp);
@@ -299,7 +430,21 @@ export default function Terminal() {
 		// The dock's height is content-driven; publish the measured value so
 		// the chrome stacked above it (minimap, toasts, full view) clears it.
 		const dock = el("bottom");
-		if (dock?.offsetHeight)
+		const nav = el("phone-nav");
+		// Phone: the bottom chrome is the nav bar, plus the command pill or
+		// replay bar when one is shown above it.
+		const phoneBottom = nav
+			? Math.min(
+					nav.offsetTop,
+					dock?.offsetHeight ? dock.offsetTop : Number.POSITIVE_INFINITY,
+				)
+			: null;
+		if (phoneBottom != null)
+			document.documentElement.style.setProperty(
+				"--dock-h",
+				`${Math.max(0, window.innerHeight - phoneBottom - 8)}px`,
+			);
+		else if (dock?.offsetHeight)
 			document.documentElement.style.setProperty(
 				"--dock-h",
 				`${dock.offsetHeight}px`,
@@ -314,7 +459,12 @@ export default function Terminal() {
 		const H = window.innerHeight;
 		const tk = el("ticker");
 		const top = tk ? tk.offsetTop + tk.offsetHeight : 0;
-		const bottom = dock && !hid("hide-dock") ? H - dock.offsetTop : 0;
+		const bottom =
+			phoneBottom != null
+				? H - phoneBottom
+				: dock && !hid("hide-dock")
+					? H - dock.offsetTop
+					: 0;
 		const ex = el("explorer");
 		const left =
 			bp === "phone" || !ex || hid("hide-expl")
@@ -351,7 +501,13 @@ export default function Terminal() {
 	syncPaddingRef.current = syncPadding;
 	useEffect(() => {
 		const ro = new ResizeObserver(() => syncPadding());
-		for (const id of ["ticker", "explorer", "inspector", "bottom"]) {
+		for (const id of [
+			"ticker",
+			"explorer",
+			"inspector",
+			"bottom",
+			"phone-nav",
+		]) {
 			const el = document.getElementById(id);
 			if (el) ro.observe(el);
 		}
@@ -377,7 +533,7 @@ export default function Terminal() {
 					watchSeeded = true;
 					return;
 				}
-				if (fresh.length) {
+				if (fresh.length && settings().watchPopups) {
 					setToasts((t) =>
 						[
 							...fresh.slice(0, 3).map((w) => ({
@@ -408,10 +564,22 @@ export default function Terminal() {
 					(a) => a.severity === "critical" && !seenCrit.current.has(a.id),
 				);
 				for (const a of j.items) seenCrit.current.add(a.id);
-				if (fresh.length) {
+				// The first poll only learns what is already there: a page
+				// load used to fire every critical of the last 24 h at once.
+				if (!critSeeded.current) {
+					critSeeded.current = true;
+					return;
+				}
+				if (fresh.length) setAlertBadge((b) => b + fresh.length);
+				if (fresh.length && settings().notify) void notifyCritical(fresh);
+				if (fresh.length && settings().critPopups) {
 					setToasts((t) =>
 						[
-							...fresh.map((a) => ({ id: a.id, title: a.title ?? a.id })),
+							...fresh.map((a) => ({
+								id: a.id,
+								title: a.title ?? a.id,
+								item: a,
+							})),
 							...t,
 						].slice(0, 5),
 					);
@@ -427,6 +595,10 @@ export default function Terminal() {
 				/* keep */
 			}
 		}
+		// Learn what is already there at load, so the first change after it
+		// toasts only what is new (not every critical of the last 24 h).
+		void checkToasts();
+		void checkWatch();
 		const known: Record<string, string> = {};
 		// Trailing throttle: worker ticks bump versions every ~60s across
 		// many layers, and every bump re-fetches + re-clusters (killing open
@@ -556,12 +728,22 @@ export default function Terminal() {
 		});
 		refreshStats();
 	}
+	function setLayers(ls: string[], st: boolean) {
+		setVisible((v) => {
+			const nv = { ...v };
+			for (const l of ls) nv[l] = st;
+			const map = mapRef.current;
+			if (map) for (const l of ls) setVis(map, l, nv);
+			return nv;
+		});
+		refreshStats();
+	}
 	function handleMode(m: string) {
 		if (m === "globe") {
 			setGlobe((g) => !g);
 			return;
 		}
-		setMode(m === "dark" ? "default" : m);
+		pickMode(m);
 	}
 	async function flyTheater(key: string) {
 		if (!key) return;
@@ -580,6 +762,61 @@ export default function Terminal() {
 	}
 
 	// A short-lived status toast (workspace saved, link copied…).
+	const dismissToast = useCallback(
+		(id: string) => setToasts((t) => t.filter((x) => x.id !== id)),
+		[],
+	);
+	// Installable app: register the service worker; a tapped notification
+	// asks this page to open its alert.
+	const openToastRef = useRef<(t: (typeof toasts)[number]) => void>(() => {});
+	useEffect(() => {
+		registerServiceWorker();
+		if (!("serviceWorker" in navigator)) return;
+		const onMsg = (e: MessageEvent) => {
+			const item = e.data?.item as LayerItem | undefined;
+			if (e.data?.type === OPEN_ALERT && item?.id)
+				openToastRef.current({
+					id: item.id,
+					title: item.title ?? item.id,
+					item,
+				});
+		};
+		navigator.serviceWorker.addEventListener("message", onMsg);
+		return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+	}, []);
+	function openToast(t: (typeof toasts)[number]) {
+		if (t.kind === "watch") {
+			setOsint({ kind: "watch", arg: "matches" });
+			setTab("object");
+			setPanel("insp", false);
+			document.getElementById("inspector")?.classList.add("open");
+			return;
+		}
+		const i = t.item;
+		const c = i?.geom?.coordinates;
+		if (!i) return;
+		const lon = Number(c?.[0]);
+		const lat = Number(c?.[1]);
+		if (Number.isFinite(lat) && Number.isFinite(lon))
+			mapRef.current?.flyTo({
+				center: [lon, lat],
+				zoom: Math.max(mapRef.current.getZoom(), 5),
+			});
+		selectFull({
+			id: i.id,
+			title: i.title || i.id,
+			url: i.url || "",
+			layer: i.layer,
+			severity: i.severity || "",
+			source: i.source,
+			ts: i.ts,
+			lon,
+			lat,
+			airline: "",
+			rot: 0,
+		});
+	}
+	openToastRef.current = openToast;
 	const notice = useCallback((title: string) => {
 		const id = `notice:${Date.now()}`;
 		setToasts((t) =>
@@ -609,6 +846,7 @@ export default function Terminal() {
 			globe,
 			tab,
 			panels: hidden,
+			pops: currentPops().map(packPop),
 		};
 	}
 	const applyWorkspace = useCallback((w: Workspace) => {
@@ -617,10 +855,17 @@ export default function Terminal() {
 		);
 		setMission(w.mission);
 		setSev(w.sev);
-		setMode(w.mode);
+		// Workspaces saved before cinema became a toggle stored it as a mode.
+		if (w.mode === "cinema") {
+			setMode("sat");
+			setCinema(true);
+		} else setMode(w.mode);
 		setGlobe(w.globe);
 		setTab(w.tab as Tab);
 		setHidden(w.panels);
+		// Older workspaces carry no windows: leave the open ones alone.
+		if (w.pops)
+			window.dispatchEvent(new CustomEvent(POPS_EVENT, { detail: w.pops }));
 		mapRef.current?.jumpTo({
 			center: w.camera.c,
 			zoom: w.camera.z,
@@ -738,9 +983,9 @@ export default function Terminal() {
 			).map(([m, label]) => ({
 				id: `mode-${m}`,
 				group: "Mode",
-				label,
+				label: m === "cinema" && cinema ? "Stop cinema" : label,
 				hint: m === "default" ? "s" : undefined,
-				run: () => setMode(m),
+				run: () => pickMode(m),
 			})),
 			{
 				id: "mode-globe",
@@ -866,6 +1111,44 @@ export default function Terminal() {
 				},
 			]),
 			{
+				id: "settings",
+				group: "View",
+				label: "Settings — size, text, time, alerts",
+				hint: ",",
+				run: () => setSettingsOpen(true),
+			},
+			{
+				id: "area-centre",
+				group: "Report",
+				label: "Area dossier at the map centre",
+				run: () => {
+					const c = mapRef.current?.getCenter();
+					if (c)
+						setInspReq({
+							n: Date.now(),
+							kind: "area",
+							lat: c.lat.toFixed(4),
+							lng: c.lng.toFixed(4),
+						});
+				},
+			},
+			{
+				id: "monitor",
+				group: "Help",
+				label: "Server monitor",
+				run: () => {
+					setTab("monitor");
+					setPanel("insp", false);
+					document.getElementById("inspector")?.classList.add("open");
+				},
+			},
+			{
+				id: "changelog",
+				group: "Help",
+				label: "Changelog",
+				run: () => setChangelog(true),
+			},
+			{
 				id: "keys",
 				group: "Help",
 				label: "Keyboard shortcuts",
@@ -889,12 +1172,15 @@ export default function Terminal() {
 			)}
 			<Ticker
 				mode={mode}
-				setMode={(m) => setMode(m === "dark" ? "default" : m)}
+				setMode={pickMode}
+				cinema={cinema}
 				globe={globe}
 				setGlobe={setGlobe}
 				sse={sse}
 				sseLast={sseLast}
 				onMonitor={() => setTab("monitor")}
+				onPalette={() => setPalOpen(true)}
+				onSettings={() => setSettingsOpen(true)}
 				focus={focus}
 				setFocus={setFocus}
 				clear={clear}
@@ -904,7 +1190,21 @@ export default function Terminal() {
 				<Explorer
 					counts={counts}
 					visible={visible}
-					onToggle={(l) => toggleLayer(l)}
+					onToggle={(l) => {
+						// The tablet rail shows icons only: say what the tap did.
+						if (
+							document.body.dataset.bp === "tab" &&
+							!document
+								.getElementById("explorer")
+								?.classList.contains("expanded")
+						)
+							notice(`${l} ${visible[l] ? "off" : "on"}`);
+						toggleLayer(l);
+					}}
+					onSetLayers={setLayers}
+					onClose={() =>
+						document.getElementById("explorer")?.classList.remove("open")
+					}
 					sev={sev}
 					setSev={setSev}
 					onMonitor={() => setTab("monitor")}
@@ -913,10 +1213,13 @@ export default function Terminal() {
 					onTheater={flyTheater}
 				/>
 				<MapView
+					key={mapTheme}
 					visible={visible}
 					sev={sev}
 					since={since}
 					mode={mode}
+					cinema={cinema}
+					onCinemaStop={() => setCinema(false)}
 					globe={globe}
 					onSelect={(p) => {
 						preview(p);
@@ -924,12 +1227,21 @@ export default function Terminal() {
 					onFull={(p) => {
 						selectFull(p);
 					}}
-					onArea={() => setTab("area")}
+					onArea={(lat, lng) =>
+						setInspReq({
+							n: Date.now(),
+							kind: "area",
+							lat: lat.toFixed(4),
+							lng: lng.toFixed(4),
+						})
+					}
 					overlay={
 						<>
 							{/* Hidden on phones: a second WebGL map there would still
 						    load tiles and redraw for nothing. */}
-							{!phone && <MiniMap getMap={getMap} />}
+							{!phone && prefs.minimap && (
+								<MiniMap key={mapTheme} getMap={getMap} />
+							)}
 							{graph && (
 								<EntityGraph
 									getMap={getMap}
@@ -958,6 +1270,7 @@ export default function Terminal() {
 							try {
 								const c = m.getCenter();
 								window.location.hash = `c=${c.lng.toFixed(2)},${c.lat.toFixed(2)},${m.getZoom().toFixed(1)}`;
+								saveView([c.lng, c.lat], m.getZoom());
 							} catch {
 								/* keep */
 							}
@@ -977,12 +1290,13 @@ export default function Terminal() {
 						setTab("object");
 					}}
 					country={countryQ}
+					request={inspReq}
 				/>
 			</div>
 			<div className="bottom" id="bottom">
 				<div className="tl-row">
 					<ThreatClock />
-					<div style={{ flex: 1, minWidth: 0 }}>
+					<div className="tl-main" style={{ flex: 1, minWidth: 0 }}>
 						{replayOn ? (
 							<Replay getMap={getMap} />
 						) : (
@@ -1016,8 +1330,14 @@ export default function Terminal() {
 				<CmdBar
 					onLayer={(l, st) => toggleLayer(l, st)}
 					onMode={handleMode}
-					onDossier={() => setTab("area")}
-					onSdn={() => setTab("sdn")}
+					onDossier={(lat, lng) =>
+						setInspReq({ n: Date.now(), kind: "area", lat, lng })
+					}
+					onSdn={(q) =>
+						q.trim()
+							? setInspReq({ n: Date.now(), kind: "sdn", q })
+							: setTab("sdn")
+					}
 					onAlerts={() => setTab("alerts")}
 					onTab={(t) => setTab(t as Tab)}
 					onSitrep={() => setSitrepOn(true)}
@@ -1034,6 +1354,28 @@ export default function Terminal() {
 				/>
 			</div>
 			<PopWindows getMap={getMap} onFull={selectFull} />
+			{phone && (
+				<>
+					<ToolsSheet
+						open={toolsOpen}
+						onClose={() => setToolsOpen(false)}
+						mode={mode}
+						setMode={pickMode}
+						cinema={cinema}
+						globe={globe}
+						setGlobe={setGlobe}
+						actions={toolsOpen ? buildActions() : []}
+						onPalette={() => setPalOpen(true)}
+					/>
+					<PhoneNav
+						onPick={navPick}
+						tab={tab}
+						searchOpen={cmdOpen}
+						moreOpen={toolsOpen}
+						alertBadge={alertBadge}
+					/>
+				</>
+			)}
 			{/* Edge handles: a slim grip on each panel's inner edge; when the
 			panel is hidden it becomes a labelled tab on the screen edge. */}
 			{(["expl", "insp", "dock"] as const).map((k) => (
@@ -1053,54 +1395,101 @@ export default function Terminal() {
 					<span className="pt-label">{PANEL_LABEL[k]}</span>
 				</button>
 			))}
-			{toasts.length > 0 && (
-				<div className="toasts">
-					{toasts.map((t) => (
-						<div key={t.id} className={`toast toast-${t.kind ?? "critical"}`}>
-							{t.kind === "notice" ? null : t.kind === "watch" ? (
-								<>
-									<b style={{ color: "var(--amber)" }}>● WATCH</b> ·{" "}
-								</>
-							) : (
-								<>
-									<b style={{ color: "var(--red)" }}>● CRITICAL</b> ·{" "}
-								</>
-							)}
-							{t.title}
-						</div>
-					))}
-				</div>
-			)}
-			{full && <CompleteView sel={full} onClose={() => setFull(null)} />}
-			{changelog && (
-				<div className="modal-veil" onClick={() => setChangelog(false)}>
-					<div className="modal" onClick={(e) => e.stopPropagation()}>
-						<h3>CHANGELOG</h3>
-						<div className="ibody" style={{ maxHeight: "60vh" }}>
-							<div className="item">
-								<b>Phase 4</b> · NEWS/MARKETS/CYBER tabs · toasts · shortcuts ·
-								changelog
-							</div>
-							<div className="item">
-								<b>Phase 3</b> · Next.js rebuild, parity with terminal
-							</div>
-							<div className="item">
-								<b>Phase 2</b> · freeze alarms · SSE resume · video wall
-							</div>
-							<div className="item">
-								<b>Phase 1</b> · 25 layers · 36 feeds · 11 static datasets · 7
-								OSINT endpoints
-							</div>
-							<div className="item">
-								<b>Phase 0</b> · 7 PORT docs · primitives + responsive contract
-							</div>
-						</div>
-						<button className="go" onClick={() => setChangelog(false)}>
-							Close
+			<div className="toasts" role="log" aria-live="polite" aria-label="alerts">
+				{toasts.map((t) => (
+					<div key={t.id} className={`toast toast-${t.kind ?? "critical"}`}>
+						{t.kind === "notice" ? (
+							<span className="toast-t">{t.title}</span>
+						) : (
+							<button
+								type="button"
+								className="toast-t"
+								title={
+									t.kind === "watch" ? "open watch matches" : "open this event"
+								}
+								onClick={() => {
+									dismissToast(t.id);
+									openToast(t);
+								}}
+							>
+								{t.kind === "watch" ? (
+									<b style={{ color: "var(--amber)" }}>● WATCH</b>
+								) : (
+									<b style={{ color: "var(--red)" }}>● CRITICAL</b>
+								)}{" "}
+								· {t.title}
+							</button>
+						)}
+						<button
+							type="button"
+							className="toast-x"
+							aria-label="dismiss"
+							onClick={() => dismissToast(t.id)}
+						>
+							✕
 						</button>
 					</div>
-				</div>
+				))}
+			</div>
+			{full && <CompleteView sel={full} onClose={() => setFull(null)} />}
+			{changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
+			{settingsOpen && (
+				<SettingsPanel
+					onClose={() => setSettingsOpen(false)}
+					onNotice={notice}
+				/>
 			)}
 		</main>
+	);
+}
+
+/** The changelog as a modal dialog (focus in, Tab trapped, Esc closes,
+ * focus back to the opener). */
+function ChangelogModal({ onClose }: { onClose: () => void }) {
+	const box = useRef<HTMLDivElement>(null);
+	useDialog(box, true, onClose);
+	return (
+		<div className="modal-veil" onClick={onClose}>
+			<div
+				className="modal"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="changelog-h"
+				ref={box}
+				onClick={(e) => e.stopPropagation()}
+			>
+				<h3 id="changelog-h">
+					CHANGELOG · {process.env.NEXT_PUBLIC_THOTH_VERSION}
+				</h3>
+				<div className="ibody" style={{ maxHeight: "60vh" }}>
+					<div className="item">
+						<b>0.2.0</b> · content security policy · OpenAPI · reader keys ·
+						webhooks · installable app · paper theme · cross-layer rules
+					</div>
+					<div className="item">
+						<b>0.1.0</b> · first release · settings with five layout and text
+						sizes · phone navigation · source and provenance on every object ·
+						half/full sheets
+					</div>
+					<div className="item">
+						<b>pre-release</b> · monitoring and ops alerts · replay, watches,
+						sitrep · incidents and anomalies · about 70 collectors over 300+
+						keyless sources · OSINT lookups
+					</div>
+					<div className="item">
+						<a
+							href="https://github.com/azzindani/Thoth/blob/main/CHANGELOG.md"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Full changelog ↗
+						</a>
+					</div>
+				</div>
+				<button className="go" onClick={onClose}>
+					Close
+				</button>
+			</div>
+		</div>
 	);
 }

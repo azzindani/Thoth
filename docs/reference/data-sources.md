@@ -46,6 +46,10 @@ The cadence is the collector's poll interval, before jitter.
 
 ### Movement and infrastructure
 
+The `flights` layer is served as live tracks: one dot per aircraft at its
+latest reported position, and an aircraft that has not reported for 45
+minutes leaves the map (`TRACK_LAYERS` in `backend/src/db/queries.ts`).
+
 | Layer | Main upstreams | Cadence |
 |---|---|---|
 | `flights` | adsb.lol → OpenSky (fallback, several regional boxes), adsb.fi, VATSIM, IVAO | 5–15 min |

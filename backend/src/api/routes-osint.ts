@@ -1,15 +1,11 @@
 import type express from "express";
-import { z } from "zod";
 import { searchSanctions } from "../db/queries.js";
 import { log } from "../lib/logger.js";
 import { fetchCircl, fetchEpss, fetchOsv } from "../workers/lib/vuln-enrich.js";
+import { GeoParams, IpParams, SanctionsParams } from "./schemas.js";
 
 /** Keyless OSINT lookups. Registered on the shared app (see server.ts). */
 export function registerOsint(app: express.Express): void {
-	const SanctionsParams = z.object({
-		query: z.string().trim().min(1).max(200),
-		limit: z.coerce.number().int().min(1).max(100).default(20),
-	});
 	app.get("/api/osint/sanctions", async (req, res) => {
 		const p = SanctionsParams.safeParse({
 			query: req.query.query,
@@ -34,10 +30,6 @@ export function registerOsint(app: express.Express): void {
 
 	// OSINT enrich (best-effort, keyless): Nominatim reverse label + ip-api lookup.
 	// Failures return ok:false with reason — never fabricated data.
-	const GeoParams = z.object({
-		lat: z.coerce.number().min(-90).max(90),
-		lng: z.coerce.number().min(-180).max(180),
-	});
 	app.get("/api/osint/geo", async (req, res) => {
 		const p = GeoParams.safeParse({ lat: req.query.lat, lng: req.query.lng });
 		if (!p.success) {
@@ -68,14 +60,6 @@ export function registerOsint(app: express.Express): void {
 		}
 	});
 
-	const IpParams = z.object({
-		host: z
-			.string()
-			.trim()
-			.min(1)
-			.max(253)
-			.regex(/^[a-zA-Z0-9.:-]+$/),
-	});
 	app.get("/api/osint/ip", async (req, res) => {
 		const p = IpParams.safeParse({ host: req.query.host });
 		if (!p.success) {
@@ -1201,7 +1185,7 @@ export function registerOsint(app: express.Express): void {
 			.trim()
 			.toUpperCase()
 			.slice(0, 2);
-		const year = Number(req.query.year ?? 2026);
+		const year = Number(req.query.year ?? new Date().getUTCFullYear());
 		if (!/^[A-Z]{2}$/.test(cc) || !Number.isFinite(year)) {
 			res.status(400).json({ ok: false, error: "cc required (ISO2)" });
 			return;

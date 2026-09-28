@@ -6,6 +6,17 @@ priority order within each group. Shipped work is recorded in the
 
 Status: `[ ]` open · `[~]` in progress
 
+## Next release: v0.3.0
+
+1. [ ] Removal of the deprecated single-file terminal
+   (`backend/public/index.html`) and its e2e suite, on or after 2026-10-09
+   as announced (Frontend).
+
+v0.2.0 shipped the CSP, the OpenAPI document, reader API keys, outbound
+webhooks, the installable app, the paper theme, pop-out windows in
+workspaces and the first cross-layer rules (see the
+[Changelog](../CHANGELOG.md)).
+
 ## Guiding principles
 
 - Free and keyless first. A keyed integration ships disabled until it is
@@ -17,19 +28,12 @@ Status: `[ ]` open · `[~]` in progress
 
 ## Platform and integrations
 
-- [ ] **OpenAPI specification** generated from the zod schemas and
-      published with the docs.
-- [ ] **Reader API keys** with per-key rate limits, separate from the
-      write key.
-- [ ] **Outbound webhooks** for alerts and watch matches.
 - [ ] **Agent surface.** An MCP server and a command channel so an
       assistant can query layers, incidents and alerts and place pins. See
       the [AI agents proposal](proposals/ai-agents.md).
 
 ## Security and operations
 
-- [ ] **Content-Security-Policy** for the app, with an audited allowlist
-      for tiles, fonts and video embeds.
 - [ ] **Per-user identity and an audit trail** for writes. Today there is a
       single shared write key.
 - [ ] **Shared rate-limit and SSE state** (for example Redis) so that more
@@ -38,9 +42,6 @@ Status: `[ ]` open · `[~]` in progress
       quarter.
 - [ ] **Freeze-budget review** for low-volume digest sources that show as
       frozen.
-- [ ] **Telegram alert delivery under Compose:** pass the bot variables to
-      the `worker` service by default (see
-      [Configuration](operations/configuration.md#how-variables-reach-the-containers)).
 
 ## Data coverage
 
@@ -56,8 +57,9 @@ Status: `[ ]` open · `[~]` in progress
 
 ## Intelligence
 
-- [ ] Explicit cross-layer rules, for example an internet outage near a
-      cable landing, or airspace emptying near a conflict event.
+- [ ] More cross-layer rules (`backend/src/workers/rules.ts`), for example
+      GNSS jamming next to an air traffic drop, or a quake near a nuclear
+      plant.
 - [ ] Hour-of-week anomaly baselines, once enough history has built up.
 - [ ] Market analytics HUD and backtesting. This needs several months of
       archived sitrep history first (earliest Q1 2027).
@@ -68,12 +70,12 @@ Status: `[ ]` open · `[~]` in progress
 
 - [ ] Country pages: sanctions and markets per country (needs ISO codes on
       each row).
-- [ ] Pop-out windows saved as part of workspaces.
 
 ## Frontend
 
 - [ ] Self-hosted vector basemap (PMTiles, keyless) in the warm style.
-- [ ] Installable PWA with push notifications for critical alerts.
-- [ ] Light "paper" theme, as a token swap only with no structural change.
+- [ ] Web Push for critical alerts while the app is closed (VAPID and a
+      push-subscription store). Today notifications need Thoth running,
+      and webhooks cover delivery elsewhere.
 - [ ] Remove the deprecated single-file terminal (`backend/public/index.html`)
       and its e2e suite. It is scheduled for after 2026-10-09.

@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { query } from "../src/db/client.js";
+import { getLayerSlice, getLayerView } from "../src/db/queries.js";
 import { collect as vatsim } from "../src/workers/collectors/vatsim.js";
 
 const realFetch = globalThis.fetch;
@@ -102,5 +103,62 @@ describe("vatsim", () => {
 		);
 		assert.ok(rows.length >= 1, "ivao pilot stored");
 		assert.ok(rows.every((x) => x.id.startsWith("ivao:")));
+	});
+
+	it("keeps one row per callsign and drops pilots that left", async () => {
+		const feed = (pilots: { callsign: string; lon: number }[]) =>
+			(async (url: unknown) => {
+				const u = String(url);
+				if (u.includes("data.vatsim.net"))
+					return ok({
+						pilots: pilots.map((p) => ({
+							callsign: p.callsign,
+							latitude: 50,
+							longitude: p.lon,
+							altitude: 30000,
+						})),
+					});
+				return ok({}, 500);
+			}) as typeof fetch;
+		await query("TRUNCATE events");
+		globalThis.fetch = feed([
+			{ callsign: "AAA1", lon: 1 },
+			{ callsign: "BBB2", lon: 2 },
+		]);
+		await vatsim();
+		globalThis.fetch = feed([{ callsign: "AAA1", lon: 3 }]);
+		await vatsim();
+		const rows = await query<{ id: string; lon: number }>(
+			"SELECT id, ST_X(geom) AS lon FROM events WHERE source='vatsim' ORDER BY id",
+		);
+		assert.deepEqual(
+			rows.map((r) => [r.id, Number(r.lon)]),
+			[["vatsim:AAA1", 3]],
+		);
+	});
+});
+
+describe("flights read path", () => {
+	it("serves each aircraft once, at its latest fresh position", async () => {
+		await query("TRUNCATE events");
+		const ins = (id: string, ageMin: number, lon: number) =>
+			query(
+				`INSERT INTO events(id, ts, source, layer, title, severity, geom)
+         VALUES ($1, now() - make_interval(mins => $2::int), 'ivao', 'flights', $1, 'info',
+                 ST_SetSRID(ST_MakePoint($3::float, 10), 4326))`,
+				[id, ageMin, lon],
+			);
+		// legacy per-minute snapshots of one callsign, plus a 2-day-old ghost
+		await ins("ivao:OLD1:2026-01-01T10:00", 5, 1);
+		await ins("ivao:OLD1:2026-01-01T10:05", 1, 2);
+		await ins("ivao:GHOST:2026-01-01T09:00", 2 * 24 * 60, 3);
+		await ins("adsb:abc123", 3, 4);
+		for (const items of [
+			await getLayerSlice("flights"),
+			(await getLayerView("flights", { z: 2 })).items,
+		]) {
+			const got = (items as { id: string }[]).map((i) => i.id).sort();
+			assert.deepEqual(got, ["adsb:abc123", "ivao:OLD1:2026-01-01T10:05"]);
+		}
 	});
 });

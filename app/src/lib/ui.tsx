@@ -2,6 +2,7 @@
 // Tokens-only colors, Lucide glyphs only, escaped by construction (React).
 import type { ReactNode } from "react";
 import { LAYERS } from "./layer-catalog";
+import { hostOf, sourceHome } from "./sources";
 
 /** Layer symbol. Monochrome by design: it inherits the surrounding text
  * colour (layers are told apart by shape; colour is reserved for severity). */
@@ -101,23 +102,56 @@ export function LayerRow({
 	visible,
 	onToggle,
 	title,
+	error,
 }: {
 	name: string;
 	count: string | number;
 	visible: boolean;
 	onToggle: () => void;
 	title?: string;
+	/** last load failed: shown instead of the count */
+	error?: string;
 }) {
 	return (
 		<div
 			className={`lrow${visible ? "" : " off"}`}
+			role="switch"
+			aria-checked={visible}
+			aria-label={name}
+			tabIndex={0}
 			onClick={onToggle}
-			title={title}
+			onKeyDown={(e) => {
+				if (e.key === " " || e.key === "Enter") {
+					e.preventDefault();
+					onToggle();
+				}
+			}}
+			title={error ? `${name} failed to load (${error}), retrying` : title}
 		>
 			<Glyph layer={name} />
 			<span className="nm">{name}</span>
-			<b>{count}</b>
+			{error ? <b className="lrow-err">!</b> : <b>{count}</b>}
+			<Switch on={visible} />
 		</div>
+	);
+}
+
+/** On/off track. Presentational only: the row or header around it owns the
+ * click and the switch role, so the hit target stays the full row. */
+export function Switch({
+	on,
+	mixed = false,
+}: {
+	on: boolean;
+	mixed?: boolean;
+}) {
+	return (
+		<span
+			className={`sw${on ? " on" : ""}${mixed ? " mixed" : ""}`}
+			aria-hidden="true"
+		>
+			<span className="sw-knob" />
+		</span>
 	);
 }
 
@@ -148,4 +182,30 @@ export function ItemRow({
 
 export function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
 	return <input autoComplete="off" spellCheck={false} {...props} />;
+}
+
+/** "usgs.gov ↗": the item's own link, else its publisher's site, else
+ * nothing (never a guess). Stops the click so row handlers don't fire. */
+export function SourceLink({
+	url,
+	source,
+}: {
+	url?: string | null;
+	source?: string;
+}) {
+	const own = url && /^https?:\/\//.test(url) ? url : null;
+	const href = own ?? (source ? sourceHome(source) : null);
+	if (!href) return null;
+	return (
+		<a
+			className="src-link"
+			href={href}
+			target="_blank"
+			rel="noreferrer noopener"
+			title={own ? "Open the original report" : "Open the publisher"}
+			onClick={(e) => e.stopPropagation()}
+		>
+			{hostOf(href) ?? "source"} ↗
+		</a>
+	);
 }

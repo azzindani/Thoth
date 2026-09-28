@@ -1,9 +1,19 @@
 import type express from "express";
-import { z } from "zod";
 import { query } from "../db/client.js";
-import { getBrief, getLayerSlice as slice } from "../db/queries.js";
+import {
+	getBrief,
+	getLayerSlice as slice,
+	watchCondition,
+} from "../db/queries.js";
 import { pushTelegram } from "../workers/lib/push.js";
 import { queryImagery } from "./imagery.js";
+import {
+	NoteParams,
+	PortfolioBody,
+	PositionBody,
+	ScreenParams,
+	WatchParams,
+} from "./schemas.js";
 import { LayerParams } from "./shared.js";
 import { streamHandler } from "./stream.js";
 
@@ -85,29 +95,8 @@ export function registerIntel(app: express.Express): void {
 		}
 	});
 
-	// Watchlists: keyword / layer / severity watches + match scanning.
-	// Area watches (P5) carry a circle (lat/lon/radius_km) or a GeoJSON
-	// polygon; the other kinds are matched on text/layer/severity.
-	const Polygon = z.object({
-		type: z.enum(["Polygon", "MultiPolygon"]),
-		coordinates: z.array(z.unknown()).min(1),
-	});
-	const WatchParams = z.discriminatedUnion("kind", [
-		z.object({
-			kind: z.enum(["keyword", "layer", "severity"]),
-			value: z.string().trim().min(1).max(200),
-			note: z.string().trim().max(500).optional().default(""),
-		}),
-		z.object({
-			kind: z.literal("area"),
-			value: z.string().trim().min(1).max(200),
-			note: z.string().trim().max(500).optional().default(""),
-			lat: z.number().min(-90).max(90).optional(),
-			lon: z.number().min(-180).max(180).optional(),
-			radius_km: z.number().positive().max(2000).optional(),
-			geom: Polygon.optional(),
-		}),
-	]);
+	// Watchlists: keyword / layer / severity / area watches + match scanning
+	// (schemas.ts WatchParams).
 	app.get("/api/watch", async (_req, res) => {
 		res.json({
 			ok: true,
@@ -183,29 +172,8 @@ export function registerIntel(app: express.Express): void {
 			res.json({ ok: true, count: 0, items: [] });
 			return;
 		}
-		const ors: string[] = [];
 		const params: unknown[] = [];
-		for (const w of watches) {
-			if (w.kind === "keyword") {
-				params.push(`%${w.value}%`);
-				ors.push(
-					`(title ILIKE $${params.length} OR body ILIKE $${params.length})`,
-				);
-			} else if (w.kind === "area") {
-				// Anything live inside the area; catalogs (airports…) never.
-				params.push(w.id);
-				ors.push(
-					`(source <> 'static' AND geom IS NOT NULL AND ST_Intersects(geom,
-					   (SELECT g.geom FROM watchlists g WHERE g.id = $${params.length})))`,
-				);
-			} else if (w.kind === "layer") {
-				params.push(w.value);
-				ors.push(`layer = $${params.length}`);
-			} else {
-				params.push(w.value);
-				ors.push(`severity = $${params.length}`);
-			}
-		}
+		const ors = watches.map((w) => watchCondition(w, params));
 		params.push(limit);
 		const items = await query(
 			`SELECT id, ts, source, layer, title, body, url, severity, confidence,
@@ -323,16 +291,8 @@ export function registerIntel(app: express.Express): void {
 		res.json(r);
 	});
 
-	// Terminal pillar (fincept digest, batch64): analyst-owned objects.
-	// Portfolios + positions (holdings aggregate), notes (ticker-linked
-	// FinancialNote shape), screens (saved screener specs). Single-operator:
-	// no auth scoping; ids client-stable for upsert.
-	const Slug = z
-		.string()
-		.trim()
-		.min(1)
-		.max(80)
-		.regex(/^[A-Za-z0-9][A-Za-z0-9 _.-]*$/);
+	// Analyst-owned objects: portfolios + positions, notes and saved screens.
+	// Single-operator: no auth scoping; ids are client-stable for upsert.
 	app.get("/api/portfolios", async (_req, res) => {
 		res.json({
 			ok: true,
@@ -342,9 +302,7 @@ export function registerIntel(app: express.Express): void {
 		});
 	});
 	app.post("/api/portfolios", async (req, res) => {
-		const p = z
-			.object({ name: Slug, note: z.string().max(500).default("") })
-			.safeParse(req.body);
+		const p = PortfolioBody.safeParse(req.body);
 		if (!p.success) {
 			res.status(400).json({ ok: false, error: "name required" });
 			return;
@@ -363,19 +321,7 @@ export function registerIntel(app: express.Express): void {
 	});
 	app.post("/api/portfolios/:id/positions", async (req, res) => {
 		const pid = String(req.params.id);
-		const p = z
-			.object({
-				symbol: z
-					.string()
-					.trim()
-					.min(1)
-					.max(12)
-					.regex(/^[A-Za-z0-9.^=-]+$/),
-				qty: z.coerce.number().finite(),
-				avg_price: z.coerce.number().finite().optional(),
-				note: z.string().max(300).default(""),
-			})
-			.safeParse(req.body);
+		const p = PositionBody.safeParse(req.body);
 		if (!p.success) {
 			res.status(400).json({ ok: false, error: "symbol + qty required" });
 			return;
@@ -395,19 +341,6 @@ export function registerIntel(app: express.Express): void {
 			`${String(req.params.id)}:${String(req.params.sym).toUpperCase()}`,
 		]);
 		res.json({ ok: true });
-	});
-	const NoteParams = z.object({
-		title: z.string().trim().min(1).max(200),
-		body: z.string().max(8000).default(""),
-		category: z
-			.enum(["idea", "earnings", "risk", "macro", "watch", "place"])
-			.default("idea"),
-		tickers: z.string().max(200).default(""),
-		sentiment: z.enum(["BULLISH", "BEARISH", "NEUTRAL"]).default("NEUTRAL"),
-		favorite: z.coerce.boolean().default(false),
-		// Map notes (P5): optionally pinned to a place (both or neither).
-		lat: z.number().min(-90).max(90).optional(),
-		lon: z.number().min(-180).max(180).optional(),
 	});
 	app.get("/api/notes", async (req, res) => {
 		const q = String(req.query.q ?? "")
@@ -456,10 +389,6 @@ export function registerIntel(app: express.Express): void {
 	app.delete("/api/notes/:id", async (req, res) => {
 		await query("DELETE FROM notes WHERE id=$1", [String(req.params.id)]);
 		res.json({ ok: true });
-	});
-	const ScreenParams = z.object({
-		name: Slug,
-		spec: z.record(z.unknown()).default({}),
 	});
 	app.get("/api/screens", async (_req, res) => {
 		res.json({

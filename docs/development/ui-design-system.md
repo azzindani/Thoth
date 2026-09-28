@@ -9,7 +9,18 @@ The design direction is "instrument on warm black".
 
 Tokens live in `app/src/app/globals.css` `:root`; `app/src/lib/palette.ts`
 mirrors the hex values for map/canvas/SVG code (`test/palette.test.ts` fails
-if they drift). The rules, in priority order:
+if they drift).
+
+**Themes are token swaps.** The light "paper" theme is
+`:root[data-theme="paper"]` in `globals.css` (mirrored by `PAPER` in
+`palette.ts`): the same structure with warm paper and ink, and the accent,
+red and amber deepened for contrast on light. Write every colour as a token
+(`--wash`, `--well`, `--scrim`, `--line3` and friends cover the tints) so
+both themes follow; a literal colour in a component is a bug in one of
+them. Map code reads `PALETTE` when it builds a map, and the map is rebuilt
+on a theme change with the matching CARTO basemap (Dark Matter or
+Positron). The rules below are written for the dark theme and hold for
+paper with the paper values. In priority order:
 
 1. **Warm black + bone.** `--bg #0b0b0a`, text `--txt #e9e5da` → `--txt2`
    → `--dim` → `--faint`. Hierarchy comes from luminance, not hue. No pure
@@ -69,6 +80,11 @@ if they drift). The rules, in priority order:
     Cards also anchor inside the free map area (`fitAnchor`: the camera
     padding *is* the free area), so a card near a panel opens beside it,
     never on top of it.
+    On phones the pinned card and the stack picker are instead a
+    full-width sheet under the top bar (30–50% of the height); pinning
+    pans the object into view below it. Card imagery is Esri World Imagery
+    centred on the point (`lib/satview.ts`); moving objects (flights,
+    vessels, satellites, drones) show telemetry instead of imagery.
 12. **Collapsible chrome, fixed homes.** Explorer, inspector and dock keep
     their positions but each can slide off to its edge (`body.hide-expl
     / hide-insp / hide-dock`, edge handles `#pt-*`); `\` or CLEAR hides
@@ -85,6 +101,21 @@ if they drift). The rules, in priority order:
     Windows re-read their layer on SSE ticks; the arrangement is remembered
     (`thoth.pop`). Below desk they become one swipeable stack above the
     dock — no free windows where there is no room for them.
+14. **Every item traces to its source.** Anything shown from a feed
+    carries a way back: the record's own `url`, else the publisher's site
+    (`lib/sources.ts` `sourceHome`), else nothing — never a guessed link.
+    Objects with a public identifier also link to independent trackers
+    (`verifyLinks`). The full view's provenance section (`Provenance.tsx`,
+    `GET /api/event`) states feed health, observed vs re-confirmed time
+    and corroboration, and says "single source" plainly when nothing else
+    agrees.
+15. **Two size dials, one baseline.** Every length in the chrome is a
+    token or a `calc(Npx * var(--lk))` (layout) / `calc(Npx * var(--fk))`
+    (text); `lib/settings.ts` sets the multipliers on `<html>` from the
+    Settings panel (five levels each, M = 1 = the original design) and
+    the layout script applies them before first paint. New CSS follows
+    the same rule; only hairlines (1–3 px), the 256 px imagery tiles, the
+    switch geometry and 16 px iOS input text stay fixed.
 
 Testing rule: with panels floating over the map, a feature can be rendered
 yet covered by chrome. E2e specs pick map points with
@@ -102,8 +133,8 @@ around it is composed from the catalog below.
 | Class | Width | Layout |
 |---|---|---|
 | `desk` | ≥1200px | Full-bleed map; floating status bar across the top, explorer (`--expl` 264px) left, inspector (`--insp` 372px) right, dock (threat · timeline · command line) between them at the bottom. Reference look. |
-| `tab` | 768–1199px | Explorer collapses to a floating 56px rail: glyph over its count (names/groups hidden; the row title carries the name). Inspector is an overlay panel below the status bar that slides in from the right, hidden until a tab/selection opens it; the dock spans rail → right edge. |
-| `phone` | <768px | Map-first. Floating status bar: LAYERS button + mark + health (clock and mode controls hidden). The dock shrinks to a floating command pill. Explorer and inspector share one bottom-sheet form (`--r-sheet` top corners, grabber, 60vh cap, slides up). Inputs are 16px so iOS never zooms; safe-area insets respected. |
+| `tab` | 768–1199px (and over 500px tall below 1024) | Explorer collapses to a floating 56px rail: glyph over its count; its ☰ expands it into the full panel over the map, and a folded-rail toggle announces itself. Inspector is an overlay panel below the status bar that slides in from the right (INTEL in the ticker), stopping above the dock; the Monitor widens it. The dock spans rail → right edge. |
+| `phone` | <768px, or ≤500px tall and <1024px wide (a phone on its side) | Map-first. Floating status bar: mark + health (clock, tape and mode controls hidden). A bottom nav (`PhoneNav.tsx`: Layers · Intel · Search · Alerts · More) sits above every sheet; the command pill shows on Search, the replay bar while replay runs. Explorer, inspector, full view and the Tools sheet share one bottom-sheet form (`--r-sheet` top corners, grabber, half/full snaps via `lib/sheet.tsx`). Long-press opens the area dossier. Inputs are 16px so iOS never zooms; safe-area insets respected. |
 
 Rules:
 - No fixed pixel widths outside the token + breakpoint system. Panels size in `px` tokens only at `desk`; everywhere else they are overlays/sheets.

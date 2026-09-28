@@ -9,6 +9,7 @@ import {
 	SESSION_COOKIE,
 	sessionCookie,
 } from "./lib/auth";
+import { buildCsp, cspHeaderName, cspMode, makeNonce } from "./lib/csp";
 
 // Edge of the app (Next 16 "proxy", formerly middleware). Two jobs:
 //
@@ -20,9 +21,9 @@ import {
 //    Unauthenticated callers get a plain 401 — no WWW-Authenticate, so no
 //    browser username/password popup. Unset = open (local dev, CI).
 //
-// 2. Backend write key: API_WRITE_KEY is attached server-side to mutating
-//    /api requests before the rewrite to the backend, so the secret never
-//    ships to the browser. It is attached only for authenticated callers —
+// 2. Backend keys: API_WRITE_KEY is attached server-side to mutating
+//    /api requests before the rewrite to the backend (and API_READ_KEY, if
+//    set, to reads), so the secrets never ship to the browser. It is attached only for authenticated callers —
 //    passed the gate above, or APP_TRUST_UPSTREAM_AUTH=1 when an auth proxy
 //    in front has already vetted them. Anyone else's writes reach the backend
 //    without the key and are refused there (fail closed).
@@ -59,6 +60,28 @@ export function proxy(req: NextRequest) {
 		);
 	if (gated && !authed) return unauthorized(isApi);
 
+	// Pages get a per-request nonce and the CSP (lib/csp.ts). Next reads
+	// the nonce from the request's CSP header and stamps its own scripts;
+	// the layout stamps its early script from x-nonce.
+	const mode = cspMode();
+	const nonce = !isApi && mode !== "off" ? makeNonce() : "";
+	const policy = nonce
+		? buildCsp(
+				nonce,
+				process.env.NODE_ENV !== "production",
+				process.env.NEXT_PUBLIC_THOTH_API,
+			)
+		: "";
+	const pass = () => {
+		if (!policy) return NextResponse.next();
+		const headers = new Headers(req.headers);
+		headers.set("x-nonce", nonce);
+		headers.set("content-security-policy", policy);
+		const res = NextResponse.next({ request: { headers } });
+		res.headers.set(cspHeaderName(mode), policy);
+		return res;
+	};
+
 	if (isApi) {
 		const headers = new Headers(req.headers);
 		// Never forward a caller-supplied key, nor the app credential: the
@@ -69,10 +92,14 @@ export function proxy(req: NextRequest) {
 		const vetted = authed || process.env.APP_TRUST_UPSTREAM_AUTH === "1";
 		if (key && vetted && isMutating(req.method))
 			headers.set("x-thoth-key", key);
+		// Reader key for an API that requires one (API_READ_REQUIRED). Give
+		// it no per-key limit so users stay limited per client IP.
+		else if (process.env.API_READ_KEY && !isMutating(req.method))
+			headers.set("x-thoth-key", process.env.API_READ_KEY);
 		return NextResponse.next({ request: { headers } });
 	}
 
-	if (!gated || req.method !== "GET") return NextResponse.next();
+	if (!gated || req.method !== "GET") return pass();
 	const secure =
 		req.headers.get("x-forwarded-proto") === "https" ||
 		req.nextUrl.protocol === "https:";
@@ -91,7 +118,7 @@ export function proxy(req: NextRequest) {
 
 	// Sliding session: a page load on a live cookie renews its window, so
 	// daily use never lapses. Bearer-only callers (scripts) get no cookie.
-	const res = NextResponse.next();
+	const res = pass();
 	if (cookie && isValidToken(cookie)) res.headers.set("Set-Cookie", fresh());
 	return res;
 }

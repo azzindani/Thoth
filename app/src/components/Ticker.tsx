@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, monitor } from "../lib/api";
+import { fmtClock } from "../lib/settings";
 import { Btn } from "../lib/ui";
 
 /** Market-tape sources: prices, rates, odds (not package downloads). */
@@ -35,10 +36,7 @@ function healthTitle(
 function Clock() {
 	const [clock, setClock] = useState("--:--:--");
 	useEffect(() => {
-		const t = setInterval(
-			() => setClock(`${new Date().toISOString().slice(11, 19)}Z`),
-			1000,
-		);
+		const t = setInterval(() => setClock(fmtClock(new Date())), 1000);
 		return () => clearInterval(t);
 	}, []);
 	return <span className="clock">{clock}</span>;
@@ -56,6 +54,9 @@ export default function Ticker({
 	onClear,
 	sse,
 	sseLast,
+	onPalette,
+	cinema,
+	onSettings,
 }: {
 	mode: string;
 	setMode: (m: string) => void;
@@ -70,6 +71,10 @@ export default function Ticker({
 	sse?: { ok: boolean; n: number };
 	/** Time of the last stream message (a ref: heartbeats never re-render). */
 	sseLast?: { current: number };
+	/** opens the command palette (the only way in used to be Ctrl+K) */
+	onPalette?: () => void;
+	cinema?: boolean;
+	onSettings?: () => void;
 }) {
 	const [tape, setTape] = useState("booting…");
 	const [pill, setPill] = useState(<span>···</span>);
@@ -204,17 +209,6 @@ export default function Ticker({
 
 	return (
 		<div className="ticker" id="ticker">
-			{/* Mobile nav: ☰ opens the layer sheet (like a navigation pane —
-			tap a layer directly there). Desktop keeps the icon rail. */}
-			<button
-				className="sheet-toggle"
-				aria-label="layers"
-				onClick={() =>
-					document.getElementById("explorer")?.classList.toggle("open")
-				}
-			>
-				LAYERS
-			</button>
 			<span className="logo">THOTH</span>
 			<Clock />
 			<div className="tape">
@@ -272,10 +266,10 @@ export default function Ticker({
 				<Btn on={globe} onClick={() => setGlobe(!globe)}>
 					GLOBE
 				</Btn>
-				<Btn on={mode === "cinema"} onClick={() => setMode("cinema")}>
+				<Btn on={!!cinema} onClick={() => setMode("cinema")}>
 					CINEMA
 				</Btn>
-				<Btn on={focus} onClick={() => setFocus(!focus)}>
+				<Btn on={focus} onClick={() => setFocus(!focus)} id="focus-btn">
 					FOCUS
 				</Btn>
 				<Btn
@@ -287,6 +281,40 @@ export default function Ticker({
 					CLEAR
 				</Btn>
 			</fieldset>
+			{/* Tablet has no inspector edge tab: the sheet opens from here. */}
+			<button
+				type="button"
+				className="tbtn tab-only"
+				id="intel-btn"
+				onClick={() =>
+					document.getElementById("inspector")?.classList.toggle("open")
+				}
+				title="open or close the inspector (i)"
+			>
+				INTEL
+			</button>
+			<button
+				type="button"
+				className="tbtn"
+				id="palette-btn"
+				onClick={onPalette}
+				title="every command, layer, view and saved workspace (Ctrl+K)"
+			>
+				⌘K
+			</button>
+			<button
+				type="button"
+				className="tbtn"
+				id="settings-btn"
+				onClick={onSettings}
+				aria-label="settings"
+				title="settings: layout size, text size, time, alerts (,)"
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true" className="tb-ico">
+					<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+					<circle cx="12" cy="12" r="3" />
+				</svg>
+			</button>
 		</div>
 	);
 }
