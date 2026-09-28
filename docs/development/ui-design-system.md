@@ -69,6 +69,11 @@ if they drift). The rules, in priority order:
     Cards also anchor inside the free map area (`fitAnchor`: the camera
     padding *is* the free area), so a card near a panel opens beside it,
     never on top of it.
+    On phones the pinned card and the stack picker are instead a
+    full-width sheet under the top bar (30–50% of the height); pinning
+    pans the object into view below it. Card imagery is Esri World Imagery
+    centred on the point (`lib/satview.ts`); moving objects (flights,
+    vessels, satellites, drones) show telemetry instead of imagery.
 12. **Collapsible chrome, fixed homes.** Explorer, inspector and dock keep
     their positions but each can slide off to its edge (`body.hide-expl
     / hide-insp / hide-dock`, edge handles `#pt-*`); `\` or CLEAR hides

@@ -1016,8 +1016,8 @@ details.gaps[open] summary::before {
 	pointer-events: none;
 }
 .hov {
-	min-width: 210px;
-	max-width: 300px;
+	min-width: 240px;
+	max-width: 340px;
 	position: relative;
 	overflow: hidden;
 	padding-left: 12px;
@@ -1045,6 +1045,16 @@ details.gaps[open] summary::before {
 }
 .hov-m.dim {
 	color: var(--dim);
+}
+.hov-d {
+	margin-top: 6px;
+	color: var(--txt2);
+	font-size: 11.5px;
+	line-height: 1.45;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 .sev-tag {
 	font-family: var(--mono);
@@ -1085,26 +1095,46 @@ details.gaps[open] summary::before {
 	border-radius: var(--r-ctl);
 	position: relative;
 }
+/* centred imagery mosaic (lib/satview.ts): 256px tiles placed around the
+   object, which sits under the crosshair in the middle of the frame */
 .hov-shot img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-	opacity: 0;
-	transition: opacity var(--t) var(--ease);
-}
-.hov-shot img.on {
-	opacity: 1;
-}
-.hov-shot.empty::after {
-	content: "No recent satellite pass";
 	position: absolute;
-	inset: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--faint);
-	font-size: 11px;
+	width: 256px;
+	height: 256px;
+	max-width: none;
+	display: block;
+	user-select: none;
+	pointer-events: none;
+}
+.hov-x {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 18px;
+	height: 18px;
+	margin: -9px 0 0 -9px;
+	border: 2px solid var(--accent);
+	border-radius: 50%;
+	box-shadow:
+		0 0 0 1px rgba(0, 0, 0, 0.6),
+		inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.hov-cap {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	padding: 3px 7px;
+	font-size: 10px;
+	color: var(--txt2);
+	background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.sat-view {
+	height: 200px;
+	margin-top: 0;
 }
 .hov-act {
 	display: flex;
@@ -1113,6 +1143,8 @@ details.gaps[open] summary::before {
 }
 .hov-act button {
 	flex: 1;
+	white-space: nowrap;
+	padding: 0 8px;
 	font: inherit;
 	font-size: var(--fs-s);
 	font-weight: 600;
@@ -1751,6 +1783,84 @@ body.focus .inspector.open {
 		left: var(--inset);
 		right: var(--inset);
 		width: auto;
+	}
+	/* Pinned card / stacked picker: a sheet across the top of the screen
+	   (full width, 30–50% of the height) instead of a bubble on the point —
+	   showPinned pans the object into view below it. */
+	body[data-bp="phone"] #map .pin-pop,
+	body[data-bp="phone"] #map .pick-pop {
+		position: fixed;
+		top: var(--top);
+		left: var(--inset);
+		right: var(--inset);
+		/* biome-ignore lint/complexity/noImportantStyles: MapLibre writes transform inline on every frame */
+		transform: none !important;
+		/* biome-ignore lint/complexity/noImportantStyles: MapLibre writes max-width inline from its option */
+		max-width: none !important;
+	}
+	body[data-bp="phone"] #map .pin-pop .maplibregl-popup-tip,
+	body[data-bp="phone"] #map .pick-pop .maplibregl-popup-tip {
+		display: none;
+	}
+	body[data-bp="phone"] #map .pin-pop .maplibregl-popup-content,
+	body[data-bp="phone"] #map .pick-pop .maplibregl-popup-content {
+		width: 100%;
+		min-height: 30dvh;
+		max-height: 50dvh;
+		overflow: auto;
+		overscroll-behavior: contain;
+		padding: 14px 16px 0;
+		border-radius: var(--r-panel);
+		animation: sheet-down var(--t-sheet) var(--ease);
+	}
+	body[data-bp="phone"] #map .pin-pop .hov,
+	body[data-bp="phone"] #map .pick-pop .hov {
+		max-width: none;
+		min-width: 0;
+		padding-bottom: 14px;
+		/* the content box scrolls, not the card: sticky actions need it */
+		overflow: visible;
+	}
+	body[data-bp="phone"] #map .pin-pop .hov-t {
+		font-size: var(--fs-title);
+		padding-right: 28px;
+	}
+	/* two label/value pairs per line: the wide card stays short */
+	body[data-bp="phone"] #map .pin-pop .hov-grid {
+		grid-template-columns: auto 1fr auto 1fr;
+		font-size: 12px;
+		gap: 4px 10px;
+	}
+	body[data-bp="phone"] #map .pin-pop .hov-grid .w {
+		grid-column: span 3;
+	}
+	body[data-bp="phone"] #map .pin-pop .hov-shot {
+		height: 150px;
+	}
+	/* actions stay reachable while the card scrolls */
+	body[data-bp="phone"] #map .pin-pop .hov-act {
+		position: sticky;
+		bottom: 0;
+		margin-top: 12px;
+		padding: 10px 0 12px;
+		background: var(--glass2);
+		border-top: 1px solid var(--line);
+	}
+	body[data-bp="phone"] #map .pin-pop .hov-act button {
+		height: var(--tap);
+		font-size: var(--fs);
+	}
+	body[data-bp="phone"] #map .maplibregl-popup-close-button {
+		width: var(--tap);
+		height: var(--tap);
+		top: 4px;
+		right: 4px;
+	}
+}
+@keyframes sheet-down {
+	from {
+		opacity: 0.6;
+		transform: translateY(-16px);
 	}
 }
 

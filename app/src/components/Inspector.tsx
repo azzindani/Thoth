@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
-import { STREAMS } from "../lib/layer-catalog";
+import { LAYERS, STREAMS } from "../lib/layer-catalog";
+import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
 import { SheetHead } from "../lib/sheet";
 import { ageStr, Glyph, ItemRow, KV } from "../lib/ui";
 import { CountryTab } from "./CountryTab";
@@ -233,7 +234,7 @@ export default function Inspector({
 							<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
 						)}
 						{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-							<SatImage lat={sel.lat} lon={sel.lon} />
+							<SatImage lat={sel.lat} lon={sel.lon} layer={sel.layer} />
 						)}
 					</>
 				)}
@@ -320,7 +321,16 @@ export function ObjectDetail({ sel }: { sel: ObjProps }) {
 
 // SATIMAGE — freshest Sentinel-2 true-color over the selection
 // (earth-search STAC via /api/imagery, keyless). Lazy, honest-empty.
-export function SatImage({ lat, lon }: { lat: number; lon: number }) {
+export function SatImage({
+	lat,
+	lon,
+	layer,
+}: {
+	lat: number;
+	lon: number;
+	layer: string;
+}) {
+	const moving = MOVING_LAYERS.has(layer);
 	const [s, setS] = useState<
 		| {
 				id: string;
@@ -332,10 +342,9 @@ export function SatImage({ lat, lon }: { lat: number; lon: number }) {
 		| null
 		| undefined
 	>(undefined);
-	const [imgOk, setImgOk] = useState(true);
 	useEffect(() => {
+		if (moving) return;
 		let stop = false;
-		setImgOk(true);
 		api
 			.imagery(lon, lat)
 			.then((j) => {
@@ -347,33 +356,47 @@ export function SatImage({ lat, lon }: { lat: number; lon: number }) {
 		return () => {
 			stop = true;
 		};
-	}, [lat, lon]);
-	if (s === undefined)
-		return <div style={{ color: "var(--dim)" }}>satellite…</div>;
-	if (!s) return null;
+	}, [lat, lon, moving]);
+	// Imagery under a plane or ship says nothing about it.
+	if (moving) return null;
+	const z = satZoom(layer, Boolean(LAYERS[layer]?.polygon));
 	return (
 		<>
-			<h3>
-				SATELLITE ·{" "}
-				{String(s.datetime).slice(0, 10) +
-					(s.cloud_cover != null
-						? ` · ${Number(s.cloud_cover).toFixed(0)}% cloud`
-						: "")}
-			</h3>
-			<a href={s.tci} target="_blank" rel="noreferrer">
-				{imgOk && (
-					// biome-ignore lint/performance/noImgElement: remote STAC thumbnail, next/image has no optimizer for it
+			<h3>Imagery · {fmtKm(tileKm(lat, z))} across</h3>
+			<div className="hov-shot sat-view">
+				{mosaic(lat, lon, z).map((t) => (
+					// biome-ignore lint/performance/noImgElement: raw map tiles, positioned by hand
 					<img
-						src={s.thumbnail}
-						alt={`Sentinel-2 ${s.id}`}
-						style={{ width: "100%", borderRadius: "var(--r-md)" }}
+						key={t.url}
+						className="on"
+						alt=""
 						loading="lazy"
-						onError={() => setImgOk(false)}
+						referrerPolicy="no-referrer"
+						src={t.url}
+						style={{
+							left: `calc(50% + ${t.left}px)`,
+							top: `calc(50% + ${t.top}px)`,
+						}}
 					/>
+				))}
+				<span className="hov-x" aria-hidden="true" />
+			</div>
+			<div style={{ color: "var(--dim)", fontSize: 12, marginTop: 4 }}>
+				Esri World Imagery, centred on the object (basemap, not live).
+				{s === undefined && " Looking for the latest Sentinel-2 pass…"}
+				{s && (
+					<>
+						{" "}
+						Latest Sentinel-2 pass:{" "}
+						<a href={s.tci} target="_blank" rel="noreferrer">
+							{String(s.datetime).slice(0, 10)}
+							{s.cloud_cover != null
+								? ` · ${Number(s.cloud_cover).toFixed(0)}% cloud`
+								: ""}{" "}
+							↗
+						</a>
+					</>
 				)}
-			</a>
-			<div style={{ color: "var(--dim)", fontSize: 12 }}>
-				Sentinel-2 · {s.id} · click opens full-res COG
 			</div>
 		</>
 	);
@@ -431,7 +454,7 @@ export function CompleteView({
 					)}
 					<ObjectDetail sel={sel} />
 					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
-						<SatImage lat={sel.lat} lon={sel.lon} />
+						<SatImage lat={sel.lat} lon={sel.lon} layer={sel.layer} />
 					)}
 					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
 						<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />

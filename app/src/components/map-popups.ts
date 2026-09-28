@@ -4,8 +4,8 @@
 // against stored records (no per-button closures).
 import * as maplibregl from "maplibre-gl";
 import "../lib/maplibre"; // setWorkerUrl before any Map is built
-import { api } from "../lib/api";
 import { LAYERS } from "../lib/layer-catalog";
+import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
 import { ageStr } from "../lib/ui";
 
 export interface ObjProps {
@@ -20,6 +20,111 @@ export interface ObjProps {
 	lat: number;
 	airline: string;
 	rot: number;
+	/** JSON [label, value][] from the record's meta (see factsOf). */
+	facts?: string;
+	/** first lines of the record body */
+	desc?: string;
+}
+
+// Meta keys worth a row in the card, with their label and unit. Anything
+// else short and primitive is shown under its own (uppercased) name.
+const FACT_LABEL: Record<string, [string, (v: number) => string]> = {
+	alt: ["ALT", (v) => `${Math.round(v).toLocaleString("en-US")} ft`],
+	alt_baro: ["ALT", (v) => `${Math.round(v).toLocaleString("en-US")} ft`],
+	gs: ["SPEED", (v) => `${Math.round(v)} kt`],
+	sog: ["SPEED", (v) => `${v.toFixed(1)} kt`],
+	hdg: ["HEADING", (v) => `${Math.round(v)}°`],
+	track: ["HEADING", (v) => `${Math.round(v)}°`],
+	mag: ["MAG", (v) => v.toFixed(1)],
+	depth: ["DEPTH", (v) => `${v.toFixed(1)} km`],
+};
+// Already on the card (title, POS) or not for reading.
+const FACT_SKIP = new Set([
+	"airline",
+	"id",
+	"url",
+	"link",
+	"image",
+	"thumb",
+	"lat",
+	"lon",
+	"lng",
+	"latitude",
+	"longitude",
+	"fixture",
+]);
+const MAX_FACTS = 8;
+
+/** Short, flat facts from a record's meta for the preview card. Map
+ * features only carry flat properties, so this is serialized per feature. */
+export function factsOf(
+	meta: Record<string, unknown> | undefined,
+	title = "",
+): string {
+	const out: [string, string][] = [];
+	const seen = new Set<string>();
+	for (const [k, v] of Object.entries(meta ?? {})) {
+		if (out.length >= MAX_FACTS) break;
+		if (FACT_SKIP.has(k) || v == null || v === "") continue;
+		const known = FACT_LABEL[k];
+		const label = known
+			? known[0]
+			: k
+					.replace(/([a-z])([A-Z])/g, "$1 $2")
+					.replace(/_/g, " ")
+					.toUpperCase()
+					.slice(0, 12);
+		if (seen.has(label)) continue;
+		let val: string;
+		if (typeof v === "number") {
+			if (!Number.isFinite(v)) continue;
+			val = known ? known[1](v) : String(Math.round(v * 100) / 100);
+		} else if (typeof v === "boolean") val = v ? "yes" : "no";
+		else if (
+			typeof v === "string" &&
+			v.length <= 48 &&
+			!/^https?:/.test(v) &&
+			// a name or callsign the title already carries
+			!(v.length > 2 && title.includes(v))
+		)
+			val = v;
+		else continue;
+		seen.add(label);
+		out.push([label, val]);
+	}
+	return out.length ? JSON.stringify(out) : "";
+}
+
+function readFacts(s: string | undefined): [string, string][] {
+	if (!s) return [];
+	try {
+		const a = JSON.parse(s);
+		return Array.isArray(a) ? a : [];
+	} catch {
+		return [];
+	}
+}
+
+function utcStamp(ts: string | undefined): string {
+	const t = Date.parse(String(ts ?? ""));
+	if (!Number.isFinite(t)) return "";
+	const d = new Date(t).toISOString();
+	return `${d.slice(5, 10)} ${d.slice(11, 16)}Z`;
+}
+
+/** Centred imagery (see lib/satview): the object sits under the crosshair. */
+function satShot(lat: number, lon: number, layer: string): string {
+	const z = satZoom(layer, Boolean(LAYERS[layer]?.polygon));
+	const tiles = mosaic(lat, lon, z)
+		.map(
+			(t) =>
+				`<img class="on" alt="" loading="lazy" referrerpolicy="no-referrer" src="${t.url}" style="left:calc(50% + ${t.left}px);top:calc(50% + ${t.top}px)" />`,
+		)
+		.join("");
+	return (
+		`<div class="hov-shot">${tiles}<span class="hov-x" aria-hidden="true"></span>` +
+		`<span class="hov-cap">Esri World Imagery · ${fmtKm(tileKm(lat, z))} across · not live</span></div>`
+	);
 }
 
 export type SelectFn = (p: ObjProps, ll: unknown) => void;
@@ -65,19 +170,31 @@ export function hoverCard(
 	const lat = Number(p.lat);
 	const lon = Number(p.lon);
 	const geo = Number.isFinite(lat) && Number.isFinite(lon);
+	const moving = MOVING_LAYERS.has(layer);
+	const facts = readFacts(p.facts);
+	const stamp = utcStamp(p.ts);
+	// wide rows take a whole line in the phone card's two-pair grid
+	const row = (k: string, v: string, wide = false) =>
+		`<span>${esc(k)}</span><span${wide ? ' class="w"' : ""}>${esc(v)}</span>`;
 	return (
 		`<div class="hov"><div class="hov-bar" style="background:${sevCol}"></div>` +
 		`<div class="hov-t">${esc(p.title || p.id || layer)}</div>` +
 		`<div class="hov-m"><span class="sev-tag" style="color:${sevCol}">${esc(sev.toUpperCase())}</span>` +
 		` · ${esc(layer)}${p.airline ? ` · ${esc(p.airline)}` : ""}</div>` +
+		(p.desc ? `<div class="hov-d">${esc(p.desc)}</div>` : "") +
 		`<div class="hov-grid">` +
-		`<span>SRC</span><span>${esc(p.source || "?")}</span>` +
-		`<span>AGE</span><span>${esc(ageStr(p.ts))}</span>` +
-		(geo
-			? `<span>POS</span><span>${lat.toFixed(2)}, ${lon.toFixed(2)}</span>`
-			: "") +
+		row(
+			moving ? "SEEN" : "AGE",
+			`${ageStr(p.ts)}${stamp ? ` · ${stamp}` : ""}`,
+			true,
+		) +
+		(geo ? row("POS", `${lat.toFixed(3)}, ${lon.toFixed(3)}`, true) : "") +
+		row("SRC", p.source || "?") +
+		facts.map(([k, v]) => row(k, v)).join("") +
 		`</div>` +
-		(geo ? `<div class="hov-shot"><img data-hovimg alt="" /></div>` : "") +
+		// Imagery under a plane or ship says nothing about it: moving
+		// objects get their telemetry above instead.
+		(geo && !moving ? satShot(lat, lon, layer) : "") +
 		(pinId != null
 			? `<div class="hov-act"><button class="primary" data-act="full:${pinId}">Full view</button>` +
 				`<button class="ghost" data-act="zoom:${pinId}">Zoom</button>` +
@@ -85,53 +202,6 @@ export function hoverCard(
 			: `<div class="hov-h">Click to pin preview</div>`) +
 		`</div>`
 	);
-}
-
-// Lazy satellite thumbnail for hover previews: one earth-search lookup per
-// ~1km cell, cached (URL or known-empty). Patches the still-open popup only.
-const thumbCache = new Map<string, string | null>();
-const thumbPending = new Set<string>();
-/** Arm the satellite thumbnail for an already-attached popup. */
-export function armThumb(pop: maplibregl.Popup, p: ObjProps): void {
-	const lat = Number(p.lat);
-	const lon = Number(p.lon);
-	if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-	const key = `${lon.toFixed(2)},${lat.toFixed(2)}`;
-	const el = pop
-		.getElement()
-		?.querySelector<HTMLImageElement>("img[data-hovimg]");
-	if (!el) return;
-	el.dataset.hovkey = key;
-	function paint(img: HTMLImageElement, url: string | null): void {
-		if (!img.isConnected || img.dataset.hovkey !== key) return;
-		if (url) {
-			img.src = url;
-			img.classList.add("on");
-		} else {
-			img.closest(".hov-shot")?.classList.add("empty");
-		}
-	}
-	const hit = thumbCache.get(key);
-	if (hit !== undefined) {
-		paint(el, hit);
-		return;
-	}
-	if (thumbPending.has(key)) return;
-	thumbPending.add(key);
-	api
-		.imagery(lon, lat)
-		.then((j) => {
-			const url = j.scene?.thumbnail ?? null;
-			thumbCache.set(key, url);
-			paint(el, url);
-		})
-		.catch(() => {
-			thumbCache.set(key, null);
-			paint(el, null);
-		})
-		.finally(() => {
-			thumbPending.delete(key);
-		});
 }
 
 // Stacked-point disambiguation + pinned-preview actions dispatch through one
@@ -243,7 +313,7 @@ export function showPinned(
 		closeOnClick: false,
 		offset: 14,
 		className: "hov-pop pin-pop",
-		maxWidth: "320px",
+		maxWidth: "360px",
 	});
 	pinStore.set(id, {
 		p,
@@ -262,7 +332,26 @@ export function showPinned(
 		.setHTML(hoverCard(p as ObjProps & { ts?: string }, layer, id))
 		.addTo(map);
 	fitAnchor(map, pop);
-	armThumb(pop, p);
+	revealUnderCard(map, pop);
+}
+
+/** Phone: the pinned card is a sheet across the top of the screen (CSS),
+ * so pan the map until the object shows below it instead of under it. */
+function revealUnderCard(map: maplibregl.Map, pop: maplibregl.Popup): void {
+	if (document.body.dataset.bp !== "phone") return;
+	const el = pop.getElement();
+	const ll = pop.getLngLat();
+	if (!el || !ll) return;
+	const box = el.getBoundingClientRect();
+	const mapBox = map.getContainer().getBoundingClientRect();
+	const pt = map.project(ll);
+	const y = pt.y + mapBox.top;
+	const x = pt.x + mapBox.left;
+	const bottom = window.innerHeight - 80; // above the command pill
+	const want = box.bottom + (bottom - box.bottom) / 2;
+	if (y > box.bottom + 24 && y < bottom && x > 0 && x < window.innerWidth)
+		return;
+	map.panBy([x - window.innerWidth / 2, y - want], { duration: 350 });
 }
 
 /** Latest sinks (identical behavior across layers, refreshed per load):
@@ -529,7 +618,7 @@ function showPickCard(
 		closeButton: true,
 		offset: 14,
 		className: "pick-pop",
-		maxWidth: "320px",
+		maxWidth: "360px",
 	});
 	pickStore.set(id, { cands, preview, full, map, lngLat, pop });
 	pop.on("close", () => {
