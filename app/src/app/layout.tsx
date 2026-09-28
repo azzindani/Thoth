@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 	title: "THOTH — live intelligence terminal",
 	description:
 		"Global intelligence terminal: live OSINT layers, dossier, sanctions, OSINT lookups.",
+	icons: { apple: "/icons/apple-touch-icon.png" },
+	appleWebApp: { capable: true, title: "Thoth", statusBarStyle: "black" },
 };
 
 export const viewport = {

@@ -10,6 +10,11 @@ listed in [Upgrading](docs/operations/upgrading.md).
 ## [Unreleased]
 
 ### Added
+- **Installable app.** A web app manifest, icons and a service worker
+  (which caches nothing, so data is never stale) let Chrome, Edge, Android
+  and iOS install Thoth as an app. Settings → Alerts → *Critical alert
+  notifications* shows system notifications for new criticals while Thoth
+  is in the background; tapping one opens the alert.
 - **Outbound webhooks** (`WEBHOOK_URLS`, `WEBHOOK_SECRET`): each URL gets
   a signed JSON POST for every new critical alert and watch match, with
   retries and a baseline so switching them on does not replay what is

@@ -116,7 +116,7 @@ Every keyed integration is off by default. With no key it reports itself as
 
 | Variable | When read | Description |
 |---|---|---|
-| `APP_ACCESS_KEY` | runtime | Operator access key. Gates every page and `/api` call. `/healthz` and static assets stay open. |
+| `APP_ACCESS_KEY` | runtime | Operator access key. Gates every page and `/api` call. `/healthz`, static assets and the install files (manifest, service worker, icons) stay open. |
 | `APP_TOKENS` | runtime | Extra named keys, `name:key,name2:key2`. To revoke one, remove it. |
 | `APP_TOKENS_FILE` | runtime | Extra keys as JSON `{"name": "key"}`. Re-read on every check, so you can add or revoke keys without a restart. Needs a volume mount in compose. |
 | `APP_JWT_SECRET` | runtime | Session-cookie signing secret. Defaults to `APP_ACCESS_KEY`. Rotating it signs every browser out. |

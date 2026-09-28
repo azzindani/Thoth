@@ -16,7 +16,7 @@ their entry in the themed lists below.
 3. [x] Reader API keys with per-key rate limits (Platform and integrations).
 4. [x] Outbound webhooks for alerts and watch matches (Platform and
    integrations).
-5. [ ] Installable PWA with critical-alert notifications (Frontend).
+5. [x] Installable PWA with critical-alert notifications (Frontend).
 6. [ ] Light "paper" theme (Frontend).
 7. [ ] Pop-out windows saved with workspaces (Analyst workflow).
 8. [ ] Explicit cross-layer rules (Intelligence).
@@ -80,7 +80,9 @@ their entry in the themed lists below.
 ## Frontend
 
 - [ ] Self-hosted vector basemap (PMTiles, keyless) in the warm style.
-- [ ] Installable PWA with push notifications for critical alerts.
+- [ ] Web Push for critical alerts while the app is closed (VAPID and a
+      push-subscription store). Today notifications need Thoth running,
+      and webhooks cover delivery elsewhere.
 - [ ] Light "paper" theme, as a token swap only with no structural change.
 - [ ] Remove the deprecated single-file terminal (`backend/public/index.html`)
       and its e2e suite. It is scheduled for after 2026-10-09.

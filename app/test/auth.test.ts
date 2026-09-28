@@ -125,6 +125,11 @@ describe("helpers", () => {
 		expect(isPublicPath("/healthz")).toBe(true);
 		expect(isPublicPath("/_next/static/chunks/a.js")).toBe(true);
 		expect(isPublicPath("/maplibre/maplibre-gl-worker.mjs")).toBe(true);
+		// install surface: manifests are fetched without cookies
+		expect(isPublicPath("/manifest.webmanifest")).toBe(true);
+		expect(isPublicPath("/sw.js")).toBe(true);
+		expect(isPublicPath("/icons/icon-192.png")).toBe(true);
+		expect(isPublicPath("/api/stats")).toBe(false);
 		expect(isPublicPath("/")).toBe(false);
 		expect(isPublicPath("/api/notes")).toBe(false);
 		expect(isPublicPath("/healthz/../api")).toBe(false);

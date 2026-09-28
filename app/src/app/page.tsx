@@ -37,6 +37,7 @@ import ToolsSheet from "../components/ToolsSheet";
 import { API, api, type LayerItem } from "../lib/api";
 import { useDialog } from "../lib/dialog";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
+import { notifyCritical, OPEN_ALERT, registerServiceWorker } from "../lib/pwa";
 import {
 	applySettings,
 	loadSettings,
@@ -545,6 +546,7 @@ export default function Terminal() {
 					return;
 				}
 				if (fresh.length) setAlertBadge((b) => b + fresh.length);
+				if (fresh.length && settings().notify) void notifyCritical(fresh);
 				if (fresh.length && settings().critPopups) {
 					setToasts((t) =>
 						[
@@ -739,6 +741,24 @@ export default function Terminal() {
 		(id: string) => setToasts((t) => t.filter((x) => x.id !== id)),
 		[],
 	);
+	// Installable app: register the service worker; a tapped notification
+	// asks this page to open its alert.
+	const openToastRef = useRef<(t: (typeof toasts)[number]) => void>(() => {});
+	useEffect(() => {
+		registerServiceWorker();
+		if (!("serviceWorker" in navigator)) return;
+		const onMsg = (e: MessageEvent) => {
+			const item = e.data?.item as LayerItem | undefined;
+			if (e.data?.type === OPEN_ALERT && item?.id)
+				openToastRef.current({
+					id: item.id,
+					title: item.title ?? item.id,
+					item,
+				});
+		};
+		navigator.serviceWorker.addEventListener("message", onMsg);
+		return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+	}, []);
 	function openToast(t: (typeof toasts)[number]) {
 		if (t.kind === "watch") {
 			setOsint({ kind: "watch", arg: "matches" });
@@ -771,6 +791,7 @@ export default function Terminal() {
 			rot: 0,
 		});
 	}
+	openToastRef.current = openToast;
 	const notice = useCallback((title: string) => {
 		const id = `notice:${Date.now()}`;
 		setToasts((t) =>

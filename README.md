@@ -25,8 +25,12 @@ database with full provenance, and shows it on an interactive globe.
 - **Analyst workflow.** Incidents and anomaly detection (no LLM), area
   watches, country pages, time replay, map notes, sitrep export, saved
   workspaces and a command palette.
-- **Responsive.** One terminal layout that adapts to desktop, tablet and
-  phone.
+- **Responsive and installable.** One terminal layout that adapts to
+  desktop, tablet and phone, installable as an app with critical-alert
+  notifications.
+- **Integrations.** An OpenAPI 3.1 description of every route, named reader
+  keys with their own rate limits, and signed outbound webhooks for
+  critical alerts and watch matches.
 
 ## Architecture at a glance
 
