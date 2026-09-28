@@ -57,6 +57,7 @@ export default function Ticker({
 	sse,
 	sseLast,
 	onPalette,
+	cinema,
 }: {
 	mode: string;
 	setMode: (m: string) => void;
@@ -73,6 +74,7 @@ export default function Ticker({
 	sseLast?: { current: number };
 	/** opens the command palette (the only way in used to be Ctrl+K) */
 	onPalette?: () => void;
+	cinema?: boolean;
 }) {
 	const [tape, setTape] = useState("booting…");
 	const [pill, setPill] = useState(<span>···</span>);
@@ -264,7 +266,7 @@ export default function Ticker({
 				<Btn on={globe} onClick={() => setGlobe(!globe)}>
 					GLOBE
 				</Btn>
-				<Btn on={mode === "cinema"} onClick={() => setMode("cinema")}>
+				<Btn on={!!cinema} onClick={() => setMode("cinema")}>
 					CINEMA
 				</Btn>
 				<Btn on={focus} onClick={() => setFocus(!focus)}>

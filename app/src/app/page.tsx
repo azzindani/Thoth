@@ -60,6 +60,14 @@ export default function Terminal() {
 	const [sev, setSev] = useState("");
 	const [since, setSince] = useState<string | null>(null);
 	const [mode, setMode] = useState("default");
+	// Cinema is a slow spin over whichever basemap is chosen, toggled on its
+	// own (it used to be a basemap: clicking it again did nothing, and it
+	// replaced SAT/NVG). Grabbing the map stops it.
+	const [cinema, setCinema] = useState(false);
+	const pickMode = useCallback((m: string) => {
+		if (m === "cinema") setCinema((c) => !c);
+		else setMode(m === "dark" ? "default" : m);
+	}, []);
 	const [globe, setGlobe] = useState(true);
 	const [tab, setTab] = useState<Tab>("object");
 	const [sel, setSel] = useState<ObjProps | null>(null);
@@ -672,7 +680,7 @@ export default function Terminal() {
 			setGlobe((g) => !g);
 			return;
 		}
-		setMode(m === "dark" ? "default" : m);
+		pickMode(m);
 	}
 	async function flyTheater(key: string) {
 		if (!key) return;
@@ -728,7 +736,11 @@ export default function Terminal() {
 		);
 		setMission(w.mission);
 		setSev(w.sev);
-		setMode(w.mode);
+		// Workspaces saved before cinema became a toggle stored it as a mode.
+		if (w.mode === "cinema") {
+			setMode("sat");
+			setCinema(true);
+		} else setMode(w.mode);
 		setGlobe(w.globe);
 		setTab(w.tab as Tab);
 		setHidden(w.panels);
@@ -849,9 +861,9 @@ export default function Terminal() {
 			).map(([m, label]) => ({
 				id: `mode-${m}`,
 				group: "Mode",
-				label,
+				label: m === "cinema" && cinema ? "Stop cinema" : label,
 				hint: m === "default" ? "s" : undefined,
-				run: () => setMode(m),
+				run: () => pickMode(m),
 			})),
 			{
 				id: "mode-globe",
@@ -1031,7 +1043,8 @@ export default function Terminal() {
 			)}
 			<Ticker
 				mode={mode}
-				setMode={(m) => setMode(m === "dark" ? "default" : m)}
+				setMode={pickMode}
+				cinema={cinema}
 				globe={globe}
 				setGlobe={setGlobe}
 				sse={sse}
@@ -1074,6 +1087,8 @@ export default function Terminal() {
 					sev={sev}
 					since={since}
 					mode={mode}
+					cinema={cinema}
+					onCinemaStop={() => setCinema(false)}
 					globe={globe}
 					onSelect={(p) => {
 						preview(p);
@@ -1211,7 +1226,8 @@ export default function Terminal() {
 						open={toolsOpen}
 						onClose={() => setToolsOpen(false)}
 						mode={mode}
-						setMode={setMode}
+						setMode={pickMode}
+						cinema={cinema}
 						globe={globe}
 						setGlobe={setGlobe}
 						actions={toolsOpen ? buildActions() : []}

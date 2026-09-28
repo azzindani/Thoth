@@ -25,6 +25,9 @@ interface Props {
 	sev: string;
 	since: string | null;
 	mode: string;
+	/** slow auto-rotate over the current basemap */
+	cinema?: boolean;
+	onCinemaStop?: () => void;
 	globe: boolean;
 	onSelect: SelectFn;
 	onFull: SelectFn;
@@ -906,6 +909,8 @@ let liveMap: maplibregl.Map | null = null;
  * A watchdog restores the last good camera should any other move go
  * non-finite.
  */
+let attribution: maplibregl.AttributionControl | null = null;
+
 export function guardCamera(map: maplibregl.Map): void {
 	const fly = map.flyTo.bind(map);
 	map.flyTo = ((opts: maplibregl.FlyToOptions, data?: unknown) => {
@@ -981,10 +986,14 @@ export default function MapView(props: Props) {
 				? Math.min(window.devicePixelRatio || 1, 2)
 				: window.devicePixelRatio,
 			canvasContextAttributes: { antialias: !touch },
-			attributionControl: { compact: true },
+			// Our own control (below): MapLibre's never drops the credit of a
+			// removed source, so "Esri World Imagery" outlived the SAT basemap.
+			attributionControl: false,
 		});
 		mapRef.current = map;
 		liveMap = map;
+		attribution = new maplibregl.AttributionControl({ compact: true });
+		map.addControl(attribution);
 		guardCamera(map);
 		(window as unknown as { __thothMap?: maplibregl.Map }).__thothMap = map;
 		// Right-click (desk) or a long-press (touch) opens the area dossier.
@@ -1079,15 +1088,25 @@ export default function MapView(props: Props) {
 			/* older style */
 		}
 		const hasSat = !!map.getSource("sat");
-		if ((props.mode === "sat" || props.mode === "cinema") && !hasSat) {
+		if (props.mode === "sat" && !hasSat) {
 			map.addSource("sat", SAT_SOURCE);
 			map.addLayer(SAT_LAYER);
-		} else if (props.mode !== "sat" && props.mode !== "cinema" && hasSat) {
+		} else if (props.mode !== "sat" && hasSat) {
 			if (map.getLayer("sat")) map.removeLayer("sat");
 			map.removeSource("sat");
+			// rebuild the credits without the removed source
+			if (attribution) map.removeControl(attribution);
+			attribution = new maplibregl.AttributionControl({ compact: true });
+			map.addControl(attribution);
 		}
 		document.body.classList.toggle("nvg", props.mode === "nvg");
-		if (props.mode !== "cinema") return;
+	}, [props.mode, props.globe]);
+
+	// cinema: a slow spin until toggled off or the map is grabbed
+	useEffect(() => {
+		const m = mapRef.current;
+		if (!m || !props.cinema) return;
+		const map: maplibregl.Map = m;
 		let stop = false;
 		let timer: ReturnType<typeof setTimeout>;
 		function spin() {
@@ -1100,11 +1119,19 @@ export default function MapView(props: Props) {
 			timer = setTimeout(spin, 4100);
 		}
 		spin();
+		const grab = () => propsRef.current.onCinemaStop?.();
+		map.on("mousedown", grab);
+		map.on("touchstart", grab);
+		map.on("wheel", grab);
 		return () => {
 			stop = true;
 			clearTimeout(timer);
+			map.off("mousedown", grab);
+			map.off("touchstart", grab);
+			map.off("wheel", grab);
+			map.stop();
 		};
-	}, [props.mode, props.globe]);
+	}, [props.cinema]);
 
 	// visibility follows state
 	useEffect(() => {

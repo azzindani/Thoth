@@ -2558,7 +2558,8 @@ body:not(.insp-wide) .dt-wrap {
 		--rot: 90deg;
 	}
 }
-@media (min-width: 768px) and (max-width: 1199px) and (min-height: 501px), (min-width: 1024px) and (max-width: 1199px) {
+@media (min-width: 768px) and (max-width: 1199px) and (min-height: 501px),
+	(min-width: 1024px) and (max-width: 1199px) {
 	.pt-insp {
 		display: none;
 	}

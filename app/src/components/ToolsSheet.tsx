@@ -28,6 +28,7 @@ export default function ToolsSheet({
 	setGlobe,
 	actions,
 	onPalette,
+	cinema,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -37,6 +38,7 @@ export default function ToolsSheet({
 	setGlobe: (g: boolean) => void;
 	actions: Action[];
 	onPalette: () => void;
+	cinema: boolean;
 }) {
 	const run = (a: Action) => {
 		onClose();
@@ -83,9 +85,9 @@ export default function ToolsSheet({
 					</button>
 					<button
 						type="button"
-						className={mode === "cinema" ? "on" : ""}
-						aria-pressed={mode === "cinema"}
-						onClick={() => setMode(mode === "cinema" ? "default" : "cinema")}
+						className={cinema ? "on" : ""}
+						aria-pressed={cinema}
+						onClick={() => setMode("cinema")}
 					>
 						Cinema
 					</button>
