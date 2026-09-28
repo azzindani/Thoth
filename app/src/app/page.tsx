@@ -1045,7 +1045,17 @@ export default function Terminal() {
 				<Explorer
 					counts={counts}
 					visible={visible}
-					onToggle={(l) => toggleLayer(l)}
+					onToggle={(l) => {
+						// The tablet rail shows icons only: say what the tap did.
+						if (
+							document.body.dataset.bp === "tab" &&
+							!document
+								.getElementById("explorer")
+								?.classList.contains("expanded")
+						)
+							notice(`${l} ${visible[l] ? "off" : "on"}`);
+						toggleLayer(l);
+					}}
 					onSetLayers={setLayers}
 					onClose={() =>
 						document.getElementById("explorer")?.classList.remove("open")
