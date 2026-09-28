@@ -101,7 +101,8 @@ a password prompt.
 ### Known limitations
 
 - **Single shared write key.** There is no per-user identity or audit trail
-  for writes.
+  for writes. Named reader keys (`API_READ_KEYS`) identify read-only
+  integrations, and `API_READ_REQUIRED=1` closes the API to keyless reads.
 - **Per-process state.** Rate-limit and SSE state live in memory. That is
   fine for the single-API compose setup, but running several API replicas
   needs a shared store first.

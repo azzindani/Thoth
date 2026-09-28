@@ -68,6 +68,8 @@ services:
       API_WRITE_KEY: ${API_WRITE_KEY:?set API_WRITE_KEY (openssl rand -hex 32)}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
+      API_READ_KEYS: ${API_READ_KEYS:-}
+      API_READ_REQUIRED: ${API_READ_REQUIRED:-}
       REQUESTS_PER_MIN: ${REQUESTS_PER_MIN:-300}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -139,6 +141,7 @@ services:
       APP_SESSION_TTL_MS: ${APP_SESSION_TTL_MS:-}
       APP_TRUST_UPSTREAM_AUTH: ${APP_TRUST_UPSTREAM_AUTH:-}
       APP_CSP: ${APP_CSP:-enforce}
+      API_READ_KEY: ${API_READ_KEY:-}
     ports:
       - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
     networks:

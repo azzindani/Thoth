@@ -16,7 +16,7 @@ The Thoth API is JSON over HTTP, plus one Server-Sent Events stream.
 | Request | Needs |
 |---|---|
 | Through the app, when `APP_ACCESS_KEY` is set | `Authorization: Bearer <access key>`, or the `thoth_session` cookie |
-| `GET` on the API directly | Nothing |
+| `GET` on the API directly | Nothing, unless the API sets `API_READ_REQUIRED`: then a reader key from `API_READ_KEYS` (or the write key), as `Authorization: Bearer <key>` or `X-Thoth-Key` |
 | `POST`, `PUT`, `PATCH`, `DELETE` | `Authorization: Bearer <API_WRITE_KEY>` or `X-Thoth-Key: <API_WRITE_KEY>`. The app adds it for signed-in users. |
 
 ### Responses
@@ -29,9 +29,9 @@ The Thoth API is JSON over HTTP, plus one Server-Sent Events stream.
   | Status | Meaning |
   |---|---|
   | `400` | Invalid parameters. Every input is validated. |
-  | `401` | Missing or invalid key |
+  | `401` | Missing or invalid key (an unknown reader key is refused, never ignored) |
   | `404` | Unknown route or item |
-  | `429` | Rate limited (`REQUESTS_PER_MIN` per client IP) |
+  | `429` | Rate limited: `REQUESTS_PER_MIN` per client IP, or a reader key's own `perMin` |
   | `502` | The upstream behind an on-demand lookup failed. The API reports it rather than returning an empty `200`. |
   | `503` | `/api/stream` at `SSE_MAX_CLIENTS`. Honour `Retry-After`. |
 

@@ -7,6 +7,7 @@ import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
 import express from "express";
 import { createApp, trustProxyValue } from "../src/api/app.js";
+import { identify, parseKeyFile, parseReaderKeys } from "../src/api/keys.js";
 import {
 	cors,
 	errorHandler,
@@ -114,6 +115,107 @@ describe("rateLimit", () => {
 			assert.equal(other.status, 200);
 			assert.equal((await other.json()).ip, "203.0.113.2");
 			assert.equal((await as("203.0.113.1")).status, 429);
+		} finally {
+			await srv.close();
+		}
+	});
+});
+
+describe("reader keys", () => {
+	const READ = "reader-key-0123456789";
+	const BOT = "bot-key-abcdefghijklmn";
+	const WRITE = "write-key-0123456789";
+	const keys = () => [
+		{ name: "dash", key: READ },
+		{ name: "bot", key: BOT, perMin: 1 },
+	];
+	const app = (required = false) =>
+		mini(
+			identify({ readKeys: keys, writeKey: WRITE, required }),
+			rateLimit(5),
+			requireWriteKey(WRITE),
+			(_req, res, next) => {
+				res.setHeader("X-Client", res.locals.client?.name ?? "-");
+				next();
+			},
+		);
+	const as = (url: string, key?: string, init: RequestInit = {}) =>
+		fetch(url, {
+			...init,
+			headers: key ? { Authorization: `Bearer ${key}` } : {},
+		});
+
+	it("parses name:key[:perMin] and drops malformed or short keys", () => {
+		assert.deepEqual(
+			parseReaderKeys(
+				`a:${READ}, b:${BOT}:60 ,bad name:${READ},c:short,d:${READ}:0`,
+			),
+			[
+				{ name: "a", key: READ },
+				{ name: "b", key: BOT, perMin: 60 },
+			],
+		);
+		assert.deepEqual(
+			parseKeyFile({ x: READ, y: { key: BOT, perMin: 10 }, z: "short" }),
+			[
+				{ name: "x", key: READ },
+				{ name: "y", key: BOT, perMin: 10 },
+			],
+		);
+		assert.deepEqual(parseKeyFile(["nope"]), []);
+	});
+
+	it("identifies the caller and refuses unknown keys", async () => {
+		const srv = await serve(app());
+		try {
+			const r = await as(`${srv.url}/a`, READ);
+			assert.equal(r.headers.get("x-client"), "dash");
+			assert.equal(
+				(await as(`${srv.url}/a`, WRITE)).headers.get("x-client"),
+				"write",
+			);
+			assert.equal((await as(`${srv.url}/a`)).status, 200);
+			const bad = await as(`${srv.url}/a`, "not-a-key-at-all-xx");
+			assert.equal(bad.status, 401);
+			assert.match(bad.headers.get("www-authenticate") ?? "", /Bearer/);
+		} finally {
+			await srv.close();
+		}
+	});
+
+	it("never lets a reader key write", async () => {
+		const srv = await serve(app());
+		try {
+			const r = await as(`${srv.url}/a`, READ, { method: "POST" });
+			assert.equal(r.status, 401);
+			const w = await as(`${srv.url}/a`, WRITE, { method: "POST" });
+			assert.equal(w.status, 200);
+		} finally {
+			await srv.close();
+		}
+	});
+
+	it("gives a key with a limit its own bucket", async () => {
+		const srv = await serve(app());
+		try {
+			const first = await as(`${srv.url}/a`, BOT);
+			assert.equal(first.headers.get("ratelimit-limit"), "1");
+			assert.equal((await as(`${srv.url}/a`, BOT)).status, 429);
+			// Other callers from the same IP are unaffected.
+			assert.equal((await as(`${srv.url}/a`, READ)).status, 200);
+			assert.equal((await as(`${srv.url}/a`)).status, 200);
+		} finally {
+			await srv.close();
+		}
+	});
+
+	it("API_READ_REQUIRED closes reads to keyless callers, not probes", async () => {
+		const srv = await serve(app(true));
+		try {
+			assert.equal((await as(`${srv.url}/a`)).status, 401);
+			assert.equal((await as(`${srv.url}/livez`)).status, 200);
+			assert.equal((await as(`${srv.url}/a`, READ)).status, 200);
+			assert.equal((await as(`${srv.url}/a`, WRITE)).status, 200);
 		} finally {
 			await srv.close();
 		}

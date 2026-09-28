@@ -10,6 +10,11 @@ listed in [Upgrading](docs/operations/upgrading.md).
 ## [Unreleased]
 
 ### Added
+- **Reader API keys** (`API_READ_KEYS`, or `API_READ_KEYS_FILE` re-read
+  on change): named read-only keys that identify their caller in the access
+  log and can carry their own per-minute limit. `API_READ_REQUIRED=1`
+  closes `GET /api` to keyless callers; the app then sends `API_READ_KEY`
+  server-side.
 - **OpenAPI 3.1 document** at `GET /api/openapi.json` and in
   `docs/reference/openapi.json`, covering all 120 routes. Parameters and
   bodies come from the zod schemas the routes validate with; a unit test
