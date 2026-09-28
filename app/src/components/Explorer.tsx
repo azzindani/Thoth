@@ -7,12 +7,15 @@ import {
 	LAYERS,
 	MISSIONS,
 } from "../lib/layer-catalog";
-import { Chip, Field, fmtCadence, LayerRow } from "../lib/ui";
+import { SheetHead } from "../lib/sheet";
+import { Chip, Field, fmtCadence, LayerRow, Switch } from "../lib/ui";
 
 export default function Explorer({
 	counts,
 	visible,
 	onToggle,
+	onSetLayers,
+	onClose,
 	onTheater,
 	sev,
 	setSev,
@@ -23,6 +26,8 @@ export default function Explorer({
 	counts: Map<string, string>;
 	visible: Record<string, boolean>;
 	onToggle: (l: string) => void;
+	onSetLayers: (ls: string[], on: boolean) => void;
+	onClose: () => void;
 	sev: string;
 	setSev: (s: string) => void;
 	onMonitor: () => void;
@@ -45,90 +50,119 @@ export default function Explorer({
 	}, []);
 	return (
 		<div className="explorer" id="explorer">
-			<h3>View</h3>
-			{Object.keys(theaters).length > 0 && (
-				<div className="row2 theater" style={{ marginBottom: 8 }}>
-					<select
-						defaultValue=""
-						onChange={(e) => {
-							onTheater(e.target.value);
-							e.target.value = "";
-						}}
-					>
-						<option value="">Theater · fly to…</option>
-						{Object.entries(theaters).map(([k, t]) => (
-							<option key={k} value={k}>
-								{t.label}
-							</option>
-						))}
+			<SheetHead title="Layers" onClose={onClose} closeButton />
+			<div className="expl-body">
+				<h3>View</h3>
+				{Object.keys(theaters).length > 0 && (
+					<div className="row2 theater" style={{ marginBottom: 8 }}>
+						<select
+							defaultValue=""
+							onChange={(e) => {
+								onTheater(e.target.value);
+								e.target.value = "";
+							}}
+						>
+							<option value="">Theater · fly to…</option>
+							{Object.entries(theaters).map(([k, t]) => (
+								<option key={k} value={k}>
+									{t.label}
+								</option>
+							))}
+						</select>
+					</div>
+				)}
+				<div className="row2 mission" style={{ marginBottom: 8 }}>
+					<select value={mission} onChange={(e) => setMission(e.target.value)}>
+						<option value="">Mission · all</option>
+						<option value="crisis">Crisis desk</option>
+						<option value="cyber">Cyber watch</option>
+						<option value="markets">Markets</option>
+						<option value="disaster">Disaster response</option>
+						<option value="intel">Intel map</option>
+						<option value="wartime">Wartime</option>
 					</select>
 				</div>
-			)}
-			<div className="row2 mission" style={{ marginBottom: 8 }}>
-				<select value={mission} onChange={(e) => setMission(e.target.value)}>
-					<option value="">Mission · all</option>
-					<option value="crisis">Crisis desk</option>
-					<option value="cyber">Cyber watch</option>
-					<option value="markets">Markets</option>
-					<option value="disaster">Disaster response</option>
-					<option value="intel">Intel map</option>
-					<option value="wartime">Wartime</option>
-				</select>
-			</div>
-			<div className="chips" id="sev-chips">
-				{["", "critical", "watch", "info"].map((s) => (
-					<Chip key={s} active={sev === s} onClick={() => setSev(s)}>
-						{s === ""
-							? "All"
-							: s === "critical"
-								? "Critical"
-								: s[0].toUpperCase() + s.slice(1)}
-					</Chip>
-				))}
-			</div>
-			<h3 style={{ marginTop: 16 }}>Layers</h3>
-			<div className="findbox" style={{ marginBottom: 2 }}>
-				<Field
-					placeholder="Find layers…"
-					value={find}
-					onChange={(e) => setFind(e.target.value)}
-				/>
-			</div>
-			<div id="layer-rows">
-				{groupedLayers(shown).map(([group, layers]) => (
-					<div key={group} className="lgroup-wrap">
-						<div className="lgroup">{group}</div>
-						{layers.map((l) => {
-							const c = counts.get(l) ?? "0";
-							const cad = LAYERS[l] ? fmtCadence(LAYERS[l].intervalSec) : "?";
-							return (
-								<LayerRow
-									key={l}
-									name={l}
-									count={c}
-									visible={visible[l]}
-									onToggle={() => onToggle(l)}
-									title={`${l} · ${c} events · refresh every ${cad}${LAYERS[l]?.polygon ? " · polygon" : ""}`}
-								/>
-							);
-						})}
-					</div>
-				))}
-			</div>
-			{/* Feed health moved to the MONITOR inspector tab (tabular,
+				<div className="chips" id="sev-chips">
+					{["", "critical", "watch", "info"].map((s) => (
+						<Chip key={s} active={sev === s} onClick={() => setSev(s)}>
+							{s === ""
+								? "All"
+								: s === "critical"
+									? "Critical"
+									: s[0].toUpperCase() + s.slice(1)}
+						</Chip>
+					))}
+				</div>
+				<h3 style={{ marginTop: 16 }}>Layers</h3>
+				<div className="findbox" style={{ marginBottom: 2 }}>
+					<Field
+						placeholder="Find layers…"
+						value={find}
+						onChange={(e) => setFind(e.target.value)}
+					/>
+				</div>
+				<div id="layer-rows">
+					{groupedLayers(shown).map(([group, layers]) => {
+						const on = layers.filter((l) => visible[l]).length;
+						const all = on === layers.length;
+						return (
+							<div key={group} className="lgroup-wrap">
+								<div
+									className="lgroup"
+									role="switch"
+									aria-checked={all ? true : on ? "mixed" : false}
+									aria-label={`all ${group} layers`}
+									tabIndex={0}
+									title={all ? `hide all ${group}` : `show all ${group}`}
+									onClick={() => onSetLayers(layers, !all)}
+									onKeyDown={(e) => {
+										if (e.key === " " || e.key === "Enter") {
+											e.preventDefault();
+											onSetLayers(layers, !all);
+										}
+									}}
+								>
+									<span className="lg-nm">{group}</span>
+									<span className="lg-n">
+										{on}/{layers.length}
+									</span>
+									<Switch on={on > 0} mixed={on > 0 && !all} />
+								</div>
+								{layers.map((l) => {
+									const c = counts.get(l) ?? "0";
+									const cad = LAYERS[l]
+										? fmtCadence(LAYERS[l].intervalSec)
+										: "?";
+									return (
+										<LayerRow
+											key={l}
+											name={l}
+											count={c}
+											visible={visible[l]}
+											onToggle={() => onToggle(l)}
+											title={`${l} · ${c} events · refresh every ${cad}${LAYERS[l]?.polygon ? " · polygon" : ""}`}
+										/>
+									);
+								})}
+							</div>
+						);
+					})}
+				</div>
+				{/* Feed health moved to the MONITOR inspector tab (tabular,
 			grouped by collector with period + stale depth). This link keeps
 			the production surface clean: layers here, servers there. */}
-			<div className="explorer-foot">
-				<button
-					className="tbtn"
-					id="monitor-link"
-					onClick={onMonitor}
-					title="open server monitor"
-				>
-					SERVER MONITOR
-				</button>
-				<div className="credit">
-					Symbols: Lucide (ISC) · {Object.keys(MISSIONS).length} missions
+				<div className="explorer-foot">
+					<button
+						className="tbtn"
+						id="monitor-link"
+						onClick={onMonitor}
+						title="open server monitor"
+					>
+						SERVER MONITOR
+					</button>
+					<div className="credit">
+						Symbols: Lucide (ISC) · {Object.keys(MISSIONS).length} missions
+					</div>
 				</div>
 			</div>
 		</div>

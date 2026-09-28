@@ -388,6 +388,21 @@ main.app {
 }
 
 /* ── explorer (layers) ────────────────────────────────────────────────── */
+.lgroup:hover {
+	background: var(--hover);
+}
+.lg-nm {
+	flex: 1;
+}
+.lg-n {
+	font-family: var(--mono);
+	letter-spacing: 0;
+	font-weight: 400;
+}
+/* bottom-sheet header (lib/sheet.tsx): phone only */
+.sheet-head {
+	display: none;
+}
 h3 {
 	margin: 2px 0 10px;
 	font-size: var(--fs-label);
@@ -452,8 +467,13 @@ select:focus,
 	color: var(--faint);
 }
 .lgroup {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	margin: 14px 0 3px;
-	padding: 0 8px;
+	padding: 4px 8px;
+	border-radius: var(--r-ctl);
+	cursor: pointer;
 	font-size: var(--fs-label);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -492,11 +512,52 @@ select:focus,
 .lrow:hover .glyph {
 	color: var(--txt);
 }
-.lrow.off {
-	opacity: 0.4;
+/* off: the row's content dims, its switch stays legible */
+.lrow.off > :not(.sw) {
+	opacity: 0.45;
 }
-.lrow.off:hover {
-	opacity: 0.7;
+.lrow.off:hover > :not(.sw) {
+	opacity: 0.75;
+}
+.lrow:focus-visible,
+.lgroup:focus-visible {
+	outline: 2px solid var(--accent-line);
+	outline-offset: -2px;
+}
+/* on/off switch (layer rows, group headers) */
+.sw {
+	position: relative;
+	flex: none;
+	width: 28px;
+	height: 16px;
+	border-radius: var(--r-pill);
+	background: rgba(233, 229, 218, 0.1);
+	box-shadow: inset 0 0 0 1px var(--line2);
+	transition: background var(--t-fast) var(--ease);
+}
+.sw-knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--dim);
+	transition:
+		transform var(--t-fast) var(--ease),
+		background var(--t-fast) var(--ease);
+}
+.sw.on {
+	background: var(--accent-dim);
+	box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.sw.on .sw-knob {
+	transform: translateX(12px);
+	background: var(--accent);
+}
+/* some layers of a group on: knob parks mid-track */
+.sw.mixed .sw-knob {
+	transform: translateX(6px);
 }
 .lrow b {
 	color: var(--dim);
@@ -1307,6 +1368,12 @@ body.focus .explorer .theater,
 body.focus .explorer .findbox {
 	display: none;
 }
+body.focus .explorer .lrow .sw {
+	display: none;
+}
+body.focus .explorer .lrow.off {
+	opacity: 0.45;
+}
 body.focus .explorer .lrow {
 	justify-content: center;
 	flex-direction: column;
@@ -1395,6 +1462,12 @@ body.focus .inspector.open {
 		font-size: 9.5px;
 		line-height: 1;
 	}
+	.explorer .lrow .sw {
+		display: none;
+	}
+	.explorer .lrow.off {
+		opacity: 0.45;
+	}
 	.inspector {
 		width: min(var(--insp), 86vw);
 		z-index: 30;
@@ -1430,6 +1503,9 @@ body.focus .inspector.open {
 		--lw: 0px;
 		--rw: 0px;
 		--dock-h: 52px;
+		/* bottom-sheet rest heights (lib/sheet.tsx snaps between them) */
+		--sheet-half: 58dvh;
+		--sheet-full: calc(100dvh - var(--top));
 	}
 	.ticker {
 		gap: 10px;
@@ -1482,30 +1558,78 @@ body.focus .inspector.open {
 			0 -16px 40px rgba(0, 0, 0, 0.55);
 		display: none;
 	}
-	.explorer {
-		max-height: 64vh;
-		padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
-	}
+	.explorer,
 	.inspector {
-		max-height: 62vh;
+		max-height: var(--sheet-half);
 	}
-	.explorer::before,
-	.inspector::before {
-		/* grabber: the affordance that says "this slides" */
-		content: "";
+	.explorer {
+		padding: 0;
+		overflow: hidden;
+		flex-direction: column;
+	}
+	.expl-body {
+		flex: 1;
+		min-height: 0;
+		overflow: auto;
+		overscroll-behavior: contain;
+		padding: 2px 14px calc(14px + env(safe-area-inset-bottom));
+	}
+	.explorer[data-snap="full"],
+	.inspector[data-snap="full"],
+	.fullview[data-snap="full"] {
+		height: var(--sheet-full);
+		max-height: var(--sheet-full);
+	}
+	/* grabber + title + close: the part that drags. Swipe up: half → full;
+	   swipe down: full → half → closed; tap the grabber: half ↔ full. */
+	.sheet-head {
+		display: block;
+		flex: none;
+		touch-action: none;
+		cursor: grab;
+		user-select: none;
+		-webkit-user-select: none;
+		padding-top: 10px;
+	}
+	.sheet-grip {
 		display: block;
 		width: 38px;
 		height: 4px;
 		border-radius: 2px;
 		background: var(--line2);
-		margin: 0 auto 12px;
-		flex: none;
+		margin: 0 auto 10px;
 	}
-	.inspector::before {
-		margin: 10px auto 0;
+	.sheet-bar {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 6px 6px 18px;
+	}
+	.sheet-title {
+		flex: 1;
+		font-size: var(--fs-label);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--txt2);
+		font-weight: 600;
+	}
+	.sheet-close {
+		background: none;
+		border: none;
+		color: var(--dim);
+		font: inherit;
+		font-size: 14px;
+		cursor: pointer;
+		width: var(--tap);
+		height: var(--tap);
+		border-radius: var(--r-ctl);
+	}
+	.sheet-close:active {
+		background: var(--press);
+		color: var(--txt);
 	}
 	body[data-bp="phone"] .explorer.open {
-		display: block;
+		display: flex;
 		animation: sheet-up var(--t-sheet) var(--ease);
 	}
 	body[data-bp="phone"] .inspector.open {
@@ -1515,13 +1639,21 @@ body.focus .inspector.open {
 	body[data-bp="phone"] .explorer .lrow .nm,
 	body[data-bp="phone"] .explorer .feeds,
 	body[data-bp="phone"] .explorer h3,
-	body[data-bp="phone"] .explorer .lgroup,
-	body[data-bp="phone"] .explorer .findbox {
+	body[data-bp="phone"] .explorer .findbox,
+	body[data-bp="phone"] .explorer .lrow .sw {
 		display: block;
 	}
 	body[data-bp="phone"] .explorer .chips,
-	body[data-bp="phone"] .explorer .theater {
+	body[data-bp="phone"] .explorer .theater,
+	body[data-bp="phone"] .explorer .lgroup {
 		display: flex;
+	}
+	body[data-bp="phone"] .explorer .lrow.off {
+		opacity: 1;
+	}
+	body[data-bp="phone"] .explorer .lgroup {
+		min-height: 36px;
+		margin-top: 10px;
 	}
 	/* undo the tablet rail cell: in the sheet a layer is a full row */
 	body[data-bp="phone"] .explorer .lrow {
@@ -1583,11 +1715,28 @@ body.focus .inspector.open {
 	.fullview {
 		width: auto;
 		flex: 1;
-		max-height: 56vh;
+		max-height: var(--sheet-half);
 		border-radius: var(--r-sheet) var(--r-sheet) 0 0;
 		border-bottom: none;
-		padding-bottom: calc(18px + env(safe-area-inset-bottom));
+		padding: 0;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
 		animation: sheet-up var(--t-sheet) var(--ease);
+	}
+	.fullview .sheet-head {
+		padding-top: 8px;
+	}
+	.fullview .fv-close {
+		top: 16px;
+		z-index: 1;
+	}
+	.fv-body {
+		flex: 1;
+		min-height: 0;
+		overflow: auto;
+		overscroll-behavior: contain;
+		padding: 4px 20px calc(18px + env(safe-area-inset-bottom));
 	}
 	.toasts {
 		bottom: calc(var(--dock-h) + var(--inset) * 3);
