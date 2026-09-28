@@ -2261,9 +2261,34 @@ body:not(.insp-wide) .dt-wrap {
 	.dt .wide {
 		display: none;
 	}
+	/* scroll shadows: a fade at whichever edge has more columns behind it
+	   (the covers scroll with the content, the shades stay put) */
 	.dt-wrap {
 		overflow-x: auto;
+		background:
+			linear-gradient(to right, var(--raise) 30%, transparent) left center /
+			28px 100% no-repeat local,
+			linear-gradient(to left, var(--raise) 30%, transparent) right center /
+			28px 100% no-repeat local,
+			linear-gradient(to right, rgba(0, 0, 0, 0.6), transparent) left center /
+			16px 100% no-repeat scroll,
+			linear-gradient(to left, rgba(0, 0, 0, 0.6), transparent) right center /
+			16px 100% no-repeat scroll;
 	}
+}
+/* touch: sortable headers and rows big enough for a finger */
+@media (pointer: coarse) {
+	.dt th {
+		height: 40px;
+	}
+	.dt-sort {
+		padding: 10px 0;
+	}
+}
+/* tablet: the inspector sheet stops above the dock (it covered REPLAY and
+   GRAPH) */
+body[data-bp="tab"] .inspector {
+	bottom: calc(var(--dock-h) + var(--inset) * 2);
 }
 
 /* The monitor is a data grid: on desk the inspector widens while it is
@@ -3454,4 +3479,8 @@ body[data-bp="tab"] .explorer.expanded .lrow b {
 }
 body[data-bp="tab"] .explorer.expanded .lgroup {
 	min-height: 36px;
+}
+/* tablet: the monitor grid widens its sheet too (desk does it via --insp) */
+body[data-bp="tab"].insp-wide .inspector {
+	width: min(780px, calc(100vw - var(--lw) - var(--inset) * 3));
 }
