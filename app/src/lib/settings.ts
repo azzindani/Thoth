@@ -1,3 +1,5 @@
+import { PALETTE, setPaletteTheme, type Theme } from "./palette";
+
 // Per-browser display settings (Settings panel). Stored in localStorage,
 // applied to <html> as CSS multipliers and classes so every surface picks
 // them up without re-rendering: --lk scales layout (panel widths, bars,
@@ -29,7 +31,11 @@ export const TEXT_K: Record<Level, number> = {
 	xl: 1.26,
 };
 
+export type ThemeChoice = "dark" | "paper" | "system";
+
 export type Settings = {
+	/** colour theme; "system" follows the OS light/dark preference */
+	theme: ThemeChoice;
 	layout: Level;
 	text: Level;
 	/** timestamps in UTC (analyst default) or the browser's local zone */
@@ -53,6 +59,7 @@ export type Settings = {
 };
 
 export const DEFAULTS: Settings = {
+	theme: "dark",
 	layout: "m",
 	text: "m",
 	time: "utc",
@@ -79,6 +86,7 @@ export function sanitize(raw: unknown): Settings {
 		LEVELS.includes(v as Level) ? (v as Level) : d;
 	const bool = (v: unknown, d: boolean) => (typeof v === "boolean" ? v : d);
 	return {
+		theme: r.theme === "paper" || r.theme === "system" ? r.theme : "dark",
 		layout: lvl(r.layout, DEFAULTS.layout),
 		text: lvl(r.text, DEFAULTS.text),
 		time: r.time === "local" ? "local" : "utc",
@@ -120,14 +128,42 @@ export function saveSettings(s: Settings): void {
 	window.dispatchEvent(new Event(SETTINGS_EVENT));
 }
 
+/** The theme a choice resolves to here and now. */
+export function resolveTheme(t: ThemeChoice): Theme {
+	if (t !== "system") return t;
+	return typeof matchMedia === "function" &&
+		matchMedia("(prefers-color-scheme: light)").matches
+		? "paper"
+		: "dark";
+}
+
 export function applySettings(s: Settings): void {
 	const html = document.documentElement;
+	const theme = resolveTheme(s.theme);
+	setPaletteTheme(theme);
+	html.dataset.theme = theme;
+	document
+		.querySelector('meta[name="theme-color"]')
+		?.setAttribute("content", PALETTE.bg);
 	html.style.setProperty("--lk", String(LAYOUT_K[s.layout]));
 	html.style.setProperty("--fk", String(TEXT_K[s.text]));
 	html.dataset.layout = s.layout;
 	html.dataset.text = s.text;
 	html.classList.toggle("solid-panels", s.solid);
 	html.classList.toggle("reduce-motion", s.motion === "reduce");
+}
+
+/** Re-applies "system" when the OS switches light/dark. */
+export function watchSystemTheme(): () => void {
+	if (typeof matchMedia !== "function") return () => {};
+	const mq = matchMedia("(prefers-color-scheme: light)");
+	const on = () => {
+		if (current.theme !== "system") return;
+		applySettings(current);
+		window.dispatchEvent(new Event(SETTINGS_EVENT));
+	};
+	mq.addEventListener("change", on);
+	return () => mq.removeEventListener("change", on);
 }
 
 // ── time display ───────────────────────────────────────────────────────

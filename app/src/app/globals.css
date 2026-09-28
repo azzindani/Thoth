@@ -39,10 +39,24 @@
 	--chart: var(--txt2); /* data bars/lines are neutral, never accent */
 	--hover: rgba(233, 229, 218, 0.05);
 	--press: rgba(233, 229, 218, 0.08);
+	--wash: rgba(233, 229, 218, 0.03); /* faint row/cell tint */
+	--well: rgba(0, 0, 0, 0.26); /* sunken fields: inputs, code, chip rails */
+	--wash2: rgba(233, 229, 218, 0.1);
+	--line3: rgba(233, 229, 218, 0.22);
+	--scrim: rgba(11, 11, 10, 0.6); /* behind dialogs, map credits */
+	--scrim2: rgba(11, 11, 10, 0.72);
+	--scrim-touch: rgba(11, 11, 10, 0.82);
+	--glass-solid: rgba(17, 17, 16, 0.97);
+	--glass2-solid: rgba(28, 27, 25, 0.99);
+	--glass-touch: rgba(17, 17, 16, 0.94);
+	--glass2-touch: rgba(28, 27, 25, 0.98);
+	color-scheme: dark;
 
 	/* surfaces */
-	--glass: rgba(17, 17, 16, 0.76);
-	--glass2: rgba(28, 27, 25, 0.94);
+	--glass-blur: rgba(17, 17, 16, 0.76);
+	--glass2-blur: rgba(28, 27, 25, 0.94);
+	--glass: var(--glass-blur);
+	--glass2: var(--glass2-blur);
 	--blur: blur(20px) saturate(140%);
 	--hl: inset 0 1px 0 rgba(255, 255, 255, 0.045);
 	--shadow-panel:
@@ -96,6 +110,50 @@
 	--tap: calc(44px * var(--lk));
 	--pad: calc(14px * var(--lk));
 	--gap: calc(8px * var(--lk));
+}
+
+/* Paper theme (Settings → Theme): the same design as a token swap —
+   warm paper and ink, the faience accent deepened for contrast on light.
+   lib/palette.ts mirrors these for the map (test/palette.test.ts). */
+:root[data-theme="paper"] {
+	--bg: #f3efe6;
+	--panel: #fbf8f1;
+	--panel2: #f1ece2;
+	--raise: #e8e2d5;
+	--raise2: #dbd4c5;
+	--line: rgba(40, 36, 28, 0.1);
+	--line2: rgba(40, 36, 28, 0.18);
+	--line3: rgba(40, 36, 28, 0.3);
+	--txt: #1d1b17;
+	--txt2: #45413a;
+	--dim: #6b665c;
+	--faint: #99938a;
+	--accent: #1f7f72;
+	--accent-ink: #fbf8f1;
+	--accent-dim: rgba(31, 127, 114, 0.12);
+	--accent-line: rgba(31, 127, 114, 0.45);
+	--red: #c42f35;
+	--amber: #b36a00;
+	--hover: rgba(40, 36, 28, 0.05);
+	--press: rgba(40, 36, 28, 0.09);
+	--wash: rgba(40, 36, 28, 0.03);
+	--well: rgba(40, 36, 28, 0.055);
+	--wash2: rgba(40, 36, 28, 0.08);
+	--scrim: rgba(243, 239, 230, 0.66);
+	--scrim2: rgba(243, 239, 230, 0.78);
+	--scrim-touch: rgba(243, 239, 230, 0.9);
+	--glass-blur: rgba(251, 248, 241, 0.8);
+	--glass2-blur: rgba(241, 236, 226, 0.95);
+	--glass-solid: rgba(251, 248, 241, 0.98);
+	--glass2-solid: rgba(241, 236, 226, 0.99);
+	--glass-touch: rgba(251, 248, 241, 0.95);
+	--glass2-touch: rgba(241, 236, 226, 0.98);
+	--hl: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+	--shadow-panel:
+		0 0 0 1px rgba(40, 36, 28, 0.12), 0 18px 44px -18px rgba(40, 36, 28, 0.35);
+	--shadow-card:
+		0 0 0 1px rgba(40, 36, 28, 0.1), 0 12px 32px -12px rgba(40, 36, 28, 0.32);
+	color-scheme: light;
 }
 
 /* ── base ─────────────────────────────────────────────────────────────── */
@@ -337,7 +395,7 @@ main.app {
 	align-items: center;
 	gap: 2px;
 	padding: 2px;
-	background: rgba(0, 0, 0, 0.25);
+	background: var(--well);
 	border: 1px solid var(--line);
 	border-radius: var(--r-ctl);
 	flex: none;
@@ -424,7 +482,7 @@ select,
 .findbox input {
 	appearance: none;
 	-webkit-appearance: none;
-	background: rgba(0, 0, 0, 0.28);
+	background: var(--well);
 	color: var(--txt);
 	border: 1px solid var(--line2);
 	border-radius: var(--r-ctl);
@@ -456,7 +514,7 @@ select:hover,
 .ibody input:hover,
 .explorer input:hover,
 .findbox input:hover {
-	border-color: rgba(233, 229, 218, 0.22);
+	border-color: var(--line3);
 }
 select:focus,
 .ibody input:focus,
@@ -534,7 +592,7 @@ select:focus,
 	width: 28px;
 	height: 16px;
 	border-radius: var(--r-pill);
-	background: rgba(233, 229, 218, 0.1);
+	background: var(--wash2);
 	box-shadow: inset 0 0 0 1px var(--line2);
 	transition: background var(--t-fast) var(--ease);
 }
@@ -796,7 +854,7 @@ details.gaps[open] summary::before {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(233, 229, 218, 0.03);
+	background: var(--wash);
 	color: var(--txt2);
 	border: 1px solid var(--line2);
 	padding: 0 calc(12px * var(--lk));
@@ -1009,7 +1067,7 @@ details.gaps[open] summary::before {
 	bottom: calc(var(--dock-h) + var(--inset));
 }
 #map .maplibregl-ctrl-attrib {
-	background: rgba(11, 11, 10, 0.6);
+	background: var(--scrim);
 	font-size: calc(10px * var(--fk));
 	font-family: var(--mono);
 	color: var(--faint);
@@ -1240,7 +1298,7 @@ details.gaps[open] summary::before {
 	font-weight: 600;
 	border-radius: var(--r-ctl);
 	border: 1px solid var(--line2);
-	background: rgba(233, 229, 218, 0.03);
+	background: var(--wash);
 	color: var(--txt2);
 	text-decoration: none;
 }
@@ -1284,7 +1342,7 @@ details.gaps[open] summary::before {
 	filter: brightness(1.08);
 }
 .hov-act button.ghost {
-	background: rgba(233, 229, 218, 0.03);
+	background: var(--wash);
 	border-color: var(--line2);
 	color: var(--txt2);
 }
@@ -1461,7 +1519,7 @@ body[data-bp="phone"]:has(.explorer.open, .inspector.open, .tools-sheet.open)
 	position: fixed;
 	inset: 0;
 	z-index: 70;
-	background: rgba(11, 11, 10, 0.6);
+	background: var(--scrim);
 	-webkit-backdrop-filter: blur(6px);
 	backdrop-filter: blur(6px);
 	display: flex;
@@ -2790,7 +2848,7 @@ body[data-bp="tab"] .inspector {
 	position: fixed;
 	inset: 0;
 	z-index: 60;
-	background: rgba(0, 0, 0, 0.45);
+	background: var(--scrim);
 	display: flex;
 	align-items: flex-start;
 	justify-content: center;
@@ -2918,8 +2976,8 @@ body[data-bp="tab"] .inspector {
 		(-webkit-backdrop-filter: blur(1px))
 	) {
 	:root {
-		--glass: rgba(17, 17, 16, 0.97);
-		--glass2: rgba(28, 27, 25, 0.99);
+		--glass: var(--glass-solid);
+		--glass2: var(--glass2-solid);
 	}
 }
 @media (prefers-reduced-transparency: reduce) {
@@ -2939,14 +2997,14 @@ body[data-bp="tab"] .inspector {
 @media (pointer: coarse) {
 	:root {
 		--blur: none;
-		--glass: rgba(17, 17, 16, 0.94);
-		--glass2: rgba(28, 27, 25, 0.98);
+		--glass: var(--glass-touch);
+		--glass2: var(--glass2-touch);
 	}
 	.modal-veil,
 	.sitrep {
 		-webkit-backdrop-filter: none;
 		backdrop-filter: none;
-		background: rgba(11, 11, 10, 0.82);
+		background: var(--scrim-touch);
 	}
 }
 
@@ -2984,7 +3042,7 @@ body[data-bp="tab"] .inspector {
 	z-index: 65;
 	display: flex;
 	flex-direction: column;
-	background: rgba(11, 11, 10, 0.72);
+	background: var(--scrim2);
 	-webkit-backdrop-filter: blur(6px);
 	backdrop-filter: blur(6px);
 	animation: fade var(--t) var(--ease);
@@ -3118,7 +3176,7 @@ body[data-bp="tab"] .inspector {
 	border: 1px solid var(--line2);
 	border-radius: var(--r-card);
 	padding: calc(10px * var(--lk)) calc(12px * var(--lk));
-	background: rgba(0, 0, 0, 0.18);
+	background: var(--well);
 }
 .prov-open {
 	display: flex;
@@ -3231,7 +3289,7 @@ body[data-bp="tab"] .inspector {
 	padding: calc(10px * var(--lk));
 	margin-top: calc(8px * var(--lk));
 	border-radius: var(--r-ctl);
-	background: rgba(0, 0, 0, 0.35);
+	background: var(--well);
 	font-family: var(--mono);
 	font-size: calc(11px * var(--fk));
 	line-height: 1.45;
@@ -3395,7 +3453,7 @@ body[data-bp="tab"] .inspector {
 	min-height: calc(40px * var(--lk));
 	border-radius: var(--r-ctl);
 	border: 1px solid var(--line2);
-	background: rgba(233, 229, 218, 0.03);
+	background: var(--wash);
 	color: var(--txt2);
 	font: inherit;
 	font-size: var(--fs-s);
@@ -3635,8 +3693,8 @@ body[data-bp="tab"] #focus-btn {
 /* solid panels: no backdrop blur (cheaper on weak GPUs, easier to read) */
 .solid-panels {
 	--blur: none;
-	--glass: rgba(17, 17, 16, 0.97);
-	--glass2: rgba(28, 27, 25, 0.99);
+	--glass: var(--glass-solid);
+	--glass2: var(--glass2-solid);
 }
 /* reduced motion chosen here, whatever the OS says */
 .reduce-motion {
@@ -3719,7 +3777,7 @@ body[data-bp="tab"] #focus-btn {
 	display: flex;
 	gap: calc(4px * var(--lk));
 	padding: calc(3px * var(--lk));
-	background: rgba(0, 0, 0, 0.25);
+	background: var(--well);
 	border: 1px solid var(--line);
 	border-radius: var(--r-ctl);
 }
@@ -3794,7 +3852,7 @@ body[data-bp="tab"] #focus-btn {
 	padding: 0 calc(14px * var(--lk));
 	border-radius: var(--r-ctl);
 	border: 1px solid var(--line2);
-	background: rgba(233, 229, 218, 0.03);
+	background: var(--wash);
 	color: var(--txt2);
 	font: inherit;
 	font-size: var(--fs-s);

@@ -9,7 +9,18 @@ The design direction is "instrument on warm black".
 
 Tokens live in `app/src/app/globals.css` `:root`; `app/src/lib/palette.ts`
 mirrors the hex values for map/canvas/SVG code (`test/palette.test.ts` fails
-if they drift). The rules, in priority order:
+if they drift).
+
+**Themes are token swaps.** The light "paper" theme is
+`:root[data-theme="paper"]` in `globals.css` (mirrored by `PAPER` in
+`palette.ts`): the same structure with warm paper and ink, and the accent,
+red and amber deepened for contrast on light. Write every colour as a token
+(`--wash`, `--well`, `--scrim`, `--line3` and friends cover the tints) so
+both themes follow; a literal colour in a component is a bug in one of
+them. Map code reads `PALETTE` when it builds a map, and the map is rebuilt
+on a theme change with the matching CARTO basemap (Dark Matter or
+Positron). The rules below are written for the dark theme and hold for
+paper with the paper values. In priority order:
 
 1. **Warm black + bone.** `--bg #0b0b0a`, text `--txt #e9e5da` → `--txt2`
    → `--dim` → `--faint`. Hierarchy comes from luminance, not hue. No pure

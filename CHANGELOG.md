@@ -10,6 +10,9 @@ listed in [Upgrading](docs/operations/upgrading.md).
 ## [Unreleased]
 
 ### Added
+- **Paper theme.** Settings → Display → Theme: Dark, Paper (warm paper
+  and ink, on the CARTO Positron basemap) or Follow system. It is a token
+  swap: the same layout and components, applied before first paint.
 - **Installable app.** A web app manifest, icons and a service worker
   (which caches nothing, so data is never stale) let Chrome, Edge, Android
   and iOS install Thoth as an app. Settings → Alerts → *Critical alert

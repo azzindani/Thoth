@@ -41,8 +41,10 @@ import { notifyCritical, OPEN_ALERT, registerServiceWorker } from "../lib/pwa";
 import {
 	applySettings,
 	loadSettings,
+	SETTINGS_EVENT,
 	saveView,
 	settings,
+	watchSystemTheme,
 } from "../lib/settings";
 import { useSettings } from "../lib/useSettings";
 import {
@@ -106,6 +108,24 @@ export default function Terminal() {
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [prefs] = useSettings();
 	useEffect(() => applySettings(loadSettings()), []);
+	// The theme the maps were built with (<html data-theme>, set before
+	// paint). A change remounts them with the new basemap and palette; the
+	// camera survives through the #c= hash.
+	const [mapTheme, setMapTheme] = useState(() =>
+		typeof document === "undefined"
+			? "dark"
+			: (document.documentElement.dataset.theme ?? "dark"),
+	);
+	useEffect(() => {
+		const on = () =>
+			setMapTheme(document.documentElement.dataset.theme ?? "dark");
+		window.addEventListener(SETTINGS_EVENT, on);
+		const unwatch = watchSystemTheme();
+		return () => {
+			window.removeEventListener(SETTINGS_EVENT, on);
+			unwatch();
+		};
+	}, []);
 	const [cmdOpen, setCmdOpen] = useState(false);
 	const [alertBadge, setAlertBadge] = useState(0);
 	const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -1184,6 +1204,7 @@ export default function Terminal() {
 					onTheater={flyTheater}
 				/>
 				<MapView
+					key={mapTheme}
 					visible={visible}
 					sev={sev}
 					since={since}
@@ -1209,7 +1230,9 @@ export default function Terminal() {
 						<>
 							{/* Hidden on phones: a second WebGL map there would still
 						    load tiles and redraw for nothing. */}
-							{!phone && prefs.minimap && <MiniMap getMap={getMap} />}
+							{!phone && prefs.minimap && (
+								<MiniMap key={mapTheme} getMap={getMap} />
+							)}
 							{graph && (
 								<EntityGraph
 									getMap={getMap}

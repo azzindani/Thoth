@@ -145,6 +145,16 @@ export default function SettingsPanel({
 				</div>
 				<div className="set-body">
 					<h4>Display</h4>
+					<Choice
+						label="Theme"
+						value={s.theme}
+						options={[
+							["dark", "Dark"],
+							["paper", "Paper"],
+							["system", "Follow system"],
+						]}
+						onPick={(theme) => set({ theme })}
+					/>
 					<Steps
 						label="Layout size"
 						value={s.layout}

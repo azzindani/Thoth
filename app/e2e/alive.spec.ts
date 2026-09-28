@@ -62,3 +62,26 @@ for (const bp of BPS) {
 		expect(bad, `errors @${bp.name}`).toEqual([]);
 	});
 }
+
+test("paper theme: switches live, remounts the map, survives a reload", async ({
+	page,
+}) => {
+	const bad: string[] = [];
+	page.on("pageerror", (e) => bad.push(e.message.slice(0, 120)));
+	await page.goto("/");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	await page.waitForFunction(() => !!document.body.dataset.bp);
+	await page.keyboard.press(",");
+	await page.getByRole("button", { name: "Paper" }).click();
+	await expect(page.locator("html")).toHaveAttribute("data-theme", "paper");
+	const bg = await page.evaluate(() =>
+		getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
+	);
+	expect(bg).toBe("#f3efe6");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	await page.reload();
+	// applied before paint by the early script in layout.tsx
+	await expect(page.locator("html")).toHaveAttribute("data-theme", "paper");
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	expect(bad).toEqual([]);
+});
