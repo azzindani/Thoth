@@ -388,7 +388,7 @@ export function AreaTab({
 				AREA · {area.lat},{area.lng} · {area.r}KM
 			</h3>
 			{area.threat && (
-				<div style={{ fontSize: 14, margin: "4px 0" }}>
+				<div style={{ fontSize: "calc(14px * var(--fk))", margin: "4px 0" }}>
 					THREAT{" "}
 					<b
 						style={{
@@ -405,7 +405,13 @@ export function AreaTab({
 				</div>
 			)}
 			{area.label && (
-				<div style={{ color: "var(--txt)", fontWeight: 600, fontSize: 13 }}>
+				<div
+					style={{
+						color: "var(--txt)",
+						fontWeight: 600,
+						fontSize: "calc(13px * var(--fk))",
+					}}
+				>
 					{area.label}
 				</div>
 			)}

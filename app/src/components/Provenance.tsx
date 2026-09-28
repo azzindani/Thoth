@@ -7,15 +7,13 @@
 // with no way to trace them back.
 import { useEffect, useState } from "react";
 import { api, type EventProvenance } from "../lib/api";
+import { fmtFull } from "../lib/settings";
 import { hostOf, sourceHome, verifyLinks } from "../lib/sources";
 import { ageStr, fmtCadence, KV } from "../lib/ui";
+import { useSettings } from "../lib/useSettings";
 import type { ObjProps } from "./MapView";
 
-function utc(ts: string | null | undefined): string {
-	const t = Date.parse(String(ts ?? ""));
-	if (!Number.isFinite(t)) return "—";
-	return `${new Date(t).toISOString().slice(0, 16).replace("T", " ")}Z`;
-}
+const utc = (ts: string | null | undefined) => fmtFull(ts);
 
 function Ext({ href, children }: { href: string; children: React.ReactNode }) {
 	return (
@@ -35,6 +33,7 @@ type Member = {
 };
 
 export function Provenance({ sel }: { sel: ObjProps }) {
+	useSettings(); // times re-render when UTC/local changes
 	const [p, setP] = useState<EventProvenance | null | undefined>(undefined);
 	useEffect(() => {
 		let stop = false;

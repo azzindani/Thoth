@@ -56,10 +56,14 @@
 		"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 		"Helvetica Neue", Arial, sans-serif;
 	--mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-	--fs-label: 10.5px;
-	--fs-s: 12px;
-	--fs: 13px;
-	--fs-title: 15px;
+	/* display settings (lib/settings.ts): --fk scales text, --lk layout;
+	   1 = the original design (level M) */
+	--fk: 1;
+	--lk: 1;
+	--fs-label: calc(10.5px * var(--fk));
+	--fs-s: calc(12px * var(--fk));
+	--fs: calc(13px * var(--fk));
+	--fs-title: calc(15px * var(--fk));
 
 	/* radius scale: panel › card › control › cell */
 	--r-panel: 14px;
@@ -80,18 +84,18 @@
 
 	/* floating geometry (desk). --lw/--rw = side panel + gap; overlays and
 	   the map camera padding are laid out from these. */
-	--inset: 10px;
-	--bar: 44px;
-	--expl: 264px;
-	--insp: 372px;
-	--rail: 56px;
+	--inset: calc(10px * var(--lk));
+	--bar: calc(44px * var(--lk));
+	--expl: calc(264px * var(--lk));
+	--insp: calc(372px * var(--lk));
+	--rail: calc(56px * var(--lk));
 	--dock-h: 124px; /* first-paint fallback; page.tsx publishes the measured height */
 	--top: calc(var(--bar) + var(--inset) * 2);
 	--lw: calc(var(--expl) + var(--inset));
 	--rw: calc(var(--insp) + var(--inset));
-	--tap: 44px;
-	--pad: 14px;
-	--gap: 8px;
+	--tap: calc(44px * var(--lk));
+	--pad: calc(14px * var(--lk));
+	--gap: calc(8px * var(--lk));
 }
 
 /* ── base ─────────────────────────────────────────────────────────────── */
@@ -122,8 +126,8 @@ body {
 	border-radius: var(--r-cell);
 }
 *::-webkit-scrollbar {
-	width: 8px;
-	height: 8px;
+	width: calc(8px * var(--lk));
+	height: calc(8px * var(--lk));
 }
 *::-webkit-scrollbar-thumb {
 	background: transparent;
@@ -205,8 +209,8 @@ main.app {
 	border-radius: var(--r-panel);
 	display: flex;
 	align-items: center;
-	gap: 14px;
-	padding: 0 8px 0 14px;
+	gap: calc(14px * var(--lk));
+	padding: 0 calc(8px * var(--lk)) 0 calc(14px * var(--lk));
 	white-space: nowrap;
 	overflow: hidden;
 	font-size: var(--fs-s);
@@ -223,7 +227,7 @@ main.app {
 	/* scroll stays in the panel: a list's end never drags the map or
 	   bounces the page (every panel scroller below does the same) */
 	overscroll-behavior: contain;
-	padding: 16px 12px 12px;
+	padding: calc(16px * var(--lk)) calc(12px * var(--lk)) calc(12px * var(--lk));
 }
 .inspector {
 	position: absolute;
@@ -247,24 +251,24 @@ main.app {
 	border-radius: var(--r-panel);
 	display: grid;
 	grid-template-rows: auto 36px;
-	padding: 10px 14px 0;
+	padding: calc(10px * var(--lk)) calc(14px * var(--lk)) 0;
 }
 
 /* ── status bar ───────────────────────────────────────────────────────── */
 .logo {
 	color: var(--txt);
 	font-weight: 600;
-	font-size: 12px;
+	font-size: calc(12px * var(--fk));
 	letter-spacing: 0.22em;
 	display: inline-flex;
 	align-items: center;
-	gap: 9px;
+	gap: calc(9px * var(--lk));
 }
 .logo::before {
 	/* the mark: a faience tile — the only accent at rest */
 	content: "";
-	width: 8px;
-	height: 8px;
+	width: calc(8px * var(--lk));
+	height: calc(8px * var(--lk));
 	border-radius: 2px;
 	background: var(--accent);
 	box-shadow: 0 0 0 3px var(--accent-dim);
@@ -273,14 +277,14 @@ main.app {
 .clock {
 	color: var(--txt2);
 	font-size: var(--fs-s);
-	padding-left: 14px;
+	padding-left: calc(14px * var(--lk));
 	border-left: 1px solid var(--line);
 }
 .tape {
 	flex: 1;
 	overflow: hidden;
 	color: var(--dim);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	min-width: 0;
 	mask-image: linear-gradient(
 		90deg,
@@ -305,10 +309,10 @@ main.app {
 }
 .hpill {
 	color: var(--txt2);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	letter-spacing: 0.02em;
-	padding: 0 10px;
-	height: 30px;
+	padding: 0 calc(10px * var(--lk));
+	height: calc(30px * var(--lk));
 	border-radius: var(--r-ctl);
 	transition: background var(--t-fast) var(--ease);
 }
@@ -320,7 +324,7 @@ main.app {
 }
 .hpill .sep {
 	color: var(--faint);
-	padding: 0 6px;
+	padding: 0 calc(6px * var(--lk));
 }
 .insp-close {
 	display: none;
@@ -342,18 +346,18 @@ main.app {
 }
 .chips {
 	display: flex;
-	margin: 12px 0 4px;
+	margin: calc(12px * var(--lk)) 0 calc(4px * var(--lk));
 }
 .tbtn,
 .chips button {
 	background: transparent;
 	color: var(--dim);
 	border: none;
-	height: 26px;
-	padding: 0 10px;
+	height: calc(26px * var(--lk));
+	padding: 0 calc(10px * var(--lk));
 	cursor: pointer;
 	font: inherit;
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--fk));
 	font-weight: 500;
 	letter-spacing: 0.08em;
 	border-radius: var(--r-cell);
@@ -364,9 +368,9 @@ main.app {
 }
 .chips button {
 	flex: 1;
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	letter-spacing: 0.02em;
-	height: 28px;
+	height: calc(28px * var(--lk));
 }
 .tbtn:hover,
 .chips button:hover {
@@ -403,7 +407,7 @@ main.app {
 	display: none;
 }
 h3 {
-	margin: 2px 0 10px;
+	margin: 2px 0 calc(10px * var(--lk));
 	font-size: var(--fs-label);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -412,7 +416,7 @@ h3 {
 }
 .row2 {
 	display: flex;
-	gap: 6px;
+	gap: calc(6px * var(--lk));
 }
 select,
 .ibody input,
@@ -424,7 +428,7 @@ select,
 	color: var(--txt);
 	border: 1px solid var(--line2);
 	border-radius: var(--r-ctl);
-	padding: 7px 10px;
+	padding: calc(7px * var(--lk)) calc(10px * var(--lk));
 	font: inherit;
 	font-size: var(--fs-s);
 	width: 100%;
@@ -435,7 +439,7 @@ select,
 		background var(--t-fast) var(--ease);
 }
 select {
-	padding-right: 28px;
+	padding-right: calc(28px * var(--lk));
 	background-image:
 		linear-gradient(45deg, transparent 50%, var(--dim) 50%),
 		linear-gradient(135deg, var(--dim) 50%, transparent 50%);
@@ -468,9 +472,9 @@ select:focus,
 .lgroup {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin: 14px 0 3px;
-	padding: 4px 8px;
+	gap: calc(8px * var(--lk));
+	margin: calc(14px * var(--lk)) 0 3px;
+	padding: calc(4px * var(--lk)) calc(8px * var(--lk));
 	border-radius: var(--r-ctl);
 	cursor: pointer;
 	font-size: var(--fs-label);
@@ -482,9 +486,9 @@ select:focus,
 .lrow {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 5px 8px;
-	min-height: 30px;
+	gap: calc(10px * var(--lk));
+	padding: calc(5px * var(--lk)) calc(8px * var(--lk));
+	min-height: calc(30px * var(--lk));
 	cursor: pointer;
 	color: var(--txt2);
 	border-radius: var(--r-ctl);
@@ -561,27 +565,27 @@ select:focus,
 .lrow b {
 	color: var(--dim);
 	font-weight: 400;
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 }
 .explorer-foot {
-	margin-top: 16px;
-	padding-top: 12px;
+	margin-top: calc(16px * var(--lk));
+	padding-top: calc(12px * var(--lk));
 	border-top: 1px solid var(--line);
 }
 #monitor-link {
 	width: 100%;
-	height: 32px;
+	height: calc(32px * var(--lk));
 	justify-content: flex-start;
 	text-align: left;
-	padding: 0 10px;
+	padding: 0 calc(10px * var(--lk));
 	border: 1px solid var(--line);
 	border-radius: var(--r-ctl);
 }
 .credit {
-	margin-top: 10px;
+	margin-top: calc(10px * var(--lk));
 	padding: 0 2px;
 	color: var(--faint);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--fk));
 }
 
 /* ── inspector ────────────────────────────────────────────────────────── */
@@ -595,7 +599,7 @@ select:focus,
 	flex: 1;
 	display: flex;
 	gap: 2px;
-	padding: 0 8px;
+	padding: 0 calc(8px * var(--lk));
 	overflow-x: auto;
 	scrollbar-width: none;
 	mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent);
@@ -609,8 +613,8 @@ select:focus,
 	background: none;
 	border: none;
 	color: var(--dim);
-	padding: 0 10px;
-	height: 42px;
+	padding: 0 calc(10px * var(--lk));
+	height: calc(42px * var(--lk));
 	white-space: nowrap;
 	cursor: pointer;
 	font: inherit;
@@ -643,11 +647,11 @@ select:focus,
 	flex: 1;
 	overflow: auto;
 	overscroll-behavior: contain;
-	padding: 16px var(--pad);
+	padding: calc(16px * var(--lk)) var(--pad);
 	font-size: var(--fs-s);
 }
 .ibody h3 {
-	margin-top: 18px;
+	margin-top: calc(18px * var(--lk));
 }
 .ibody h3:first-child {
 	margin-top: 0;
@@ -662,22 +666,22 @@ select:focus,
 	font-family: var(--mono);
 	color: var(--txt2);
 	background: var(--hover);
-	padding: 1px 5px;
+	padding: 1px calc(5px * var(--lk));
 	border-radius: 4px;
 }
 .kv {
 	display: grid;
 	grid-template-columns: 84px 1fr;
-	gap: 4px 10px;
-	margin: 10px 0;
-	font-size: 11.5px;
+	gap: calc(4px * var(--lk)) calc(10px * var(--lk));
+	margin: calc(10px * var(--lk)) 0;
+	font-size: calc(11.5px * var(--fk));
 }
 .kv b {
 	color: var(--dim);
 	font-weight: 400;
 }
 .item {
-	padding: 9px 10px;
+	padding: calc(9px * var(--lk)) calc(10px * var(--lk));
 	margin: 2px 0;
 	cursor: pointer;
 	border-radius: var(--r-ctl);
@@ -689,7 +693,7 @@ select:focus,
 /* a severity-ranked row: the left edge carries severity, not a bullet */
 .sev-row {
 	position: relative;
-	padding-left: 14px;
+	padding-left: calc(14px * var(--lk));
 	line-height: 1.4;
 }
 .sev-row::before {
@@ -711,22 +715,22 @@ select:focus,
 .sev-row .lyr {
 	display: block;
 	font-family: var(--mono);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--fk));
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--dim);
 	margin-bottom: 1px;
 }
 details.gaps {
-	margin: 12px 0 4px;
-	font-size: 11.5px;
+	margin: calc(12px * var(--lk)) 0 calc(4px * var(--lk));
+	font-size: calc(11.5px * var(--fk));
 	color: var(--dim);
 }
 details.gaps summary {
 	cursor: pointer;
 	color: var(--amber);
 	list-style: none;
-	padding: 6px 10px;
+	padding: calc(6px * var(--lk)) calc(10px * var(--lk));
 	border-radius: var(--r-ctl);
 	transition: background var(--t-fast) var(--ease);
 }
@@ -741,11 +745,11 @@ details.gaps[open] summary::before {
 	content: "▾ ";
 }
 .gaps-list {
-	margin-top: 6px;
-	padding: 0 10px;
+	margin-top: calc(6px * var(--lk));
+	padding: 0 calc(10px * var(--lk));
 	color: var(--dim);
 	font-family: var(--mono);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--fk));
 	line-height: 1.6;
 }
 .sev-critical {
@@ -768,8 +772,8 @@ details.gaps[open] summary::before {
 	background: var(--accent);
 	color: var(--accent-ink);
 	border: none;
-	padding: 0 16px;
-	height: 32px;
+	padding: 0 calc(16px * var(--lk));
+	height: calc(32px * var(--lk));
 	cursor: pointer;
 	font: inherit;
 	font-size: var(--fs-s);
@@ -795,11 +799,11 @@ details.gaps[open] summary::before {
 	background: rgba(233, 229, 218, 0.03);
 	color: var(--txt2);
 	border: 1px solid var(--line2);
-	padding: 0 12px;
-	height: 32px;
+	padding: 0 calc(12px * var(--lk));
+	height: calc(32px * var(--lk));
 	cursor: pointer;
 	font: inherit;
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 	font-weight: 500;
 	letter-spacing: 0.08em;
 	border-radius: var(--r-ctl);
@@ -827,19 +831,26 @@ details.gaps[open] summary::before {
 .tl-row {
 	display: flex;
 	align-items: stretch;
-	gap: 16px;
+	gap: calc(16px * var(--lk));
+	/* a grid item: without this it never shrinks below its content and the
+	   buttons spill past the dock at large sizes */
+	min-width: 0;
 	min-height: 0;
-	padding-bottom: 10px;
+	padding-bottom: calc(10px * var(--lk));
+}
+.tl-row > button {
+	flex: none;
+	white-space: nowrap;
 }
 .threatclock {
 	flex: none;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: 6px;
-	padding-right: 16px;
+	gap: calc(6px * var(--lk));
+	padding-right: calc(16px * var(--lk));
 	border-right: 1px solid var(--line);
-	min-width: 108px;
+	min-width: calc(108px * var(--lk));
 }
 .tc-label {
 	font-size: var(--fs-label);
@@ -849,7 +860,7 @@ details.gaps[open] summary::before {
 	font-weight: 600;
 }
 .tc-num {
-	font-size: 17px;
+	font-size: calc(17px * var(--fk));
 	line-height: 1;
 	color: var(--txt);
 }
@@ -859,7 +870,7 @@ details.gaps[open] summary::before {
 	gap: 3px;
 }
 .tc-meter i {
-	height: 4px;
+	height: calc(4px * var(--lk));
 	border-radius: 2px;
 	background: var(--line2);
 	transition: background var(--t) var(--ease);
@@ -869,13 +880,23 @@ details.gaps[open] summary::before {
 	justify-content: space-between;
 	align-items: center;
 	color: var(--dim);
-	font-size: 11px;
-	gap: 12px;
+	font-size: calc(11px * var(--fk));
+	gap: calc(12px * var(--lk));
+}
+/* the hint gives way (one line, ellipsis) before the dock grows or its
+   buttons are pushed out; the title keeps its line */
+#tl-info {
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .tl-head > span:first-child {
+	flex: none;
+	white-space: nowrap;
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
+	gap: calc(8px * var(--lk));
 	font-size: var(--fs-label);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -883,9 +904,11 @@ details.gaps[open] summary::before {
 }
 .tl-head select {
 	width: auto;
+	min-width: calc(96px * var(--lk));
+	max-width: 100%;
 	margin: 0;
-	padding: 3px 24px 3px 8px;
-	font-size: 11px;
+	padding: 3px calc(24px * var(--lk)) 3px calc(8px * var(--lk));
+	font-size: calc(11px * var(--fk));
 	letter-spacing: 0;
 	text-transform: none;
 	font-weight: 400;
@@ -893,15 +916,15 @@ details.gaps[open] summary::before {
 }
 .tl-canvas {
 	width: 100%;
-	height: 40px;
+	height: calc(40px * var(--lk));
 	display: block;
 	cursor: crosshair;
-	margin-top: 6px;
+	margin-top: calc(6px * var(--lk));
 }
 .cmdbar {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: calc(10px * var(--lk));
 	border-top: 1px solid var(--line);
 	margin: 0;
 	padding: 0;
@@ -928,14 +951,14 @@ details.gaps[open] summary::before {
 }
 .cmd-out {
 	color: var(--dim);
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 	max-width: 45%;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: calc(6px * var(--lk));
 }
 .cmd-out:empty {
 	display: none;
@@ -946,7 +969,7 @@ details.gaps[open] summary::before {
 	color: var(--faint);
 	cursor: pointer;
 	font: inherit;
-	padding: 2px 4px;
+	padding: 2px calc(4px * var(--lk));
 }
 .cmd-out-x:hover {
 	color: var(--txt);
@@ -960,9 +983,9 @@ details.gaps[open] summary::before {
 	max-width: none;
 	white-space: pre-wrap;
 	align-items: flex-start;
-	padding: 12px 14px;
+	padding: calc(12px * var(--lk)) calc(14px * var(--lk));
 	font-family: var(--mono);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	line-height: 1.6;
 	color: var(--txt2);
 	background: var(--glass2);
@@ -987,7 +1010,7 @@ details.gaps[open] summary::before {
 }
 #map .maplibregl-ctrl-attrib {
 	background: rgba(11, 11, 10, 0.6);
-	font-size: 10px;
+	font-size: calc(10px * var(--fk));
 	font-family: var(--mono);
 	color: var(--faint);
 	border-radius: var(--r-cell);
@@ -1012,7 +1035,7 @@ details.gaps[open] summary::before {
 	border-radius: var(--r-card);
 	font-family: var(--sans);
 	font-size: var(--fs-s);
-	padding: 12px 14px;
+	padding: calc(12px * var(--lk)) calc(14px * var(--lk));
 	box-shadow: var(--hl), var(--shadow-card);
 	animation: rise var(--t) var(--ease);
 }
@@ -1042,8 +1065,8 @@ details.gaps[open] summary::before {
 #map .maplibregl-popup-close-button {
 	color: var(--dim);
 	font-size: 16px;
-	width: 26px;
-	height: 26px;
+	width: calc(26px * var(--lk));
+	height: calc(26px * var(--lk));
 	top: 6px;
 	right: 6px;
 	border-radius: var(--r-cell);
@@ -1062,8 +1085,8 @@ details.gaps[open] summary::before {
 	pointer-events: none;
 }
 .hov {
-	min-width: 240px;
-	max-width: 340px;
+	min-width: calc(240px * var(--lk));
+	max-width: calc(340px * var(--lk));
 	position: relative;
 	overflow: hidden;
 }
@@ -1071,10 +1094,10 @@ details.gaps[open] summary::before {
    card 12px of width for the same information) */
 .sev-dot {
 	display: inline-block;
-	width: 7px;
-	height: 7px;
+	width: calc(7px * var(--lk));
+	height: calc(7px * var(--lk));
 	border-radius: 50%;
-	margin-right: 6px;
+	margin-right: calc(6px * var(--lk));
 	vertical-align: 1px;
 }
 .hov-t {
@@ -1088,15 +1111,15 @@ details.gaps[open] summary::before {
 .hov-m {
 	color: var(--txt2);
 	line-height: 1.55;
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 }
 .hov-m.dim {
 	color: var(--dim);
 }
 .hov-d {
-	margin-top: 6px;
+	margin-top: calc(6px * var(--lk));
 	color: var(--txt2);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	line-height: 1.45;
 	display: -webkit-box;
 	-webkit-line-clamp: 3;
@@ -1105,7 +1128,7 @@ details.gaps[open] summary::before {
 }
 .sev-tag {
 	font-family: var(--mono);
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--fk));
 	letter-spacing: 0.08em;
 	font-weight: 500;
 }
@@ -1115,16 +1138,16 @@ details.gaps[open] summary::before {
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	font-weight: 600;
-	margin-top: 10px;
+	margin-top: calc(10px * var(--lk));
 }
 .hov-grid {
 	display: grid;
 	grid-template-columns: auto 1fr;
-	gap: 2px 10px;
-	margin-top: 8px;
-	padding-top: 8px;
+	gap: 2px calc(10px * var(--lk));
+	margin-top: calc(8px * var(--lk));
+	padding-top: calc(8px * var(--lk));
 	border-top: 1px solid var(--line);
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 }
 .hov-grid span:nth-child(odd) {
 	color: var(--faint);
@@ -1134,8 +1157,8 @@ details.gaps[open] summary::before {
 }
 /* fixed satellite slot: the card never reflows when the thumbnail lands */
 .hov-shot {
-	height: 112px;
-	margin-top: 10px;
+	height: calc(112px * var(--lk));
+	margin-top: calc(10px * var(--lk));
 	overflow: hidden;
 	background: rgba(0, 0, 0, 0.3);
 	border: 1px solid var(--line);
@@ -1157,9 +1180,9 @@ details.gaps[open] summary::before {
 	position: absolute;
 	left: 50%;
 	top: 50%;
-	width: 18px;
-	height: 18px;
-	margin: -9px 0 0 -9px;
+	width: calc(18px * var(--lk));
+	height: calc(18px * var(--lk));
+	margin: calc(-9px * var(--lk)) 0 0 calc(-9px * var(--lk));
 	border: 2px solid var(--accent);
 	border-radius: 50%;
 	box-shadow:
@@ -1171,8 +1194,8 @@ details.gaps[open] summary::before {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	padding: 3px 7px;
-	font-size: 10px;
+	padding: 3px calc(7px * var(--lk));
+	font-size: calc(10px * var(--fk));
 	color: var(--txt2);
 	background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
 	white-space: nowrap;
@@ -1180,22 +1203,22 @@ details.gaps[open] summary::before {
 	text-overflow: ellipsis;
 }
 .sat-view {
-	height: 200px;
+	height: calc(200px * var(--lk));
 	margin-top: 0;
 }
 .hov-act {
 	display: flex;
-	gap: 6px;
-	margin-top: 12px;
+	gap: calc(6px * var(--lk));
+	margin-top: calc(12px * var(--lk));
 }
 .hov-act button {
 	flex: 1;
 	white-space: nowrap;
-	padding: 0 8px;
+	padding: 0 calc(8px * var(--lk));
 	font: inherit;
 	font-size: var(--fs-s);
 	font-weight: 600;
-	height: 32px;
+	height: calc(32px * var(--lk));
 	cursor: pointer;
 	border-radius: var(--r-ctl);
 	border: 1px solid transparent;
@@ -1210,8 +1233,8 @@ details.gaps[open] summary::before {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	height: 32px;
-	padding: 0 8px;
+	height: calc(32px * var(--lk));
+	padding: 0 calc(8px * var(--lk));
 	white-space: nowrap;
 	font-size: var(--fs-s);
 	font-weight: 600;
@@ -1229,19 +1252,19 @@ details.gaps[open] summary::before {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px 10px;
-	margin-top: 10px;
-	font-size: 11px;
+	gap: calc(4px * var(--lk)) calc(10px * var(--lk));
+	margin-top: calc(10px * var(--lk));
+	font-size: calc(11px * var(--fk));
 }
 .hov-verify-l {
 	color: var(--faint);
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
-	font-size: 10px;
+	font-size: calc(10px * var(--fk));
 }
 .hov-cam {
 	display: block;
-	height: 150px;
+	height: calc(150px * var(--lk));
 }
 .hov-shot.hov-cam img {
 	position: static;
@@ -1275,7 +1298,7 @@ details.gaps[open] summary::before {
 	text-transform: uppercase;
 	color: var(--dim);
 	font-weight: 600;
-	margin-bottom: 6px;
+	margin-bottom: calc(6px * var(--lk));
 }
 .pick-row {
 	display: block;
@@ -1286,7 +1309,7 @@ details.gaps[open] summary::before {
 	color: var(--txt);
 	font: inherit;
 	font-size: var(--fs-s);
-	padding: 7px 8px;
+	padding: calc(7px * var(--lk)) calc(8px * var(--lk));
 	margin: 1px 0;
 	cursor: pointer;
 	border-radius: var(--r-ctl);
@@ -1302,7 +1325,7 @@ details.gaps[open] summary::before {
 }
 .pick-row .dim {
 	color: var(--dim);
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 }
 
 /* ── overlays: full view, toasts, modal, minimap, entity graph ────────── */
@@ -1322,7 +1345,7 @@ details.gaps[open] summary::before {
 }
 .fullview {
 	pointer-events: auto;
-	width: min(440px, 94vw);
+	width: min(calc(440px * var(--lk)), 94vw);
 	max-height: 100%;
 	overflow: auto;
 	overscroll-behavior: contain;
@@ -1331,7 +1354,7 @@ details.gaps[open] summary::before {
 	backdrop-filter: var(--blur);
 	border: 1px solid var(--line2);
 	border-radius: var(--r-panel);
-	padding: 18px 20px;
+	padding: calc(18px * var(--lk)) calc(20px * var(--lk));
 	box-shadow: var(--hl), var(--shadow-panel);
 	position: relative;
 	animation: slide-left var(--t) var(--ease);
@@ -1344,10 +1367,10 @@ details.gaps[open] summary::before {
 	border: 1px solid var(--line2);
 	color: var(--dim);
 	font: inherit;
-	font-size: 12px;
+	font-size: calc(12px * var(--fk));
 	cursor: pointer;
-	width: 30px;
-	height: 30px;
+	width: calc(30px * var(--lk));
+	height: calc(30px * var(--lk));
 	padding: 0;
 	border-radius: var(--r-ctl);
 	transition:
@@ -1365,19 +1388,20 @@ details.gaps[open] summary::before {
 	z-index: 60;
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
-	max-width: min(420px, 90vw);
+	gap: calc(8px * var(--lk));
+	max-width: min(calc(420px * var(--lk)), 90vw);
 }
 .toast {
 	display: flex;
 	align-items: flex-start;
-	gap: 6px;
+	gap: calc(6px * var(--lk));
 	background: var(--glass2);
 	-webkit-backdrop-filter: var(--blur);
 	backdrop-filter: var(--blur);
 	border: 1px solid var(--line2);
 	border-radius: var(--r-card);
-	padding: 4px 4px 4px 16px;
+	padding: calc(4px * var(--lk)) calc(4px * var(--lk)) calc(4px * var(--lk))
+		calc(16px * var(--lk));
 	font-size: var(--fs-s);
 	box-shadow:
 		inset 3px 0 0 var(--red),
@@ -1398,7 +1422,7 @@ details.gaps[open] summary::before {
 .toast-t {
 	flex: 1;
 	min-width: 0;
-	padding: 6px 0;
+	padding: calc(6px * var(--lk)) 0;
 	text-align: left;
 	background: none;
 	border: none;
@@ -1415,8 +1439,8 @@ button.toast-t:hover {
 }
 .toast-x {
 	flex: none;
-	width: 32px;
-	height: 32px;
+	width: calc(32px * var(--lk));
+	height: calc(32px * var(--lk));
 	background: none;
 	border: none;
 	color: var(--dim);
@@ -1449,8 +1473,8 @@ body[data-bp="phone"]:has(.explorer.open, .inspector.open, .tools-sheet.open)
 	background: var(--glass2);
 	border: 1px solid var(--line2);
 	border-radius: var(--r-sheet);
-	padding: 22px;
-	width: min(560px, 92vw);
+	padding: calc(22px * var(--lk));
+	width: min(calc(560px * var(--lk)), 92vw);
 	box-shadow: var(--hl), var(--shadow-panel);
 	animation: rise var(--t) var(--ease);
 }
@@ -1473,16 +1497,16 @@ body[data-bp="phone"]:has(.explorer.open, .inspector.open, .tools-sheet.open)
 	right: calc(var(--inset) + var(--rw));
 	top: var(--top);
 	z-index: 16;
-	width: 340px;
+	width: calc(340px * var(--lk));
 	border-radius: var(--r-panel);
-	padding: 12px 14px;
+	padding: calc(12px * var(--lk)) calc(14px * var(--lk));
 	animation: rise var(--t) var(--ease);
 }
 .eg-head {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	font-size: 11px;
+	gap: calc(8px * var(--lk));
+	font-size: calc(11px * var(--fk));
 }
 .eg-head .dim {
 	flex: 1;
@@ -1529,7 +1553,7 @@ body.nvg #map canvas {
 	}
 }
 body.focus .explorer {
-	padding: 8px 4px;
+	padding: calc(8px * var(--lk)) calc(4px * var(--lk));
 	overflow-x: hidden;
 }
 body.focus .explorer .lrow .nm,
@@ -1554,7 +1578,7 @@ body.focus .explorer .lrow {
 	justify-content: center;
 	flex-direction: column;
 	gap: 3px;
-	padding: 6px 0;
+	padding: calc(6px * var(--lk)) 0;
 	min-height: var(--tap);
 }
 body.focus .inspector:not(.open) .insp-head {
@@ -1574,7 +1598,7 @@ body.focus .inspector:not(.open) .insp-close {
 body.focus .inspector:not(.open) .tabs button.on {
 	writing-mode: vertical-rl;
 	height: auto;
-	min-height: 120px;
+	min-height: calc(120px * var(--lk));
 	margin: auto;
 }
 body.focus .inspector:not(.open) .tabs button.on::after {
@@ -1586,7 +1610,7 @@ body.focus .inspector:not(.open) .tabs button.on::after {
 	height: auto;
 }
 body.focus .inspector.open {
-	width: min(372px, 86vw);
+	width: min(calc(372px * var(--lk)), 86vw);
 	z-index: 30;
 }
 
@@ -1597,7 +1621,7 @@ body.focus .inspector.open {
 		--rw: 0px;
 	}
 	.ticker {
-		gap: 10px;
+		gap: calc(10px * var(--lk));
 	}
 	.ticker .hpill {
 		/* live counts change width run to run — truncate, never overflow */
@@ -1611,7 +1635,7 @@ body.focus .inspector.open {
 	}
 	.explorer {
 		width: var(--rail);
-		padding: 8px 4px;
+		padding: calc(8px * var(--lk)) calc(4px * var(--lk));
 		overflow-x: hidden;
 	}
 	.explorer .lrow .nm,
@@ -1631,11 +1655,11 @@ body.focus .inspector.open {
 		flex-direction: column;
 		justify-content: center;
 		gap: 3px;
-		padding: 6px 0;
+		padding: calc(6px * var(--lk)) 0;
 		min-height: var(--tap);
 	}
 	.explorer .lrow b {
-		font-size: 9.5px;
+		font-size: calc(9.5px * var(--fk));
 		line-height: 1;
 	}
 	.explorer .lrow .sw {
@@ -1659,9 +1683,9 @@ body.focus .inspector.open {
 		border: none;
 		color: var(--dim);
 		font: inherit;
-		font-size: 14px;
+		font-size: calc(14px * var(--fk));
 		cursor: pointer;
-		padding: 0 14px;
+		padding: 0 calc(14px * var(--lk));
 		transition: color var(--t-fast) var(--ease);
 	}
 	.insp-close:hover {
@@ -1675,19 +1699,19 @@ body.focus .inspector.open {
 /* ── phone (<768, or a phone on its side: ≤500 tall): map-first, floating bar + command pill, bottom sheets ─ */
 @media (max-width: 767px), (max-height: 500px) and (max-width: 1023px) {
 	:root {
-		--inset: 8px;
+		--inset: calc(8px * var(--lk));
 		--lw: 0px;
 		--rw: 0px;
 		--dock-h: 52px;
 		/* bottom navigation (PhoneNav.tsx); sheets rest above it */
-		--nav-h: calc(58px + env(safe-area-inset-bottom));
+		--nav-h: calc(58px * var(--lk) + env(safe-area-inset-bottom));
 		/* bottom-sheet rest heights (lib/sheet.tsx snaps between them) */
 		--sheet-half: 56dvh;
 		--sheet-full: calc(100dvh - var(--top) - var(--nav-h));
 	}
 	.ticker {
-		gap: 10px;
-		padding: 0 10px 0 6px;
+		gap: calc(10px * var(--lk));
+		padding: 0 calc(10px * var(--lk)) 0 calc(6px * var(--lk));
 	}
 	.ticker .seg,
 	.ticker .tbtn,
@@ -1696,8 +1720,8 @@ body.focus .inspector.open {
 		display: none;
 	}
 	body[data-bp="phone"] .hpill {
-		font-size: 11px;
-		padding: 0 4px;
+		font-size: calc(11px * var(--fk));
+		padding: 0 calc(4px * var(--lk));
 	}
 	/* explorer (layers) and inspector share one bottom-sheet form */
 	.explorer,
@@ -1731,7 +1755,7 @@ body.focus .inspector.open {
 		min-height: 0;
 		overflow: auto;
 		overscroll-behavior: contain;
-		padding: 2px 14px 14px;
+		padding: 2px calc(14px * var(--lk)) calc(14px * var(--lk));
 	}
 	.explorer[data-snap="full"],
 	.inspector[data-snap="full"],
@@ -1748,21 +1772,22 @@ body.focus .inspector.open {
 		cursor: grab;
 		user-select: none;
 		-webkit-user-select: none;
-		padding-top: 10px;
+		padding-top: calc(10px * var(--lk));
 	}
 	.sheet-grip {
 		display: block;
-		width: 38px;
-		height: 4px;
+		width: calc(38px * var(--lk));
+		height: calc(4px * var(--lk));
 		border-radius: 2px;
 		background: var(--line2);
-		margin: 0 auto 10px;
+		margin: 0 auto calc(10px * var(--lk));
 	}
 	.sheet-bar {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 0 6px 6px 18px;
+		gap: calc(8px * var(--lk));
+		padding: 0 calc(6px * var(--lk)) calc(6px * var(--lk))
+			calc(18px * var(--lk));
 	}
 	.sheet-title {
 		flex: 1;
@@ -1777,7 +1802,7 @@ body.focus .inspector.open {
 		border: none;
 		color: var(--dim);
 		font: inherit;
-		font-size: 14px;
+		font-size: calc(14px * var(--fk));
 		cursor: pointer;
 		width: var(--tap);
 		height: var(--tap);
@@ -1811,15 +1836,15 @@ body.focus .inspector.open {
 		opacity: 1;
 	}
 	body[data-bp="phone"] .explorer .lgroup {
-		min-height: 36px;
-		margin-top: 10px;
+		min-height: calc(36px * var(--lk));
+		margin-top: calc(10px * var(--lk));
 	}
 	/* undo the tablet rail cell: in the sheet a layer is a full row */
 	body[data-bp="phone"] .explorer .lrow {
 		flex-direction: row;
 		justify-content: flex-start;
-		gap: 12px;
-		padding: 0 8px;
+		gap: calc(12px * var(--lk));
+		padding: 0 calc(8px * var(--lk));
 		min-height: var(--tap);
 		font-size: var(--fs);
 	}
@@ -1827,25 +1852,28 @@ body.focus .inspector.open {
 		font-size: var(--fs);
 	}
 	body[data-bp="phone"] .explorer .lrow b {
-		font-size: 11px;
+		font-size: calc(11px * var(--fk));
 	}
 	.tabs button {
 		height: var(--tap);
 	}
 	.ibody .item {
-		padding: 11px 10px;
+		padding: calc(11px * var(--lk)) calc(10px * var(--lk));
 		min-height: var(--tap);
 	}
 	.ibody select,
 	.ibody input {
 		min-height: var(--tap);
-		font-size: 16px; /* ≥16px: iOS does not zoom the page on focus */
+		font-size: calc(
+			16px *
+			var(--fk)
+		); /* ≥calc(16px * var(--fk)): iOS does not zoom the page on focus */
 	}
 	/* the dock is a floating command pill above the nav, shown on demand
 	   (Search), or the replay bar while replay runs */
 	.bottom {
 		grid-template-rows: auto;
-		padding: 0 14px;
+		padding: 0 calc(14px * var(--lk));
 		bottom: calc(var(--nav-h) + var(--inset));
 	}
 	body[data-bp="phone"]:not(.cmd-open):not(.replay-on) .bottom {
@@ -1857,8 +1885,8 @@ body.focus .inspector.open {
 	body[data-bp="phone"].replay-on .tl-row {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
-		padding: 8px 0;
+		gap: calc(8px * var(--lk));
+		padding: calc(8px * var(--lk)) 0;
 	}
 	/* replay on a phone: the controls only (the threat gauge and the
 	   graph toggle live elsewhere there) */
@@ -1868,7 +1896,7 @@ body.focus .inspector.open {
 	}
 	.cmdbar {
 		border-top: none;
-		height: 50px;
+		height: calc(50px * var(--lk));
 	}
 	body[data-bp="phone"].replay-on:not(.cmd-open) .cmdbar {
 		display: none;
@@ -1887,8 +1915,8 @@ body.focus .inspector.open {
 		bottom: calc(100% + 10px);
 		max-width: none;
 		white-space: pre-wrap;
-		padding: 10px 12px;
-		font-size: 12px;
+		padding: calc(10px * var(--lk)) calc(12px * var(--lk));
+		font-size: calc(12px * var(--fk));
 		line-height: 1.5;
 		color: var(--txt2);
 		background: var(--glass2);
@@ -1900,8 +1928,8 @@ body.focus .inspector.open {
 	.cmd-out .cmd-out-x {
 		margin-left: auto;
 		flex: none;
-		min-width: 32px;
-		min-height: 32px;
+		min-width: calc(32px * var(--lk));
+		min-height: calc(32px * var(--lk));
 	}
 	.fullview-wrap {
 		top: auto;
@@ -1925,7 +1953,7 @@ body.focus .inspector.open {
 		animation: sheet-up var(--t-sheet) var(--ease);
 	}
 	.fullview .sheet-head {
-		padding-top: 8px;
+		padding-top: calc(8px * var(--lk));
 	}
 	.fullview .fv-close {
 		top: 16px;
@@ -1936,7 +1964,7 @@ body.focus .inspector.open {
 		min-height: 0;
 		overflow: auto;
 		overscroll-behavior: contain;
-		padding: 4px 20px 18px;
+		padding: calc(4px * var(--lk)) calc(20px * var(--lk)) calc(18px * var(--lk));
 	}
 	.toasts {
 		bottom: calc(var(--dock-h) + var(--inset) * 3);
@@ -1977,7 +2005,7 @@ body.focus .inspector.open {
 		max-height: 50dvh;
 		overflow: auto;
 		overscroll-behavior: contain;
-		padding: 14px 16px 0;
+		padding: calc(14px * var(--lk)) calc(16px * var(--lk)) 0;
 		border-radius: var(--r-panel);
 		animation: sheet-down var(--t-sheet) var(--ease);
 	}
@@ -1985,32 +2013,32 @@ body.focus .inspector.open {
 	body[data-bp="phone"] #map .pick-pop .hov {
 		max-width: none;
 		min-width: 0;
-		padding-bottom: 14px;
+		padding-bottom: calc(14px * var(--lk));
 		/* the content box scrolls, not the card: sticky actions need it */
 		overflow: visible;
 	}
 	body[data-bp="phone"] #map .pin-pop .hov-t {
 		font-size: var(--fs-title);
-		padding-right: 28px;
+		padding-right: calc(28px * var(--lk));
 	}
 	/* two label/value pairs per line: the wide card stays short */
 	body[data-bp="phone"] #map .pin-pop .hov-grid {
 		grid-template-columns: auto 1fr auto 1fr;
-		font-size: 12px;
-		gap: 4px 10px;
+		font-size: calc(12px * var(--fk));
+		gap: calc(4px * var(--lk)) calc(10px * var(--lk));
 	}
 	body[data-bp="phone"] #map .pin-pop .hov-grid .w {
 		grid-column: span 3;
 	}
 	body[data-bp="phone"] #map .pin-pop .hov-shot {
-		height: 150px;
+		height: calc(150px * var(--lk));
 	}
 	/* actions stay reachable while the card scrolls */
 	body[data-bp="phone"] #map .pin-pop .hov-act {
 		position: sticky;
 		bottom: 0;
-		margin-top: 10px;
-		padding: 8px 0 10px;
+		margin-top: calc(10px * var(--lk));
+		padding: calc(8px * var(--lk)) 0 calc(10px * var(--lk));
 		background: var(--glass2);
 		border-top: 1px solid var(--line);
 	}
@@ -2018,8 +2046,8 @@ body.focus .inspector.open {
 	   the navigation */
 	body[data-bp="phone"] #map .pin-pop .hov-act button,
 	body[data-bp="phone"] #map .pin-pop .hov-act a.btn {
-		height: 32px;
-		font-size: 11.5px;
+		height: calc(32px * var(--lk));
+		font-size: calc(11.5px * var(--fk));
 		font-weight: 500;
 	}
 	body[data-bp="phone"] #map .maplibregl-popup-close-button {
@@ -2040,24 +2068,24 @@ body.focus .inspector.open {
 .mon-kpis {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
-	margin: 2px 0 10px;
+	gap: calc(6px * var(--lk));
+	margin: 2px 0 calc(10px * var(--lk));
 }
 .mon-kpi {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	height: 24px;
-	padding: 0 9px;
+	gap: calc(6px * var(--lk));
+	height: calc(24px * var(--lk));
+	padding: 0 calc(9px * var(--lk));
 	border-radius: var(--r-pill);
 	border: 1px solid var(--line2);
 	color: var(--txt2);
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	font-variant-numeric: tabular-nums;
 }
 .mon-kpi > i {
-	width: 6px;
-	height: 6px;
+	width: calc(6px * var(--lk));
+	height: calc(6px * var(--lk));
 	border-radius: 50%;
 	background: var(--txt2);
 }
@@ -2076,27 +2104,27 @@ body.focus .inspector.open {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	gap: calc(8px * var(--lk));
 }
 .mon-wide {
-	height: 26px;
-	padding: 0 10px;
-	font-size: 10.5px;
+	height: calc(26px * var(--lk));
+	padding: 0 calc(10px * var(--lk));
+	font-size: calc(10.5px * var(--fk));
 	letter-spacing: 0.08em;
 }
 .mon-tools {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 6px;
-	margin-bottom: 10px;
+	gap: calc(6px * var(--lk));
+	margin-bottom: calc(10px * var(--lk));
 }
 .mon-tools input {
 	flex: 1 1 140px;
 	min-width: 0;
 }
 .mon-state {
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 	letter-spacing: 0.04em;
 	white-space: nowrap;
 }
@@ -2110,7 +2138,7 @@ body.focus .inspector.open {
 }
 .mon-tick {
 	width: 2px;
-	height: 12px;
+	height: calc(12px * var(--lk));
 	border-radius: 1px;
 	background: var(--faint);
 }
@@ -2122,19 +2150,19 @@ body.focus .inspector.open {
 	background: var(--red);
 }
 .mon-run {
-	height: 24px;
-	padding: 0 9px;
-	font-size: 10.5px;
+	height: calc(24px * var(--lk));
+	padding: 0 calc(9px * var(--lk));
+	font-size: calc(10.5px * var(--fk));
 	letter-spacing: 0.08em;
 }
 .mon-detail {
-	margin: 0 0 8px 10px;
-	padding: 6px 0 6px 12px;
+	margin: 0 0 calc(8px * var(--lk)) calc(10px * var(--lk));
+	padding: calc(6px * var(--lk)) 0 calc(6px * var(--lk)) calc(12px * var(--lk));
 	border-left: 2px solid var(--line2);
-	font-size: 12px;
+	font-size: calc(12px * var(--fk));
 }
 .mon-sub {
-	margin: 8px 0 3px;
+	margin: calc(8px * var(--lk)) 0 3px;
 	color: var(--faint);
 	font-size: var(--fs-label);
 	letter-spacing: 0.1em;
@@ -2144,7 +2172,7 @@ body.focus .inspector.open {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0 4px;
+	gap: 0 calc(4px * var(--lk));
 	padding: 2px 0;
 	color: var(--txt2);
 	overflow-wrap: anywhere;
@@ -2158,20 +2186,20 @@ body.focus .inspector.open {
    hairline rows, sortable header buttons. Columns marked .wide only show
    when the panel is wide (desk monitor) — compact panels keep the core. */
 .dt-wrap {
-	margin: 0 -4px;
+	margin: 0 calc(-4px * var(--lk));
 }
 .dt {
 	width: 100%;
 	border-collapse: separate;
 	border-spacing: 0;
-	font-size: 12px;
+	font-size: calc(12px * var(--fk));
 }
 .dt th {
 	position: sticky;
 	top: -16px;
 	z-index: 1;
-	padding: 0 8px;
-	height: 30px;
+	padding: 0 calc(8px * var(--lk));
+	height: calc(30px * var(--lk));
 	background: var(--panel2);
 	border-bottom: 1px solid var(--line2);
 	color: var(--dim);
@@ -2200,11 +2228,11 @@ body.focus .inspector.open {
 }
 .dt-arrow {
 	display: inline-block;
-	width: 8px;
+	width: calc(8px * var(--lk));
 	color: var(--accent);
 }
 .dt td {
-	padding: 7px 8px;
+	padding: calc(7px * var(--lk)) calc(8px * var(--lk));
 	border-bottom: 1px solid var(--line);
 	white-space: nowrap;
 	vertical-align: middle;
@@ -2235,19 +2263,19 @@ body.focus .inspector.open {
 	outline-offset: -2px;
 }
 .dt tr.dt-detail td {
-	padding: 0 8px 10px;
+	padding: 0 calc(8px * var(--lk)) calc(10px * var(--lk));
 	white-space: normal;
 	background: var(--hover);
 }
 .dt-clip {
 	display: inline-block;
-	max-width: 320px;
+	max-width: calc(320px * var(--lk));
 	overflow: hidden;
 	text-overflow: ellipsis;
 	vertical-align: bottom;
 }
 .dt-empty {
-	padding: 12px 4px;
+	padding: calc(12px * var(--lk)) calc(4px * var(--lk));
 }
 body:not(.insp-wide) .dt .wide {
 	display: none;
@@ -2279,10 +2307,10 @@ body:not(.insp-wide) .dt-wrap {
 /* touch: sortable headers and rows big enough for a finger */
 @media (pointer: coarse) {
 	.dt th {
-		height: 40px;
+		height: calc(40px * var(--lk));
 	}
 	.dt-sort {
-		padding: 10px 0;
+		padding: calc(10px * var(--lk)) 0;
 	}
 }
 /* tablet: the inspector sheet stops above the dock (it covered REPLAY and
@@ -2317,7 +2345,7 @@ body[data-bp="tab"] .inspector {
    Tablet/phone: one swipeable stack above the dock. */
 .popwin {
 	position: absolute;
-	width: 300px;
+	width: calc(300px * var(--lk));
 	border-radius: var(--r-card);
 	background: var(--glass2);
 	-webkit-backdrop-filter: var(--blur);
@@ -2336,9 +2364,9 @@ body[data-bp="tab"] .inspector {
 .popwin-head {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	height: 36px;
-	padding: 0 4px 0 12px;
+	gap: calc(8px * var(--lk));
+	height: calc(36px * var(--lk));
+	padding: 0 calc(4px * var(--lk)) 0 calc(12px * var(--lk));
 	border-bottom: 1px solid var(--line);
 	cursor: grab;
 	user-select: none;
@@ -2348,8 +2376,8 @@ body[data-bp="tab"] .inspector {
 	cursor: grabbing;
 }
 .popwin-sev {
-	width: 8px;
-	height: 8px;
+	width: calc(8px * var(--lk));
+	height: calc(8px * var(--lk));
 	border-radius: 2px;
 	flex: none;
 }
@@ -2366,8 +2394,8 @@ body[data-bp="tab"] .inspector {
 .popwin-head button {
 	display: grid;
 	place-items: center;
-	width: 28px;
-	height: 28px;
+	width: calc(28px * var(--lk));
+	height: calc(28px * var(--lk));
 	padding: 0;
 	border: none;
 	border-radius: var(--r-cell);
@@ -2383,18 +2411,18 @@ body[data-bp="tab"] .inspector {
 	color: var(--txt);
 }
 .popwin-head svg {
-	width: 14px;
-	height: 14px;
+	width: calc(14px * var(--lk));
+	height: calc(14px * var(--lk));
 	fill: none;
 	stroke: currentColor;
 	stroke-width: 2;
 	stroke-linecap: round;
 }
 .popwin-body {
-	padding: 10px 12px 12px;
+	padding: calc(10px * var(--lk)) calc(12px * var(--lk)) calc(12px * var(--lk));
 }
 .popwin-gone {
-	margin-top: 8px;
+	margin-top: calc(8px * var(--lk));
 	color: var(--dim);
 	font-size: var(--fs-s);
 	font-style: italic;
@@ -2425,16 +2453,16 @@ body[data-bp="tab"] .inspector {
 	transform: translateX(-50%);
 	z-index: 22;
 	display: flex;
-	gap: 6px;
+	gap: calc(6px * var(--lk));
 	max-width: calc(100% - var(--lw) - var(--rw) - var(--inset) * 4);
 }
 .pop-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: 7px;
-	height: 30px;
-	max-width: 220px;
-	padding: 0 12px;
+	gap: calc(7px * var(--lk));
+	height: calc(30px * var(--lk));
+	max-width: calc(220px * var(--lk));
+	padding: 0 calc(12px * var(--lk));
 	border-radius: var(--r-pill);
 	border: 1px solid var(--line2);
 	background: var(--glass2);
@@ -2443,7 +2471,7 @@ body[data-bp="tab"] .inspector {
 	box-shadow: var(--hl), var(--shadow-card);
 	color: var(--txt2);
 	font: inherit;
-	font-size: 11.5px;
+	font-size: calc(11.5px * var(--fk));
 	cursor: pointer;
 	transition:
 		background var(--t-fast) var(--ease),
@@ -2465,7 +2493,7 @@ body[data-bp="tab"] .inspector {
 	bottom: calc(var(--dock-h) + var(--inset) * 2);
 	z-index: 22;
 	display: flex;
-	gap: 8px;
+	gap: calc(8px * var(--lk));
 	overflow-x: auto;
 	scroll-snap-type: x mandatory;
 	overscroll-behavior-x: contain;
@@ -2532,7 +2560,7 @@ body[data-bp="tab"] .inspector {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 6px;
+		gap: calc(6px * var(--lk));
 		padding: 0;
 		color: var(--dim);
 		background: var(--glass2);
@@ -2540,7 +2568,7 @@ body[data-bp="tab"] .inspector {
 		backdrop-filter: var(--blur);
 		border: 1px solid var(--line);
 		box-shadow: var(--hl);
-		font: 500 10.5px / 1 var(--sans);
+		font: 500 calc(10.5px * var(--fk)) / 1 var(--sans);
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		opacity: 0.6;
@@ -2563,8 +2591,8 @@ body[data-bp="tab"] .inspector {
 		background: var(--raise2);
 	}
 	.pt-chev {
-		width: 14px;
-		height: 14px;
+		width: calc(14px * var(--lk));
+		height: calc(14px * var(--lk));
 		fill: none;
 		stroke: currentColor;
 		stroke-width: 2;
@@ -2585,8 +2613,8 @@ body[data-bp="tab"] .inspector {
 	.pt-expl {
 		top: 50%;
 		left: calc(var(--inset) + var(--expl) + 3px);
-		width: 16px;
-		height: 44px;
+		width: calc(16px * var(--lk));
+		height: calc(44px * var(--lk));
 		border-radius: 0 var(--r-cell) var(--r-cell) 0;
 		transform: translateY(-50%);
 	}
@@ -2594,7 +2622,7 @@ body[data-bp="tab"] .inspector {
 	.pt-insp.is-hidden {
 		width: auto;
 		height: auto;
-		padding: 12px 7px;
+		padding: calc(12px * var(--lk)) calc(7px * var(--lk));
 		writing-mode: vertical-rl;
 	}
 	.pt-expl.is-hidden {
@@ -2606,8 +2634,8 @@ body[data-bp="tab"] .inspector {
 	.pt-insp {
 		top: 50%;
 		right: calc(var(--inset) + var(--insp) + 3px);
-		width: 16px;
-		height: 44px;
+		width: calc(16px * var(--lk));
+		height: calc(44px * var(--lk));
 		border-radius: var(--r-cell) 0 0 var(--r-cell);
 		transform: translateY(-50%);
 		--rot: 180deg;
@@ -2621,8 +2649,8 @@ body[data-bp="tab"] .inspector {
 	.pt-dock {
 		bottom: calc(var(--inset) + var(--dock-h) + 3px);
 		left: calc((100% + var(--lw) - var(--rw)) / 2);
-		width: 44px;
-		height: 16px;
+		width: calc(44px * var(--lk));
+		height: calc(16px * var(--lk));
 		border-radius: var(--r-cell) var(--r-cell) 0 0;
 		transform: translateX(-50%);
 		--rot: -90deg;
@@ -2631,7 +2659,7 @@ body[data-bp="tab"] .inspector {
 		bottom: 0;
 		width: auto;
 		height: auto;
-		padding: 7px 14px;
+		padding: calc(7px * var(--lk)) calc(14px * var(--lk));
 		--rot: 90deg;
 	}
 }
@@ -2671,11 +2699,11 @@ body[data-bp="tab"] .inspector {
 	top: var(--top);
 	left: 50%;
 	transform: translateX(-50%);
-	width: min(640px, calc(100vw - var(--inset) * 2));
+	width: min(calc(640px * var(--lk)), calc(100vw - var(--inset) * 2));
 	max-height: 48vh;
 	display: flex;
 	flex-direction: column;
-	padding: 12px 14px;
+	padding: calc(12px * var(--lk)) calc(14px * var(--lk));
 	border-radius: var(--r-card);
 	background: var(--glass2);
 	-webkit-backdrop-filter: var(--blur);
@@ -2688,7 +2716,7 @@ body[data-bp="tab"] .inspector {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 12px;
+	gap: calc(12px * var(--lk));
 }
 .since-title {
 	margin: 0;
@@ -2697,7 +2725,7 @@ body[data-bp="tab"] .inspector {
 	overflow: auto;
 	overscroll-behavior: contain;
 	min-height: 0;
-	margin-top: 8px;
+	margin-top: calc(8px * var(--lk));
 }
 .since-escalated {
 	color: var(--red);
@@ -2717,13 +2745,13 @@ body[data-bp="tab"] .inspector {
 	min-width: 0;
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: calc(10px * var(--lk));
 	height: 100%;
-	min-height: 44px;
+	min-height: calc(44px * var(--lk));
 }
 .replay-range {
 	flex: 1;
-	min-width: 60px;
+	min-width: calc(60px * var(--lk));
 	accent-color: var(--accent);
 }
 .replay-clock {
@@ -2734,15 +2762,15 @@ body[data-bp="tab"] .inspector {
 .replay-count {
 	font-size: var(--fs-s);
 	white-space: nowrap;
-	min-width: 72px;
+	min-width: calc(72px * var(--lk));
 }
 .replay select {
 	/* the global select skin, sized to its content */
 	flex: none;
 	width: auto;
 	margin: 0;
-	padding-top: 5px;
-	padding-bottom: 5px;
+	padding-top: calc(5px * var(--lk));
+	padding-bottom: calc(5px * var(--lk));
 }
 /* The dock shares its row with the threat clock and buttons: the count
    goes first, then the selects, as the dock narrows. */
@@ -2770,7 +2798,7 @@ body[data-bp="tab"] .inspector {
 	animation: pal-in var(--t-fast) var(--ease);
 }
 .pal {
-	width: min(620px, 100%);
+	width: min(calc(620px * var(--lk)), 100%);
 	max-height: 64vh;
 	display: flex;
 	flex-direction: column;
@@ -2786,7 +2814,7 @@ body[data-bp="tab"] .inspector {
 	all: unset;
 	box-sizing: border-box;
 	width: 100%;
-	padding: 16px 18px;
+	padding: calc(16px * var(--lk)) calc(18px * var(--lk));
 	font: inherit;
 	font-size: var(--fs-title);
 	color: var(--txt);
@@ -2798,13 +2826,13 @@ body[data-bp="tab"] .inspector {
 .pal-list {
 	overflow: auto;
 	overscroll-behavior: contain;
-	padding: 6px;
+	padding: calc(6px * var(--lk));
 }
 .pal-item {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 8px 12px;
+	gap: calc(12px * var(--lk));
+	padding: calc(8px * var(--lk)) calc(12px * var(--lk));
 	border-radius: var(--r-ctl);
 	cursor: pointer;
 	color: var(--txt2);
@@ -2815,7 +2843,7 @@ body[data-bp="tab"] .inspector {
 	box-shadow: inset 2px 0 0 var(--accent);
 }
 .pal-group {
-	width: 72px;
+	width: calc(72px * var(--lk));
 	flex: none;
 	color: var(--dim);
 	font-size: var(--fs-label);
@@ -2832,18 +2860,18 @@ body[data-bp="tab"] .inspector {
 .pal kbd,
 .pal-hint {
 	font-family: var(--mono);
-	font-size: 11px;
-	padding: 1px 6px;
+	font-size: calc(11px * var(--fk));
+	padding: 1px calc(6px * var(--lk));
 	border-radius: var(--r-cell);
 	border: 1px solid var(--line2);
 	color: var(--txt2);
 	background: var(--raise);
 }
 .pal-empty {
-	padding: 14px 12px;
+	padding: calc(14px * var(--lk)) calc(12px * var(--lk));
 }
 .keys {
-	padding: 6px 18px 14px;
+	padding: calc(6px * var(--lk)) calc(18px * var(--lk)) calc(14px * var(--lk));
 }
 .keys-head {
 	display: flex;
@@ -2859,7 +2887,7 @@ body[data-bp="tab"] .inspector {
 	display: grid;
 	grid-template-columns: 120px 1fr;
 	align-items: center;
-	padding: 6px 0;
+	padding: calc(6px * var(--lk)) 0;
 	border-bottom: 1px solid var(--line);
 }
 .keys-row dt,
@@ -2964,8 +2992,8 @@ body[data-bp="tab"] .inspector {
 .sitrep-bar {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 10px var(--inset);
+	gap: calc(10px * var(--lk));
+	padding: calc(10px * var(--lk)) var(--inset);
 	background: var(--glass2);
 	border-bottom: 1px solid var(--line2);
 	font-size: var(--fs-s);
@@ -2985,17 +3013,17 @@ body[data-bp="tab"] .inspector {
 	flex: 1;
 	overflow: auto;
 	overscroll-behavior: contain;
-	width: min(960px, 100%);
+	width: min(calc(960px * var(--lk)), 100%);
 	margin: 0 auto;
-	padding: 20px var(--inset) 40px;
+	padding: calc(20px * var(--lk)) var(--inset) calc(40px * var(--lk));
 }
 .sitrep-page h1 {
-	margin: 0 0 4px;
-	font-size: 20px;
+	margin: 0 0 calc(4px * var(--lk));
+	font-size: calc(20px * var(--fk));
 	letter-spacing: 0.08em;
 }
 .sitrep-page h2 {
-	margin: 22px 0 8px;
+	margin: calc(22px * var(--lk)) 0 calc(8px * var(--lk));
 	font-size: var(--fs-title);
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -3007,7 +3035,7 @@ body[data-bp="tab"] .inspector {
 	max-height: 70vh;
 	object-fit: contain;
 	background: var(--bg);
-	margin-top: 14px;
+	margin-top: calc(14px * var(--lk));
 	border: 1px solid var(--line2);
 	border-radius: var(--r-card);
 }
@@ -3020,7 +3048,7 @@ body[data-bp="tab"] .inspector {
 .sitrep-page .sitrep-table tr td {
 	text-align: left;
 	vertical-align: top;
-	padding: 5px 8px;
+	padding: calc(5px * var(--lk)) calc(8px * var(--lk));
 	border-bottom: 1px solid var(--line);
 	overflow-wrap: break-word;
 }
@@ -3080,26 +3108,26 @@ body[data-bp="tab"] .inspector {
 
 /* ── provenance (Provenance.tsx): trace a record back to its source ───── */
 .prov-body {
-	margin: 6px 0;
+	margin: calc(6px * var(--lk)) 0;
 	line-height: 1.6;
 }
 .prov-h {
-	margin-top: 18px;
+	margin-top: calc(18px * var(--lk));
 }
 .prov-card {
 	border: 1px solid var(--line2);
 	border-radius: var(--r-card);
-	padding: 10px 12px;
+	padding: calc(10px * var(--lk)) calc(12px * var(--lk));
 	background: rgba(0, 0, 0, 0.18);
 }
 .prov-open {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 10px;
-	min-height: 36px;
-	padding: 0 12px;
-	margin-bottom: 10px;
+	gap: calc(10px * var(--lk));
+	min-height: calc(36px * var(--lk));
+	padding: 0 calc(12px * var(--lk));
+	margin-bottom: calc(10px * var(--lk));
 	border-radius: var(--r-ctl);
 	background: var(--accent-dim);
 	border: 1px solid var(--accent-line);
@@ -3122,14 +3150,14 @@ body[data-bp="tab"] .inspector {
 	color: var(--dim);
 	font-size: var(--fs-s);
 	line-height: 1.5;
-	margin: 4px 0 8px;
+	margin: calc(4px * var(--lk)) 0 calc(8px * var(--lk));
 }
 .prov-dot {
 	display: inline-block;
-	width: 7px;
-	height: 7px;
+	width: calc(7px * var(--lk));
+	height: calc(7px * var(--lk));
 	border-radius: 50%;
-	margin-right: 6px;
+	margin-right: calc(6px * var(--lk));
 	vertical-align: 1px;
 	background: var(--faint);
 }
@@ -3151,8 +3179,8 @@ body[data-bp="tab"] .inspector {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	gap: 2px 10px;
-	padding: 7px 8px;
+	gap: 2px calc(10px * var(--lk));
+	padding: calc(7px * var(--lk)) calc(8px * var(--lk));
 	border-radius: var(--r-ctl);
 	font-size: var(--fs-s);
 }
@@ -3161,7 +3189,7 @@ body[data-bp="tab"] .inspector {
 }
 .prov-row .mono {
 	font-family: var(--mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 	flex-basis: 100%;
 }
 .prov-t {
@@ -3172,10 +3200,10 @@ body[data-bp="tab"] .inspector {
 .prov-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: calc(6px * var(--lk));
 }
 .prov-chips > * {
-	padding: 5px 10px;
+	padding: calc(5px * var(--lk)) calc(10px * var(--lk));
 	border-radius: var(--r-pill);
 	border: 1px solid var(--line2);
 	font-size: var(--fs-s);
@@ -3187,7 +3215,7 @@ body[data-bp="tab"] .inspector {
 	background: var(--hover);
 }
 .prov-raw {
-	margin-top: 16px;
+	margin-top: calc(16px * var(--lk));
 }
 .prov-sum {
 	cursor: pointer;
@@ -3198,27 +3226,27 @@ body[data-bp="tab"] .inspector {
 	font-weight: 600;
 }
 .prov-raw pre {
-	max-height: 280px;
+	max-height: calc(280px * var(--lk));
 	overflow: auto;
-	padding: 10px;
-	margin-top: 8px;
+	padding: calc(10px * var(--lk));
+	margin-top: calc(8px * var(--lk));
 	border-radius: var(--r-ctl);
 	background: rgba(0, 0, 0, 0.35);
 	font-family: var(--mono);
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 	line-height: 1.45;
 	white-space: pre-wrap;
 	word-break: break-all;
 }
 .src-link {
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 	white-space: nowrap;
 	color: var(--cyan);
 }
 .lookup-err {
 	color: var(--red);
 	font-size: var(--fs-s);
-	margin: 4px 0 8px;
+	margin: calc(4px * var(--lk)) 0 calc(8px * var(--lk));
 }
 .lrow b.lrow-err {
 	color: var(--amber);
@@ -3227,7 +3255,7 @@ body[data-bp="tab"] .inspector {
 .help-grid {
 	display: grid;
 	grid-template-columns: auto 1fr;
-	gap: 4px 12px;
+	gap: calc(4px * var(--lk)) calc(12px * var(--lk));
 	flex: 1;
 	min-width: 0;
 }
@@ -3237,7 +3265,7 @@ body[data-bp="tab"] .inspector {
 .help-row > b {
 	color: var(--accent);
 	font-weight: 600;
-	font-size: 10.5px;
+	font-size: calc(10.5px * var(--fk));
 	letter-spacing: 0.08em;
 	padding-top: 1px;
 }
@@ -3269,15 +3297,15 @@ body[data-bp="tab"] .inspector {
 	border: none;
 	color: var(--dim);
 	font: inherit;
-	font-size: 10px;
+	font-size: calc(10px * var(--fk));
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	cursor: pointer;
 	transition: color var(--t-fast) var(--ease);
 }
 .nav-btn svg {
-	width: 22px;
-	height: 22px;
+	width: calc(22px * var(--lk));
+	height: calc(22px * var(--lk));
 	fill: none;
 	stroke: currentColor;
 	stroke-width: 1.75;
@@ -3304,13 +3332,13 @@ body[data-bp="tab"] .inspector {
 	position: absolute;
 	top: 6px;
 	left: calc(50% + 6px);
-	min-width: 16px;
-	height: 16px;
-	padding: 0 4px;
+	min-width: calc(16px * var(--lk));
+	height: calc(16px * var(--lk));
+	padding: 0 calc(4px * var(--lk));
 	border-radius: var(--r-pill);
 	background: var(--red);
 	color: #fff;
-	font-size: 10px;
+	font-size: calc(10px * var(--fk));
 	font-weight: 700;
 	line-height: 16px;
 	text-align: center;
@@ -3349,22 +3377,22 @@ body[data-bp="tab"] .inspector {
 	min-height: 0;
 	overflow: auto;
 	overscroll-behavior: contain;
-	padding: 0 14px 16px;
+	padding: 0 calc(14px * var(--lk)) calc(16px * var(--lk));
 }
 .tools-h {
-	margin: 14px 2px 8px;
+	margin: calc(14px * var(--lk)) 2px calc(8px * var(--lk));
 }
 .tools-seg {
 	display: flex;
-	gap: 6px;
-	margin: 0 0 6px;
+	gap: calc(6px * var(--lk));
+	margin: 0 0 calc(6px * var(--lk));
 	padding: 0;
 	border: 0;
 	min-width: 0;
 }
 .tools-seg > button {
 	flex: 1;
-	min-height: 40px;
+	min-height: calc(40px * var(--lk));
 	border-radius: var(--r-ctl);
 	border: 1px solid var(--line2);
 	background: rgba(233, 229, 218, 0.03);
@@ -3387,7 +3415,7 @@ body[data-bp="tab"] .inspector {
 .tools-all {
 	text-align: left;
 	min-height: var(--tap);
-	padding: 0 12px;
+	padding: 0 calc(12px * var(--lk));
 	border-radius: var(--r-ctl);
 	border: none;
 	background: none;
@@ -3402,7 +3430,7 @@ body[data-bp="tab"] .inspector {
 }
 .tools-all {
 	width: 100%;
-	margin-top: 14px;
+	margin-top: calc(14px * var(--lk));
 	border: 1px solid var(--line2);
 	text-align: center;
 	color: var(--txt2);
@@ -3426,7 +3454,7 @@ body[data-bp="tab"] .rail-expand {
 	justify-content: center;
 	width: 100%;
 	height: var(--tap);
-	margin-bottom: 4px;
+	margin-bottom: calc(4px * var(--lk));
 	background: none;
 	border: none;
 	border-bottom: 1px solid var(--line);
@@ -3434,8 +3462,8 @@ body[data-bp="tab"] .rail-expand {
 	cursor: pointer;
 }
 .rail-expand svg {
-	width: 20px;
-	height: 20px;
+	width: calc(20px * var(--lk));
+	height: calc(20px * var(--lk));
 	fill: none;
 	stroke: currentColor;
 	stroke-width: 1.75;
@@ -3443,14 +3471,14 @@ body[data-bp="tab"] .rail-expand {
 }
 body[data-bp="tab"] .explorer.expanded {
 	width: var(--expl);
-	padding: 8px 12px 12px;
+	padding: calc(8px * var(--lk)) calc(12px * var(--lk)) calc(12px * var(--lk));
 	z-index: 32;
 	background: var(--glass2);
 	box-shadow: var(--hl), var(--shadow-panel);
 }
 body[data-bp="tab"] .explorer.expanded .rail-expand {
 	justify-content: flex-start;
-	padding-left: 4px;
+	padding-left: calc(4px * var(--lk));
 }
 body[data-bp="tab"] .explorer.expanded .lrow .nm,
 body[data-bp="tab"] .explorer.expanded h3,
@@ -3469,52 +3497,55 @@ body[data-bp="tab"] .explorer.expanded .lgroup {
 body[data-bp="tab"] .explorer.expanded .lrow {
 	flex-direction: row;
 	justify-content: flex-start;
-	gap: 10px;
-	padding: 0 8px;
-	min-height: 40px;
+	gap: calc(10px * var(--lk));
+	padding: 0 calc(8px * var(--lk));
+	min-height: calc(40px * var(--lk));
 }
 body[data-bp="tab"] .explorer.expanded .lrow.off {
 	opacity: 1;
 }
 body[data-bp="tab"] .explorer.expanded .lrow b {
-	font-size: 11px;
+	font-size: calc(11px * var(--fk));
 }
 body[data-bp="tab"] .explorer.expanded .lgroup {
-	min-height: 36px;
+	min-height: calc(36px * var(--lk));
 }
 /* tablet: the monitor grid widens its sheet too (desk does it via --insp) */
 body[data-bp="tab"].insp-wide .inspector {
-	width: min(780px, calc(100vw - var(--lw) - var(--inset) * 3));
+	width: min(
+		calc(780px * var(--lk)),
+		calc(100vw - var(--lw) - var(--inset) * 3)
+	);
 }
 
 /* ── polish: legend, tab arrows, empty states, touch sizes ────────────── */
 .legend {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px 12px;
-	margin: 10px 2px 0;
-	font-size: 11px;
+	gap: calc(4px * var(--lk)) calc(12px * var(--lk));
+	margin: calc(10px * var(--lk)) 2px 0;
+	font-size: calc(11px * var(--fk));
 	color: var(--dim);
 }
 .legend > * {
 	display: inline-flex;
 	align-items: center;
-	gap: 5px;
+	gap: calc(5px * var(--lk));
 }
 .lg-ring {
-	width: 10px;
-	height: 10px;
+	width: calc(10px * var(--lk));
+	height: calc(10px * var(--lk));
 	border-radius: 50%;
 	border: 2px solid var(--dim);
 }
 .lg-count {
-	min-width: 16px;
-	height: 16px;
+	min-width: calc(16px * var(--lk));
+	height: calc(16px * var(--lk));
 	padding: 0 3px;
 	border-radius: var(--r-pill);
 	border: 1px solid var(--dim);
 	font-style: normal;
-	font-size: 9px;
+	font-size: calc(9px * var(--fk));
 	line-height: 14px;
 	text-align: center;
 	font-family: var(--mono);
@@ -3524,7 +3555,7 @@ body[data-bp="tab"].insp-wide .inspector {
 	letter-spacing: 0.06em;
 }
 .lrow-none {
-	padding: 10px 8px;
+	padding: calc(10px * var(--lk)) calc(8px * var(--lk));
 	font-size: var(--fs-s);
 }
 .legend:where(
@@ -3535,11 +3566,11 @@ body[data-bp="tab"].insp-wide .inspector {
 }
 .tabs-arrow {
 	flex: none;
-	width: 28px;
+	width: calc(28px * var(--lk));
 	background: none;
 	border: none;
 	color: var(--txt2);
-	font-size: 18px;
+	font-size: calc(18px * var(--fk));
 	cursor: pointer;
 }
 .tabs-arrow:hover {
@@ -3559,28 +3590,28 @@ body[data-bp="tab"] #focus-btn {
 /* touch: controls a finger can hit */
 @media (pointer: coarse) {
 	.ticker .tbtn {
-		min-height: 36px;
+		min-height: calc(36px * var(--lk));
 	}
 	#map .maplibregl-popup-close-button {
-		width: 36px;
-		height: 36px;
+		width: calc(36px * var(--lk));
+		height: calc(36px * var(--lk));
 	}
 	.tl-layer,
 	#bottom select {
-		min-height: 36px;
+		min-height: calc(36px * var(--lk));
 	}
 	.src-link,
 	.prov-row a,
 	.prov-card a {
 		display: inline-block;
-		padding: 6px 0;
+		padding: calc(6px * var(--lk)) 0;
 	}
 	.inspector .tbtn,
 	.inspector .ghost-btn {
-		min-height: 36px;
+		min-height: calc(36px * var(--lk));
 	}
 	.cmdbar input {
-		min-height: 36px;
+		min-height: calc(36px * var(--lk));
 	}
 	/* the slim panel grips keep their look but take a finger-sized hit */
 	.ptoggle::after {
@@ -3589,13 +3620,199 @@ body[data-bp="tab"] #focus-btn {
 		inset: -10px;
 	}
 	.fv-close {
-		width: 40px;
-		height: 40px;
+		width: calc(40px * var(--lk));
+		height: calc(40px * var(--lk));
 	}
 }
 /* narrow tablets: the status pill (DEFCON, live feeds) outranks the clock */
 @media (max-width: 999px) {
 	body[data-bp="tab"] .ticker .clock {
+		display: none;
+	}
+}
+
+/* ── display settings (SettingsPanel.tsx) ─────────────────────────────── */
+/* solid panels: no backdrop blur (cheaper on weak GPUs, easier to read) */
+.solid-panels {
+	--blur: none;
+	--glass: rgba(17, 17, 16, 0.97);
+	--glass2: rgba(28, 27, 25, 0.99);
+}
+/* reduced motion chosen here, whatever the OS says */
+.reduce-motion {
+	--t-fast: 1ms;
+	--t: 1ms;
+	--t-sheet: 1ms;
+}
+.reduce-motion .tape > span {
+	animation: none;
+}
+.tb-ico {
+	width: calc(16px * var(--lk));
+	height: calc(16px * var(--lk));
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.75;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.modal.settings {
+	display: flex;
+	flex-direction: column;
+	max-height: min(88dvh, calc(760px * var(--lk)));
+	padding: 0;
+	width: min(calc(520px * var(--lk)), 94vw);
+}
+.set-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: calc(14px * var(--lk)) calc(14px * var(--lk)) calc(8px * var(--lk))
+		calc(20px * var(--lk));
+	border-bottom: 1px solid var(--line);
+}
+.set-head > #settings-h {
+	margin: 0;
+}
+.set-close {
+	width: var(--tap);
+	height: var(--tap);
+	background: none;
+	border: none;
+	color: var(--dim);
+	font: inherit;
+	font-size: var(--fs);
+	cursor: pointer;
+	border-radius: var(--r-ctl);
+}
+.set-close:hover {
+	color: var(--txt);
+	background: var(--hover);
+}
+.set-body {
+	overflow: auto;
+	overscroll-behavior: contain;
+	padding: calc(4px * var(--lk)) calc(20px * var(--lk)) calc(20px * var(--lk));
+}
+.set-body h4 {
+	margin: calc(18px * var(--lk)) 0 calc(8px * var(--lk));
+	font-size: var(--fs-label);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--accent);
+	font-weight: 600;
+}
+.set-row {
+	border: 0;
+	margin: 0 0 calc(10px * var(--lk));
+	padding: 0;
+	min-width: 0;
+}
+.set-row legend {
+	padding: 0;
+	margin-bottom: calc(6px * var(--lk));
+	font-size: var(--fs);
+	font-weight: 600;
+	color: var(--txt);
+}
+.set-steps {
+	display: flex;
+	gap: calc(4px * var(--lk));
+	padding: calc(3px * var(--lk));
+	background: rgba(0, 0, 0, 0.25);
+	border: 1px solid var(--line);
+	border-radius: var(--r-ctl);
+}
+.set-steps > button {
+	flex: 1;
+	min-height: calc(36px * var(--lk));
+	background: none;
+	border: none;
+	border-radius: var(--r-cell);
+	color: var(--txt2);
+	font: inherit;
+	font-size: var(--fs-s);
+	cursor: pointer;
+}
+.set-steps > button:hover {
+	color: var(--txt);
+	background: var(--hover);
+}
+.set-steps > [aria-pressed="true"] {
+	color: var(--txt);
+	background: var(--raise2);
+	box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.set-hint {
+	margin: calc(6px * var(--lk)) 0 0;
+	color: var(--dim);
+	font-size: var(--fs-s);
+	line-height: 1.45;
+}
+.set-sample {
+	margin: calc(4px * var(--lk)) 0 calc(12px * var(--lk));
+	padding: calc(10px * var(--lk)) calc(12px * var(--lk));
+	border: 1px dashed var(--line2);
+	border-radius: var(--r-ctl);
+	color: var(--txt2);
+	font-size: var(--fs);
+}
+.set-toggle {
+	display: flex;
+	align-items: center;
+	gap: calc(12px * var(--lk));
+	width: 100%;
+	min-height: var(--tap);
+	padding: calc(8px * var(--lk)) calc(4px * var(--lk));
+	background: none;
+	border: none;
+	border-bottom: 1px solid var(--line);
+	color: var(--txt);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.set-t {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	font-size: var(--fs);
+}
+.set-t > :first-child {
+	font-weight: 500;
+}
+.set-t .set-hint {
+	margin-top: 2px;
+}
+.set-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(8px * var(--lk));
+}
+.set-actions > button {
+	min-height: calc(36px * var(--lk));
+	padding: 0 calc(14px * var(--lk));
+	border-radius: var(--r-ctl);
+	border: 1px solid var(--line2);
+	background: rgba(233, 229, 218, 0.03);
+	color: var(--txt2);
+	font: inherit;
+	font-size: var(--fs-s);
+	cursor: pointer;
+}
+.set-actions > button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+/* a narrow timeline (large sizes, small screens) keeps the layer picker
+   and the chart; the label and hint go first */
+.tl-main {
+	container-type: inline-size;
+}
+@container (max-width: 360px) {
+	.tl-title,
+	#tl-info {
 		display: none;
 	}
 }

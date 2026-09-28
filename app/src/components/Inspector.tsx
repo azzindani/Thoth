@@ -274,7 +274,7 @@ export default function Inspector({
 						</h3>
 						<div
 							style={{
-								fontSize: 14,
+								fontSize: "calc(14px * var(--fk))",
 								fontWeight: 600,
 								color: "var(--txt)",
 							}}
@@ -412,7 +412,13 @@ export function SatImage({
 				))}
 				<span className="hov-x" aria-hidden="true" />
 			</div>
-			<div style={{ color: "var(--dim)", fontSize: 12, marginTop: 4 }}>
+			<div
+				style={{
+					color: "var(--dim)",
+					fontSize: "calc(12px * var(--fk))",
+					marginTop: 4,
+				}}
+			>
 				Esri World Imagery, centred on the object (basemap, not live).
 				{s === undefined && " Looking for the latest Sentinel-2 pass…"}
 				{s && (
@@ -454,7 +460,13 @@ export function CompleteView({
 					<h3>
 						Full view · <Glyph layer={sel.layer} size={14} /> {sel.layer}
 					</h3>
-					<div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>
+					<div
+						style={{
+							fontSize: "calc(14px * var(--fk))",
+							fontWeight: 600,
+							color: "var(--txt)",
+						}}
+					>
 						{sel.title}
 					</div>
 					<KV

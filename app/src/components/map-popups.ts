@@ -6,6 +6,7 @@ import * as maplibregl from "maplibre-gl";
 import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { LAYERS } from "../lib/layer-catalog";
 import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
+import { fmtStamp, settings } from "../lib/settings";
 import { hostOf, sourceHome, verifyLinks } from "../lib/sources";
 import { ageStr } from "../lib/ui";
 
@@ -106,13 +107,6 @@ function readFacts(s: string | undefined): [string, string][] {
 	} catch {
 		return [];
 	}
-}
-
-function utcStamp(ts: string | undefined): string {
-	const t = Date.parse(String(ts ?? ""));
-	if (!Number.isFinite(t)) return "";
-	const d = new Date(t).toISOString();
-	return `${d.slice(5, 10)} ${d.slice(11, 16)}Z`;
 }
 
 const camImg = (u: string | undefined) => Boolean(u && /^https?:\/\//.test(u));
@@ -216,7 +210,7 @@ export function hoverCard(
 	const geo = Number.isFinite(lat) && Number.isFinite(lon);
 	const moving = MOVING_LAYERS.has(layer);
 	const facts = readFacts(p.facts);
-	const stamp = utcStamp(p.ts);
+	const stamp = fmtStamp(p.ts);
 	// wide rows take a whole line in the phone card's two-pair grid
 	const row = (k: string, v: string, wide = false) =>
 		`<span>${esc(k)}</span><span${wide ? ' class="w"' : ""}>${esc(v)}</span>`;
@@ -367,7 +361,7 @@ export function showPinned(
 		closeOnClick: false,
 		offset: 14,
 		className: "hov-pop pin-pop",
-		maxWidth: "360px",
+		maxWidth: "min(460px, 94vw)",
 	});
 	pinStore.set(id, {
 		p,
@@ -513,6 +507,11 @@ export function steadyHover(
 		const cur = q;
 		q = null;
 		if (!cur || moving || pickerOpen()) return;
+		// hover previews switched off in Settings: clicks still pin cards
+		if (!settings().hover) {
+			if (pop.isOpen()) pop.remove();
+			return;
+		}
 		const k = hoverKey(cur.layer, cur.p);
 		if (muted.has(k)) {
 			// Still on what was just clicked: stay quiet, and remember it so
@@ -674,7 +673,7 @@ function showPickCard(
 		closeButton: true,
 		offset: 14,
 		className: "pick-pop",
-		maxWidth: "360px",
+		maxWidth: "min(460px, 94vw)",
 	});
 	pickStore.set(id, { cands, preview, full, map, lngLat, pop });
 	pop.on("close", () => {

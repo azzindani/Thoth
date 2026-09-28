@@ -9,6 +9,18 @@ operator action are also listed in
 ## [Unreleased]
 
 ### Added
+- **Settings** (gear in the status bar, More → Settings on phones, the
+  command palette, or the `,` key), kept per browser:
+  - five **layout sizes** (XS, S, M, L, XL) scaling panels, bars,
+    buttons and spacing, and five independent **text sizes**; M is the
+    original design;
+  - solid panels (no see-through blur) and reduced motion;
+  - times in UTC or local time;
+  - hover previews and the overview minimap on or off, and "open where I
+    left off";
+  - critical and watch pop-ups on or off (the Alerts badge keeps
+    counting);
+  - restore defaults, and clear the saved panel layout.
 - **Phone navigation.** A bottom bar (Layers · Intel · Search · Alerts ·
   More) reaches every tool on a phone. Search shows the command line on
   demand; Alerts badges new criticals; More holds map style, globe,
