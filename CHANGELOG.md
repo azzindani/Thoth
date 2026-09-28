@@ -10,6 +10,9 @@ listed in [Upgrading](docs/operations/upgrading.md).
 ## [Unreleased]
 
 ### Added
+- Workspaces save the open pop-out windows (position, minimised state,
+  the object) and reopen them, shared links included. Workspaces saved
+  before leave the open windows alone.
 - **Paper theme.** Settings → Display → Theme: Dark, Paper (warm paper
   and ink, on the CARTO Positron basemap) or Follow system. It is a token
   swap: the same layout and components, applied before first paint.
