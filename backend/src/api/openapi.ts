@@ -247,9 +247,15 @@ export function buildOpenApi(routes: RouteDoc[] = ROUTE_DOCS): Json {
 				bearerWriteKey: {
 					type: "http",
 					scheme: "bearer",
-					description: "API_WRITE_KEY, for POST and DELETE",
+					description:
+						"API_WRITE_KEY for POST and DELETE. Reads accept a reader key (API_READ_KEYS), required when the API sets API_READ_REQUIRED.",
 				},
-				headerWriteKey: { type: "apiKey", in: "header", name: "X-Thoth-Key" },
+				headerWriteKey: {
+					type: "apiKey",
+					in: "header",
+					name: "X-Thoth-Key",
+					description: "The same keys as a header.",
+				},
 			},
 		},
 	};

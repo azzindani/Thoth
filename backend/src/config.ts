@@ -24,6 +24,14 @@ const Env = z.object({
 	// writes refused (fail closed); unset in dev = writes open.
 	API_WRITE_KEY: z.string().default(""),
 	REQUESTS_PER_MIN: z.coerce.number().int().min(10).default(300),
+	// Reader keys (api/keys.ts): "name:key[:perMin],…" and/or a JSON file
+	// re-read on change. API_READ_REQUIRED=1 closes GET /api to keyless callers.
+	API_READ_KEYS: z.string().default(""),
+	API_READ_KEYS_FILE: z.string().default(""),
+	API_READ_REQUIRED: z
+		.string()
+		.default("")
+		.transform((v) => v === "1" || v.toLowerCase() === "true"),
 	POLL_JITTER_PCT: z.coerce.number().min(0).max(50).default(10),
 	TELEGRAM_CHANNELS: z
 		.string()

@@ -13,7 +13,7 @@ their entry in the themed lists below.
 
 1. [x] Content-Security-Policy for the app (Security and operations).
 2. [x] OpenAPI specification (Platform and integrations).
-3. [ ] Reader API keys with per-key rate limits (Platform and integrations).
+3. [x] Reader API keys with per-key rate limits (Platform and integrations).
 4. [ ] Outbound webhooks for alerts and watch matches (Platform and
    integrations).
 5. [ ] Installable PWA with critical-alert notifications (Frontend).
@@ -34,8 +34,6 @@ their entry in the themed lists below.
 
 ## Platform and integrations
 
-- [ ] **Reader API keys** with per-key rate limits, separate from the
-      write key.
 - [ ] **Outbound webhooks** for alerts and watch matches.
 - [ ] **Agent surface.** An MCP server and a command channel so an
       assistant can query layers, incidents and alerts and place pins. See
