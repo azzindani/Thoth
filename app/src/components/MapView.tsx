@@ -1094,19 +1094,38 @@ export default function MapView(props: Props) {
 		} catch {
 			/* older style */
 		}
-		const hasSat = !!map.getSource("sat");
-		if (props.mode === "sat" && !hasSat) {
-			map.addSource("sat", SAT_SOURCE);
-			map.addLayer(SAT_LAYER);
-		} else if (props.mode !== "sat" && hasSat) {
-			if (map.getLayer("sat")) map.removeLayer("sat");
-			map.removeSource("sat");
-			// rebuild the credits without the removed source
-			if (attribution) map.removeControl(attribution);
-			attribution = new maplibregl.AttributionControl({ compact: true });
-			map.addControl(attribution);
-		}
 		document.body.classList.toggle("nvg", props.mode === "nvg");
+		const sat = props.mode === "sat";
+		const apply = () => {
+			const hasSat = !!map.getSource("sat");
+			if (sat && !hasSat) {
+				map.addSource("sat", SAT_SOURCE);
+				map.addLayer(SAT_LAYER);
+			} else if (!sat && hasSat) {
+				if (map.getLayer("sat")) map.removeLayer("sat");
+				map.removeSource("sat");
+				// rebuild the credits without the removed source
+				if (attribution) map.removeControl(attribution);
+				attribution = new maplibregl.AttributionControl({ compact: true });
+				map.addControl(attribution);
+			}
+		};
+		if (map.isStyleLoaded()) {
+			apply();
+			return;
+		}
+		// The basemap style is still loading (or its CDN is unreachable):
+		// adding a source now throws "Style is not done loading" and takes
+		// the app down. Apply once the style is in.
+		const onStyle = () => {
+			if (!map.isStyleLoaded()) return;
+			map.off("styledata", onStyle);
+			apply();
+		};
+		map.on("styledata", onStyle);
+		return () => {
+			map.off("styledata", onStyle);
+		};
 	}, [props.mode, props.globe]);
 
 	// cinema: a slow spin until toggled off or the map is grabbed

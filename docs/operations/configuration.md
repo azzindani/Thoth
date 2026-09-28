@@ -21,7 +21,7 @@ only **passes a fixed set to each service**, as listed in
 |---|---|
 | `api` | `DATABASE_URL`, `API_WRITE_KEY`, `CORS_ORIGIN`, `TRUST_PROXY`, `REQUESTS_PER_MIN`, `LOG_LEVEL`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
 | `worker` | `DATABASE_URL`, `POLL_JITTER_PCT`, `TELEGRAM_CHANNELS`, `OTX_API_KEY`, `FINNHUB_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `LOG_LEVEL` |
-| `app` | `API_WRITE_KEY`, `APP_ACCESS_KEY`, `APP_TOKENS`, `APP_JWT_SECRET`, `APP_SESSION_TTL_MS`, `APP_TRUST_UPSTREAM_AUTH` |
+| `app` | `API_WRITE_KEY`, `APP_ACCESS_KEY`, `APP_TOKENS`, `APP_JWT_SECRET`, `APP_SESSION_TTL_MS`, `APP_TRUST_UPSTREAM_AUTH`, `APP_CSP` |
 
 To set anything else in a container (for example the `*_RETENTION_DAYS`
 variables on the worker, or `PG_POOL_MAX`), add it to that service with a
@@ -118,6 +118,7 @@ Every keyed integration is off by default. With no key it reports itself as
 | `APP_JWT_SECRET` | runtime | Session-cookie signing secret. Defaults to `APP_ACCESS_KEY`. Rotating it signs every browser out. |
 | `APP_SESSION_TTL_MS` | runtime | Session cookie lifetime. Default 30 days. |
 | `APP_TRUST_UPSTREAM_AUTH` | runtime | `1` means an authenticating proxy in front has already vetted every request, so the write key is attached for all callers. |
+| `APP_CSP` | runtime | `enforce` (default) sends the Content-Security-Policy. `report` sends it as Report-Only, and `off` drops it. Use them only to diagnose something the policy blocks, then report the missing origin. |
 | `API_WRITE_KEY` | runtime | Must match the API's value. Attached server-side to writes from vetted callers only. |
 | `THOTH_API_INTERNAL` | **build** | Rewrite target for `/api/*`. Compose sets `http://api:4000`. The default is `http://localhost:4000`. |
 | `NEXT_PUBLIC_THOTH_API` | **build** | Leave empty (same-origin). Set it only if browsers must call the API directly. |

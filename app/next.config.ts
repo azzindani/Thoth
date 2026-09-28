@@ -7,9 +7,8 @@ const VERSION: string =
 	JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"))
 		.version ?? "0.0.0";
 
-// Baseline browser hardening for every page. No CSP yet: the terminal pulls
-// map tiles, fonts and 24/7 video embeds from several third-party origins —
-// an enforced policy needs that allowlist audited first (SECURITY.md, known limitations).
+// Baseline browser hardening for every page. The Content-Security-Policy
+// needs a per-request nonce, so src/proxy.ts sets it (lib/csp.ts).
 const SECURITY_HEADERS = [
 	{ key: "X-Content-Type-Options", value: "nosniff" },
 	{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

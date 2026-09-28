@@ -11,8 +11,8 @@ Status: `[ ]` open · `[~]` in progress
 Planned scope, in the order it lands (`[x]` = done). Open items also keep
 their entry in the themed lists below.
 
-1. [ ] Content-Security-Policy for the app (Security and operations).
-2. [ ] OpenAPI specification (Platform and integrations).
+1. [x] Content-Security-Policy for the app (Security and operations).
+2. [x] OpenAPI specification (Platform and integrations).
 3. [ ] Reader API keys with per-key rate limits (Platform and integrations).
 4. [ ] Outbound webhooks for alerts and watch matches (Platform and
    integrations).
@@ -34,8 +34,6 @@ their entry in the themed lists below.
 
 ## Platform and integrations
 
-- [ ] **OpenAPI specification** generated from the zod schemas and
-      published with the docs.
 - [ ] **Reader API keys** with per-key rate limits, separate from the
       write key.
 - [ ] **Outbound webhooks** for alerts and watch matches.
@@ -45,8 +43,6 @@ their entry in the themed lists below.
 
 ## Security and operations
 
-- [ ] **Content-Security-Policy** for the app, with an audited allowlist
-      for tiles, fonts and video embeds.
 - [ ] **Per-user identity and an audit trail** for writes. Today there is a
       single shared write key.
 - [ ] **Shared rate-limit and SSE state** (for example Redis) so that more

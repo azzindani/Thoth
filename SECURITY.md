@@ -87,6 +87,10 @@ a password prompt.
   `TRUST_PROXY`.
 - zod validation of every environment variable at startup and of all API
   inputs. Request bodies are limited to 100 kB.
+- A Content-Security-Policy on every app page: scripts run only with a
+  per-request nonce, and other resources load only from an audited
+  allowlist (basemap, imagery, fonts, video embeds; see
+  `app/src/lib/csp.ts`). Framing is refused.
 - Parameterized SQL only. Every statement has a timeout.
 - Non-root, multi-stage container images with healthchecks and memory
   limits.
@@ -96,9 +100,6 @@ a password prompt.
 
 ### Known limitations
 
-- **No Content-Security-Policy on the app yet.** Tiles, fonts and video
-  embeds come from several third-party origins, and the allowlist still
-  needs an audit.
 - **Single shared write key.** There is no per-user identity or audit trail
   for writes.
 - **Per-process state.** Rate-limit and SSE state live in memory. That is

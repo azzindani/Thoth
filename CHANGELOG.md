@@ -9,6 +9,27 @@ listed in [Upgrading](docs/operations/upgrading.md).
 
 ## [Unreleased]
 
+### Added
+- **OpenAPI 3.1 document** at `GET /api/openapi.json` and in
+  `docs/reference/openapi.json`, covering all 120 routes. Parameters and
+  bodies come from the zod schemas the routes validate with; a unit test
+  fails when a route is undocumented or the committed spec is stale.
+- **Content-Security-Policy** on every app page. Scripts run only with a
+  per-request nonce; styles, fonts, images, map data, frames and
+  connections are limited to an audited allowlist (CARTO basemap, Esri
+  imagery, Google Fonts, YouTube embeds, CCTV stills over HTTPS), and
+  framing is refused. `APP_CSP=report` or `off` is there for diagnosis.
+
+### Changed
+- Pages render per request (a CSP nonce cannot be baked into prerendered
+  HTML).
+
+### Fixed
+- `osint holidays` defaulted to 2026 instead of the current year.
+- Switching to SAT before the basemap style had loaded (slow or blocked
+  CDN) threw "Style is not done loading" and took the app down. The
+  imagery is added once the style is in.
+
 ## [0.1.0] - 2026-09-28
 
 The first tagged release. It contains all the work to date: the entries

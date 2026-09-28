@@ -138,6 +138,7 @@ services:
       APP_JWT_SECRET: ${APP_JWT_SECRET:-}
       APP_SESSION_TTL_MS: ${APP_SESSION_TTL_MS:-}
       APP_TRUST_UPSTREAM_AUTH: ${APP_TRUST_UPSTREAM_AUTH:-}
+      APP_CSP: ${APP_CSP:-enforce}
     ports:
       - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3000}:3000"
     networks:

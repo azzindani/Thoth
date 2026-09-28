@@ -18,7 +18,19 @@ for (const bp of BPS) {
 			if (r.url().includes("/api/") && r.status() >= 400)
 				bad.push(`${r.status()} ${r.url().slice(-80)}`);
 		});
-		await page.goto("/");
+		// Anything the Content-Security-Policy blocks (lib/csp.ts) is a bug:
+		// either the allowlist missed an origin or code went inline.
+		await page.addInitScript(() => {
+			const w = window as unknown as { __csp: string[] };
+			w.__csp = [];
+			document.addEventListener("securitypolicyviolation", (e) =>
+				w.__csp.push(`${e.violatedDirective} ${e.blockedURI}`),
+			);
+		});
+		const res = await page.goto("/");
+		expect(res?.headers()["content-security-policy"]).toContain(
+			"'strict-dynamic'",
+		);
 		await expect(page.locator("#tape-txt")).toContainText("NEWS", {
 			timeout: 30000,
 		});
@@ -30,6 +42,12 @@ for (const bp of BPS) {
 			timeout: 30000,
 		});
 		await page.waitForTimeout(8000);
+		expect(
+			await page.evaluate(
+				() => (window as unknown as { __csp: string[] }).__csp,
+			),
+			`CSP violations @${bp.name}`,
+		).toEqual([]);
 		const overflow = await page.evaluate(() => ({
 			body: document.body.scrollWidth,
 			inner: window.innerWidth,
