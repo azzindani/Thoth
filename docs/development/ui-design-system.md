@@ -90,6 +90,14 @@ if they drift). The rules, in priority order:
     Windows re-read their layer on SSE ticks; the arrangement is remembered
     (`thoth.pop`). Below desk they become one swipeable stack above the
     dock — no free windows where there is no room for them.
+14. **Every item traces to its source.** Anything shown from a feed
+    carries a way back: the record's own `url`, else the publisher's site
+    (`lib/sources.ts` `sourceHome`), else nothing — never a guessed link.
+    Objects with a public identifier also link to independent trackers
+    (`verifyLinks`). The full view's provenance section (`Provenance.tsx`,
+    `GET /api/event`) states feed health, observed vs re-confirmed time
+    and corroboration, and says "single source" plainly when nothing else
+    agrees.
 
 Testing rule: with panels floating over the map, a feature can be rendered
 yet covered by chrome. E2e specs pick map points with

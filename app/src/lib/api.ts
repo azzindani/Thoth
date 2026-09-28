@@ -24,6 +24,31 @@ export interface LayerItem {
 	geom?: { type: string; coordinates?: number[] } | null;
 }
 
+export interface EventProvenance {
+	item: LayerItem & { ingested_at: string; confidence?: number | null };
+	feed: {
+		source: string;
+		last_ok?: string | null;
+		last_attempt?: string | null;
+		content_ts?: string | null;
+		error?: string | null;
+		collector?: string;
+		intervalSec?: number;
+	} | null;
+	lastFetch: { fetched_at: string; http_status: number | null } | null;
+	related: {
+		id: string;
+		ts: string;
+		source: string;
+		layer: string;
+		title: string | null;
+		url: string | null;
+		severity: string | null;
+		reason: string;
+	}[];
+	serverTs: string;
+}
+
 // ── monitor (ROADMAP P1) ──────────────────────────────────────────────────
 export type SourceState = "ok" | "failing" | "frozen" | "stale" | "warming";
 export interface MonSummary {
@@ -158,6 +183,9 @@ export const api = {
 			truncated?: boolean;
 		}>(`/api/layers/${name}${qs ? `?${qs}` : ""}`);
 	},
+	/** One record with its provenance (see GET /api/event). */
+	event: (id: string) =>
+		get<EventProvenance>(`/api/event?id=${encodeURIComponent(id)}`),
 	layerHistory: (name: string) =>
 		get<{ buckets: { bucket: string; count: string; n?: number }[] }>(
 			`/api/layers/${name}/history?bucket=day`,

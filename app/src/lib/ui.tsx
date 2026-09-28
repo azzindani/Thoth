@@ -2,6 +2,7 @@
 // Tokens-only colors, Lucide glyphs only, escaped by construction (React).
 import type { ReactNode } from "react";
 import { LAYERS } from "./layer-catalog";
+import { hostOf, sourceHome } from "./sources";
 
 /** Layer symbol. Monochrome by design: it inherits the surrounding text
  * colour (layers are told apart by shape; colour is reserved for severity). */
@@ -178,4 +179,30 @@ export function ItemRow({
 
 export function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
 	return <input autoComplete="off" spellCheck={false} {...props} />;
+}
+
+/** "usgs.gov ↗": the item's own link, else its publisher's site, else
+ * nothing (never a guess). Stops the click so row handlers don't fire. */
+export function SourceLink({
+	url,
+	source,
+}: {
+	url?: string | null;
+	source?: string;
+}) {
+	const own = url && /^https?:\/\//.test(url) ? url : null;
+	const href = own ?? (source ? sourceHome(source) : null);
+	if (!href) return null;
+	return (
+		<a
+			className="src-link"
+			href={href}
+			target="_blank"
+			rel="noreferrer noopener"
+			title={own ? "Open the original report" : "Open the publisher"}
+			onClick={(e) => e.stopPropagation()}
+		>
+			{hostOf(href) ?? "source"} ↗
+		</a>
+	);
 }

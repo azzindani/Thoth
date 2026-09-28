@@ -97,6 +97,22 @@ describe("layers", () => {
 		});
 	}
 
+	it("an event resolves with its provenance", async () => {
+		const j = await get<{ items: { id: string }[] }>("/api/layers/quakes");
+		const id = j.items[0].id;
+		const e = await get<{
+			item: { id: string; ingested_at: string; source: string };
+			feed: { source: string } | null;
+			related: unknown[];
+		}>(`/api/event?id=${encodeURIComponent(id)}`);
+		assert.equal(e.item.id, id);
+		assert.ok(e.item.ingested_at);
+		assert.equal(e.feed?.source, e.item.source);
+		assert.ok(Array.isArray(e.related));
+		const miss = await fetch(`${API}/api/event?id=no-such-event`);
+		assert.equal(miss.status, 404);
+	});
+
 	// Viewport slices (ROADMAP P2) — airports is the 5,280-row static catalog.
 	type View = {
 		items: { geom: { coordinates: number[] } }[];

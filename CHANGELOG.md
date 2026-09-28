@@ -29,6 +29,24 @@ operator action are also listed in
 ### Removed
 - Dependabot version-update configuration (`.github/dependabot.yml`).
 
+- Source and verification on every object. Map cards and popped-out
+  windows have a **Source ↗** button (the record's own link, or the
+  publisher's site when the feed has no per-item link), show the
+  record's host next to its source, and link aircraft, vessels and
+  satellites to public trackers by their own identifier (ADS-B Exchange,
+  FlightAware, MarineTraffic, VesselFinder, N2YO, CelesTrak). CCTV cards
+  show the camera's latest still.
+- The full view and inspector gained a provenance section: open the
+  original report, the source feed's health (status, poll cadence, last
+  successful poll, latest fetch and HTTP code), when the item was
+  observed and last re-confirmed, confidence, other sources that reported
+  the same event (or a clear "single source" warning), incident member
+  reports with their links, OpenStreetMap/Google Maps at the spot, and
+  the raw stored record.
+- Alerts, nearby items and incident timelines link each item to its
+  source.
+- `GET /api/event?id=` returns one event with its provenance.
+
 ### Changed
 - Card and full-view imagery is Esri World Imagery centred on the object
   under a crosshair, replacing the Sentinel-2 scene thumbnail (which

@@ -147,6 +147,7 @@ type Member = {
 	layer: string;
 	source: string;
 	title: string | null;
+	url: string | null;
 	severity: string;
 	lat: number;
 	lon: number;
@@ -163,7 +164,7 @@ export async function buildIncidents(): Promise<{
 	const runStart = await dbClock();
 	const rows = await query<Member>(
 		`WITH pts AS (
-		   SELECT e.id, e.ts::text AS ts, e.layer, e.source, e.title, e.severity,
+		   SELECT e.id, e.ts::text AS ts, e.layer, e.source, e.title, e.url, e.severity,
 		          ST_Centroid(e.geom) AS g
 		     FROM events e
 		    WHERE e.geom IS NOT NULL AND e.severity IN ('critical','watch')
@@ -174,7 +175,7 @@ export async function buildIncidents(): Promise<{
 		   SELECT *, ST_ClusterDBSCAN(g, eps := $2, minpoints := 2) OVER () AS cid
 		     FROM pts
 		 )
-		 SELECT cl.id, cl.ts, cl.layer, cl.source, cl.title, cl.severity,
+		 SELECT cl.id, cl.ts, cl.layer, cl.source, cl.title, cl.url, cl.severity,
 		        ST_Y(cl.g) AS lat, ST_X(cl.g) AS lon, cl.cid,
 		        (SELECT count(*)::int FROM event_dups d WHERE d.primary_id = cl.id) AS dups
 		   FROM cl WHERE cl.cid IS NOT NULL
@@ -252,6 +253,8 @@ export async function buildIncidents(): Promise<{
 					source: m.source,
 					severity: m.severity,
 					title: m.title,
+					// every member report links back to where it came from
+					url: m.url,
 					dups: m.dups,
 				})),
 			},

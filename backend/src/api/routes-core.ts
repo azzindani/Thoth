@@ -5,6 +5,7 @@ import {
 	getAlerts,
 	getBrief,
 	getDossier,
+	getEventProvenance,
 	getLayerHistory,
 	getLayerSlice,
 	getLayerView,
@@ -184,6 +185,37 @@ export function registerCore(app: express.Express): void {
 			serverTs: new Date().toISOString(),
 			versions: await getVersions(),
 		});
+	});
+
+	// One record with its provenance (source feed health, latest fetch,
+	// corroborating reports). Query param, not a path segment: ids carry
+	// ':' and '/'.
+	app.get("/api/event", async (req, res) => {
+		const id = z.string().min(1).max(300).safeParse(req.query.id);
+		if (!id.success) {
+			res.status(400).json({ ok: false, error: "bad id" });
+			return;
+		}
+		try {
+			const r = await getEventProvenance(id.data);
+			if (!r) {
+				res.status(404).json({ ok: false, error: "no such event" });
+				return;
+			}
+			const src = String(r.item.source);
+			res.json({
+				...r,
+				feed: r.feed
+					? { ...r.feed, ...(SOURCE_MAP[src] ?? {}) }
+					: SOURCE_MAP[src]
+						? { source: src, ...SOURCE_MAP[src] }
+						: null,
+				serverTs: new Date().toISOString(),
+			});
+		} catch (e: unknown) {
+			log.error("event failed", { error: String(e) });
+			res.status(500).json({ ok: false, error: "event query failed" });
+		}
 	});
 
 	app.get("/api/brief", async (_req, res) => {

@@ -6,6 +6,7 @@ import * as maplibregl from "maplibre-gl";
 import "../lib/maplibre"; // setWorkerUrl before any Map is built
 import { LAYERS } from "../lib/layer-catalog";
 import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
+import { hostOf, sourceHome, verifyLinks } from "../lib/sources";
 import { ageStr } from "../lib/ui";
 
 export interface ObjProps {
@@ -24,6 +25,8 @@ export interface ObjProps {
 	facts?: string;
 	/** first lines of the record body */
 	desc?: string;
+	/** camera still (cctv), shown in place of imagery */
+	img?: string;
 }
 
 // Meta keys worth a row in the card, with their label and unit. Anything
@@ -112,6 +115,47 @@ function utcStamp(ts: string | undefined): string {
 	return `${d.slice(5, 10)} ${d.slice(11, 16)}Z`;
 }
 
+const camImg = (u: string | undefined) => Boolean(u && /^https?:\/\//.test(u));
+
+/** CCTV: the camera's own latest still, which is the evidence itself. */
+function camShot(url: string): string {
+	return (
+		`<a class="hov-shot hov-cam" href="${esc(url)}" target="_blank" rel="noreferrer noopener">` +
+		`<img class="on" alt="camera still" loading="lazy" referrerpolicy="no-referrer" src="${esc(url)}" />` +
+		`<span class="hov-cap">Camera still · open full size ↗</span></a>`
+	);
+}
+
+/** The record's own link (or, failing that, the publisher's site). */
+function sourceButton(p: ObjProps): string {
+	const href =
+		p.url && /^https?:\/\//.test(p.url) ? p.url : sourceHome(p.source);
+	if (!href) return "";
+	const tip = p.url
+		? "Open the original report"
+		: "No per-item link: open the publisher";
+	return `<a class="ghost btn" href="${esc(href)}" target="_blank" rel="noreferrer noopener" title="${esc(tip)}">Source ↗</a>`;
+}
+
+/** Trackers keyed by the object's own id (hex, MMSI, NORAD). The generic
+ * map links wait in the full view's provenance section. */
+function checkLinks(p: ObjProps, layer: string): string {
+	const links = verifyLinks({ ...p, layer }).filter(
+		(l) => l.label !== "OpenStreetMap" && l.label !== "Google Maps",
+	);
+	if (!links.length) return "";
+	return (
+		`<div class="hov-verify"><span class="hov-verify-l">Check on</span>` +
+		links
+			.map(
+				(l) =>
+					`<a href="${esc(l.href)}" target="_blank" rel="noreferrer noopener">${esc(l.label)} ↗</a>`,
+			)
+			.join("") +
+		`</div>`
+	);
+}
+
 /** Centred imagery (see lib/satview): the object sits under the crosshair. */
 function satShot(lat: number, lon: number, layer: string): string {
 	const z = satZoom(layer, Boolean(LAYERS[layer]?.polygon));
@@ -189,14 +233,24 @@ export function hoverCard(
 			true,
 		) +
 		(geo ? row("POS", `${lat.toFixed(3)}, ${lon.toFixed(3)}`, true) : "") +
-		row("SRC", p.source || "?") +
+		row(
+			"SRC",
+			`${p.source || "?"}${hostOf(p.url) ? ` · ${hostOf(p.url)}` : ""}`,
+			true,
+		) +
 		facts.map(([k, v]) => row(k, v)).join("") +
 		`</div>` +
 		// Imagery under a plane or ship says nothing about it: moving
 		// objects get their telemetry above instead.
-		(geo && !moving ? satShot(lat, lon, layer) : "") +
+		(camImg(p.img)
+			? camShot(p.img as string)
+			: geo && !moving
+				? satShot(lat, lon, layer)
+				: "") +
+		(pinId != null ? checkLinks(p, layer) : "") +
 		(pinId != null
 			? `<div class="hov-act"><button class="primary" data-act="full:${pinId}">Full view</button>` +
+				sourceButton(p) +
 				`<button class="ghost" data-act="zoom:${pinId}">Zoom</button>` +
 				`<button class="ghost" data-act="pop:${pinId}" title="Keep this card open as a movable window">Pop out</button></div>`
 			: `<div class="hov-h">Click to pin preview</div>`) +

@@ -4,7 +4,7 @@ import { api, type LayerItem } from "../lib/api";
 import { LAYERS, STREAMS } from "../lib/layer-catalog";
 import { fmtKm, MOVING_LAYERS, mosaic, satZoom, tileKm } from "../lib/satview";
 import { SheetHead } from "../lib/sheet";
-import { ageStr, Glyph, ItemRow, KV } from "../lib/ui";
+import { ageStr, Glyph, ItemRow, KV, SourceLink } from "../lib/ui";
 import { CountryTab } from "./CountryTab";
 import { IncidentsTab } from "./IncidentsTab";
 import {
@@ -18,6 +18,7 @@ import {
 import type { ObjProps } from "./MapView";
 import { MonitorTab } from "./MonitorTab";
 import OsintView from "./OsintView";
+import { Provenance } from "./Provenance";
 import { NotesTab, PortfolioTab, PulseTab, ScreenerTab } from "./TerminalTabs";
 
 export type Tab =
@@ -206,30 +207,17 @@ export default function Inspector({
 						<KV
 							pairs={[
 								["SEV", <Sev key="s" s={sel.severity} />],
-								["SRC", sel.source],
-								["TS", String(sel.ts).slice(0, 19).replace("T", " ")],
 								["AGE", ageStr(sel.ts)],
 								[
 									"POS",
 									`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
-								],
-								[
-									"ID",
-									<span key="i" style={{ wordBreak: "break-all" }}>
-										{sel.id}
-									</span>,
 								],
 								...(sel.airline
 									? [["AIRLINE", sel.airline] as [string, string]]
 									: []),
 							]}
 						/>
-						{sel.url && (
-							<a href={sel.url} target="_blank" rel="noreferrer">
-								SOURCE ↗
-							</a>
-						)}
-						<ObjectDetail sel={sel} />
+						<Provenance sel={sel} />
 						{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
 							<Nearby lat={sel.lat} lon={sel.lon} selfId={sel.id} />
 						)}
@@ -249,7 +237,8 @@ export default function Inspector({
 								<br />
 								<span style={{ color: "var(--dim)" }}>
 									{a.source} · {String(a.ts).slice(0, 10)}
-								</span>
+								</span>{" "}
+								<SourceLink url={a.url} source={a.source} />
 							</ItemRow>
 						))}
 					</>
@@ -272,50 +261,6 @@ export default function Inspector({
 				{tab === "notes" && <NotesTab />}
 			</div>
 		</div>
-	);
-}
-
-// OBJECTDETAIL — full record for the selection: the map only carries the
-// render fields, so we pull the layer feed once and merge body + meta
-// (altitude/track/magnitude/ids — everything the collector stored).
-export function ObjectDetail({ sel }: { sel: ObjProps }) {
-	const [full, setFull] = useState<LayerItem | null | undefined>(undefined);
-	useEffect(() => {
-		let stop = false;
-		api
-			.layer(sel.layer)
-			.then((j) => {
-				if (!stop) setFull(j.items.find((i) => i.id === sel.id) ?? null);
-			})
-			.catch(() => {
-				if (!stop) setFull(null);
-			});
-		return () => {
-			stop = true;
-		};
-	}, [sel.layer, sel.id]);
-	if (full === undefined)
-		return <div style={{ color: "var(--dim)" }}>detail…</div>;
-	if (!full) return null;
-	const meta = Object.entries(full.meta ?? {}).filter(([k]) => k !== "airline");
-	return (
-		<>
-			{full.body && (
-				<div style={{ margin: "6px 0", lineHeight: 1.6 }}>{full.body}</div>
-			)}
-			{meta.length > 0 && (
-				<KV
-					pairs={meta
-						.slice(0, 12)
-						.map(([k, v]) => [
-							k.toUpperCase().slice(0, 10),
-							typeof v === "object"
-								? JSON.stringify(v).slice(0, 120)
-								: String(v),
-						])}
-				/>
-			)}
-		</>
 	);
 }
 
@@ -429,30 +374,17 @@ export function CompleteView({
 					<KV
 						pairs={[
 							["SEV", <Sev key="s" s={sel.severity} />],
-							["SRC", sel.source],
-							["TS", String(sel.ts).slice(0, 19).replace("T", " ")],
 							["AGE", ageStr(sel.ts)],
 							[
 								"POS",
 								`${Number(sel.lat).toFixed(2)},${Number(sel.lon).toFixed(2)}`,
-							],
-							[
-								"ID",
-								<span key="i" style={{ wordBreak: "break-all" }}>
-									{sel.id}
-								</span>,
 							],
 							...(sel.airline
 								? [["AIRLINE", sel.airline] as [string, string]]
 								: []),
 						]}
 					/>
-					{sel.url && (
-						<a href={sel.url} target="_blank" rel="noreferrer">
-							SOURCE ↗
-						</a>
-					)}
-					<ObjectDetail sel={sel} />
+					<Provenance sel={sel} />
 					{Number.isFinite(sel.lat) && Number.isFinite(sel.lon) && (
 						<SatImage lat={sel.lat} lon={sel.lon} layer={sel.layer} />
 					)}
@@ -508,7 +440,8 @@ export function Nearby({
 			</div>
 			{others.map((i) => (
 				<ItemRow key={i.id}>
-					<b>{i.layer}</b> · {i.title}
+					<b>{i.layer}</b> · {i.title}{" "}
+					<SourceLink url={i.url} source={i.source} />
 				</ItemRow>
 			))}
 		</>

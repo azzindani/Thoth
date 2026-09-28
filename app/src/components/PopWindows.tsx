@@ -9,6 +9,7 @@
 import type * as maplibregl from "maplibre-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
+import { sourceHome } from "../lib/sources";
 import { ageStr } from "../lib/ui";
 import { type ObjProps, POPOUT_EVENT, type PopoutDetail } from "./map-popups";
 
@@ -266,6 +267,10 @@ export default function PopWindows({
 		const lat = Number(w.p.lat);
 		const lon = Number(w.p.lon);
 		const pos = Number.isFinite(lat) && Number.isFinite(lon);
+		const src =
+			w.p.url && /^https?:\/\//.test(w.p.url)
+				? w.p.url
+				: sourceHome(w.p.source);
 		return (
 			<>
 				<div
@@ -363,6 +368,21 @@ export default function PopWindows({
 						>
 							Fly to
 						</button>
+						{src && (
+							<a
+								className="ghost btn"
+								href={src}
+								target="_blank"
+								rel="noreferrer noopener"
+								title={
+									w.p.url
+										? "Open the original report"
+										: "No per-item link: open the publisher"
+								}
+							>
+								Source ↗
+							</a>
+						)}
 					</div>
 				</div>
 			</>
