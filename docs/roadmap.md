@@ -11,18 +11,17 @@ Status: `[ ]` open · `[~]` in progress
 Planned scope, in the order it lands (`[x]` = done). Open items also keep
 their entry in the themed lists below.
 
-1. [x] Telegram alert delivery under Compose (Security and operations).
-2. [ ] Content-Security-Policy for the app (Security and operations).
-3. [ ] OpenAPI specification (Platform and integrations).
-4. [ ] Reader API keys with per-key rate limits (Platform and integrations).
-5. [ ] Outbound webhooks for alerts and watch matches (Platform and
+1. [ ] Content-Security-Policy for the app (Security and operations).
+2. [ ] OpenAPI specification (Platform and integrations).
+3. [ ] Reader API keys with per-key rate limits (Platform and integrations).
+4. [ ] Outbound webhooks for alerts and watch matches (Platform and
    integrations).
-6. [ ] Installable PWA with critical-alert notifications (Frontend).
-7. [ ] Light "paper" theme (Frontend).
-8. [ ] Pop-out windows saved with workspaces (Analyst workflow).
-9. [ ] Explicit cross-layer rules (Intelligence).
-10. [ ] Removal of the deprecated single-file terminal, on or after
-    2026-10-09 as announced (Frontend).
+5. [ ] Installable PWA with critical-alert notifications (Frontend).
+6. [ ] Light "paper" theme (Frontend).
+7. [ ] Pop-out windows saved with workspaces (Analyst workflow).
+8. [ ] Explicit cross-layer rules (Intelligence).
+9. [ ] Removal of the deprecated single-file terminal, on or after
+   2026-10-09 as announced (Frontend).
 
 ## Guiding principles
 

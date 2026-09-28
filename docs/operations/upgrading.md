@@ -30,6 +30,9 @@ No manual steps: there are no new migrations or required variables.
   well above about 45 requests per page load, or layers load on retry.
 - Display settings are new and kept per browser, so nothing needs to be
   migrated.
+- Compose now passes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to the
+  worker. If you added them in a `docker-compose.override.yml`, that
+  override can go.
 
 ### 2026-09-24: access-token gate and compose project name
 

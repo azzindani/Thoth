@@ -9,10 +9,6 @@ listed in [Upgrading](docs/operations/upgrading.md).
 
 ## [Unreleased]
 
-### Changed
-- Compose passes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to the
-  worker, so ops alerts reach Telegram without an override file.
-
 ## [0.1.0] - 2026-09-28
 
 The first tagged release. It contains all the work to date: the entries
@@ -72,6 +68,8 @@ below, and the dated pre-release entries after this section.
 - `GET /api/event?id=` returns one event with its provenance.
 
 ### Changed
+- Compose passes `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` to the
+  worker, so ops alerts reach Telegram without an override file.
 - The changelog dialog shows the release version and links the full
   changelog (it listed build phases); Settings shows the version.
 - Card and full-view imagery is Esri World Imagery centred on the object
