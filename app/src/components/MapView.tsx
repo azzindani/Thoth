@@ -987,11 +987,46 @@ export default function MapView(props: Props) {
 		liveMap = map;
 		guardCamera(map);
 		(window as unknown as { __thothMap?: maplibregl.Map }).__thothMap = map;
-		// right-click sets area dossier
+		// Right-click (desk) or a long-press (touch) opens the area dossier.
+		// Some mobile browsers also fire contextmenu on a long-press: one
+		// gesture, one dossier.
+		let lastArea = 0;
+		const area = (lat: number, lng: number) => {
+			if (Date.now() - lastArea < 900) return;
+			lastArea = Date.now();
+			propsRef.current.onArea(lat, lng);
+		};
 		map.on("contextmenu", (e) => {
 			e.preventDefault();
-			propsRef.current.onArea(e.lngLat.lat, e.lngLat.lng);
+			area(e.lngLat.lat, e.lngLat.lng);
 		});
+		let press: ReturnType<typeof setTimeout> | undefined;
+		let pressAt: { x: number; y: number } | null = null;
+		const cancelPress = () => {
+			clearTimeout(press);
+			pressAt = null;
+		};
+		map.on("touchstart", (e) => {
+			cancelPress();
+			if ((e.originalEvent as TouchEvent).touches.length !== 1) return;
+			pressAt = { x: e.point.x, y: e.point.y };
+			const ll = e.lngLat;
+			press = setTimeout(() => {
+				pressAt = null;
+				navigator.vibrate?.(12);
+				area(ll.lat, ll.lng);
+			}, 600);
+		});
+		map.on("touchmove", (e) => {
+			if (
+				pressAt &&
+				Math.hypot(e.point.x - pressAt.x, e.point.y - pressAt.y) > 10
+			)
+				cancelPress();
+		});
+		map.on("touchend", cancelPress);
+		map.on("touchcancel", cancelPress);
+		map.on("movestart", cancelPress);
 		map.on("load", async () => {
 			try {
 				map.setProjection({ type: "globe" });
