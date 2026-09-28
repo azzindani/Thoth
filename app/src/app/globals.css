@@ -322,7 +322,6 @@ main.app {
 	color: var(--faint);
 	padding: 0 6px;
 }
-.sheet-toggle,
 .insp-close {
 	display: none;
 }
@@ -1628,9 +1627,11 @@ body.focus .inspector.open {
 		--lw: 0px;
 		--rw: 0px;
 		--dock-h: 52px;
+		/* bottom navigation (PhoneNav.tsx); sheets rest above it */
+		--nav-h: calc(58px + env(safe-area-inset-bottom));
 		/* bottom-sheet rest heights (lib/sheet.tsx snaps between them) */
-		--sheet-half: 58dvh;
-		--sheet-full: calc(100dvh - var(--top));
+		--sheet-half: 56dvh;
+		--sheet-full: calc(100dvh - var(--top) - var(--nav-h));
 	}
 	.ticker {
 		gap: 10px;
@@ -1638,6 +1639,7 @@ body.focus .inspector.open {
 	}
 	.ticker .seg,
 	.ticker .tbtn,
+	.ticker .tape,
 	body[data-bp="phone"] .clock {
 		display: none;
 	}
@@ -1645,33 +1647,13 @@ body.focus .inspector.open {
 		font-size: 11px;
 		padding: 0 4px;
 	}
-	.sheet-toggle {
-		display: inline-flex;
-		align-items: center;
-		background: rgba(233, 229, 218, 0.05);
-		border: 1px solid var(--line2);
-		color: var(--txt);
-		font: inherit;
-		font-size: 11px;
-		font-weight: 500;
-		letter-spacing: 0.08em;
-		cursor: pointer;
-		height: 32px;
-		padding: 0 12px;
-		border-radius: var(--r-ctl);
-		flex: none;
-		transition: background var(--t-fast) var(--ease);
-	}
-	.sheet-toggle:active {
-		background: var(--press);
-	}
 	/* explorer (layers) and inspector share one bottom-sheet form */
 	.explorer,
 	.inspector {
 		top: auto;
 		left: 0;
 		right: 0;
-		bottom: 0;
+		bottom: var(--nav-h);
 		width: auto;
 		z-index: 30;
 		background: var(--glass2);
@@ -1697,7 +1679,7 @@ body.focus .inspector.open {
 		min-height: 0;
 		overflow: auto;
 		overscroll-behavior: contain;
-		padding: 2px 14px calc(14px + env(safe-area-inset-bottom));
+		padding: 2px 14px 14px;
 	}
 	.explorer[data-snap="full"],
 	.inspector[data-snap="full"],
@@ -1807,13 +1789,32 @@ body.focus .inspector.open {
 		min-height: var(--tap);
 		font-size: 16px; /* ≥16px: iOS does not zoom the page on focus */
 	}
-	/* the dock collapses to a floating command pill */
+	/* the dock is a floating command pill above the nav, shown on demand
+	   (Search), or the replay bar while replay runs */
 	.bottom {
 		grid-template-rows: auto;
 		padding: 0 14px;
-		bottom: calc(var(--inset) + env(safe-area-inset-bottom));
+		bottom: calc(var(--nav-h) + var(--inset));
+	}
+	body[data-bp="phone"]:not(.cmd-open):not(.replay-on) .bottom {
+		display: none;
+	}
+	body[data-bp="phone"].replay-on:not(.cmd-open) .cmdbar {
+		display: none;
 	}
 	.tl-row {
+		display: none;
+	}
+	body[data-bp="phone"].replay-on .tl-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		padding: 8px 0;
+	}
+	/* replay on a phone: the controls only (the threat gauge and the
+	   graph toggle live elsewhere there) */
+	body[data-bp="phone"].replay-on .tl-row .threatclock,
+	body[data-bp="phone"].replay-on .tl-row > .ghost-btn:not(#replay-btn) {
 		display: none;
 	}
 	.cmdbar {
@@ -1854,8 +1855,8 @@ body.focus .inspector.open {
 		top: auto;
 		left: 0;
 		right: 0;
-		bottom: 0;
-		height: 100dvh;
+		bottom: var(--nav-h);
+		height: calc(100dvh - var(--nav-h));
 		align-items: flex-end;
 		justify-content: stretch;
 	}
@@ -1883,7 +1884,7 @@ body.focus .inspector.open {
 		min-height: 0;
 		overflow: auto;
 		overscroll-behavior: contain;
-		padding: 4px 20px calc(18px + env(safe-area-inset-bottom));
+		padding: 4px 20px 18px;
 	}
 	.toasts {
 		bottom: calc(var(--dock-h) + var(--inset) * 3);
@@ -3161,4 +3162,176 @@ body:not(.insp-wide) .dt-wrap {
 	font-size: 10.5px;
 	letter-spacing: 0.08em;
 	padding-top: 1px;
+}
+
+/* ── phone navigation (PhoneNav.tsx) + tools sheet (ToolsSheet.tsx) ───── */
+.phone-nav {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 45;
+	height: var(--nav-h);
+	padding-bottom: env(safe-area-inset-bottom);
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	background: var(--glass2);
+	-webkit-backdrop-filter: var(--blur);
+	backdrop-filter: var(--blur);
+	border-top: 1px solid var(--line2);
+}
+.nav-btn {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	background: none;
+	border: none;
+	color: var(--dim);
+	font: inherit;
+	font-size: 10px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: color var(--t-fast) var(--ease);
+}
+.nav-btn svg {
+	width: 22px;
+	height: 22px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.75;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.nav-btn.on {
+	color: var(--accent);
+}
+.nav-btn.on::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 30%;
+	right: 30%;
+	height: 2px;
+	border-radius: 0 0 2px 2px;
+	background: var(--accent);
+}
+.nav-btn:active {
+	background: var(--press);
+}
+.nav-badge {
+	position: absolute;
+	top: 6px;
+	left: calc(50% + 6px);
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: var(--r-pill);
+	background: var(--red);
+	color: #fff;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 16px;
+	text-align: center;
+	letter-spacing: 0;
+}
+.tools-sheet {
+	display: none;
+}
+@media (max-width: 767px) {
+	body[data-bp="phone"] .tools-sheet.open {
+		display: flex;
+		flex-direction: column;
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: var(--nav-h);
+		z-index: 30;
+		max-height: var(--sheet-half);
+		background: var(--glass2);
+		-webkit-backdrop-filter: var(--blur);
+		backdrop-filter: var(--blur);
+		border-top: 1px solid var(--line2);
+		border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+		box-shadow:
+			var(--hl),
+			0 -16px 40px rgba(0, 0, 0, 0.55);
+		animation: sheet-up var(--t-sheet) var(--ease);
+	}
+	.tools-sheet[data-snap="full"] {
+		height: var(--sheet-full);
+		max-height: var(--sheet-full);
+	}
+}
+.tools-body {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	overscroll-behavior: contain;
+	padding: 0 14px 16px;
+}
+.tools-body > h3,
+.tools-body > div > h3 {
+	margin: 14px 2px 8px;
+}
+.tools-seg {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 6px;
+}
+.tools-seg > button {
+	flex: 1;
+	min-height: 40px;
+	border-radius: var(--r-ctl);
+	border: 1px solid var(--line2);
+	background: rgba(233, 229, 218, 0.03);
+	color: var(--txt2);
+	font: inherit;
+	font-size: var(--fs-s);
+	cursor: pointer;
+}
+.tools-seg > button.on {
+	color: var(--txt);
+	background: var(--raise2);
+	border-color: var(--accent-line);
+}
+.tools-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.tools-list > button,
+.tools-all {
+	text-align: left;
+	min-height: var(--tap);
+	padding: 0 12px;
+	border-radius: var(--r-ctl);
+	border: none;
+	background: none;
+	color: var(--txt);
+	font: inherit;
+	font-size: var(--fs);
+	cursor: pointer;
+}
+.tools-list > button:active,
+.tools-all:active {
+	background: var(--press);
+}
+.tools-all {
+	width: 100%;
+	margin-top: 14px;
+	border: 1px solid var(--line2);
+	text-align: center;
+	color: var(--txt2);
+}
+/* tablet-only chrome (the inspector opener) */
+.tab-only {
+	display: none;
+}
+body[data-bp="tab"] .tab-only {
+	display: inline-flex;
+	align-items: center;
 }
