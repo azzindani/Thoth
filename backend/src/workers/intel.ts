@@ -17,6 +17,7 @@ import {
 	pruneStale,
 	storeNormalized,
 } from "./lib/store.js";
+import { rulesPass } from "./rules.js";
 
 // ── 1. duplicates ─────────────────────────────────────────────────────────
 
@@ -480,6 +481,8 @@ export async function intelPass() {
 		["incidents", buildIncidents],
 		["samples", sampleLayers],
 		["anomalies", detectAnomalies],
+		// after anomalies: a rule reads this pass's anomalies
+		["rules", rulesPass],
 	] as const) {
 		try {
 			out[k] = await fn();

@@ -10,6 +10,10 @@ listed in [Upgrading](docs/operations/upgrading.md).
 ## [Unreleased]
 
 ### Added
+- **Cross-layer rules** in the intelligence pass, shown as incidents with
+  their evidence linked: an internet outage in a country where submarine
+  cables land, and an air traffic drop within 300 km of recent conflict
+  reports.
 - Workspaces save the open pop-out windows (position, minimised state,
   the object) and reopen them, shared links included. Workspaces saved
   before leave the open windows alone.
