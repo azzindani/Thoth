@@ -1369,17 +1369,69 @@ details.gaps[open] summary::before {
 	max-width: min(420px, 90vw);
 }
 .toast {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
 	background: var(--glass2);
 	-webkit-backdrop-filter: var(--blur);
 	backdrop-filter: var(--blur);
 	border: 1px solid var(--line2);
 	border-radius: var(--r-card);
-	padding: 10px 14px 10px 16px;
+	padding: 4px 4px 4px 16px;
 	font-size: var(--fs-s);
 	box-shadow:
 		inset 3px 0 0 var(--red),
 		var(--shadow-card);
 	animation: rise var(--t) var(--ease);
+}
+.toast-watch {
+	box-shadow:
+		inset 3px 0 0 var(--amber),
+		var(--shadow-card);
+}
+/* a notice is a receipt ("volcanoes off"), not an alarm */
+.toast-notice {
+	box-shadow:
+		inset 3px 0 0 var(--accent),
+		var(--shadow-card);
+}
+.toast-t {
+	flex: 1;
+	min-width: 0;
+	padding: 6px 0;
+	text-align: left;
+	background: none;
+	border: none;
+	color: var(--txt);
+	font: inherit;
+	line-height: 1.45;
+}
+button.toast-t {
+	cursor: pointer;
+}
+button.toast-t:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.toast-x {
+	flex: none;
+	width: 32px;
+	height: 32px;
+	background: none;
+	border: none;
+	color: var(--dim);
+	font: inherit;
+	cursor: pointer;
+	border-radius: var(--r-ctl);
+}
+.toast-x:hover {
+	color: var(--txt);
+	background: var(--hover);
+}
+/* a phone sheet owns the screen: alerts wait (the Alerts badge counts them) */
+body[data-bp="phone"]:has(.explorer.open, .inspector.open, .tools-sheet.open)
+.toasts {
+	display: none;
 }
 .modal-veil {
 	position: fixed;

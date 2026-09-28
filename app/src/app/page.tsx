@@ -33,7 +33,7 @@ import ThreatClock from "../components/ThreatClock";
 import Ticker from "../components/Ticker";
 import Timeline from "../components/Timeline";
 import ToolsSheet from "../components/ToolsSheet";
-import { API, api } from "../lib/api";
+import { API, api, type LayerItem } from "../lib/api";
 import { LAYER_NAMES, MISSIONS } from "../lib/layer-catalog";
 import {
 	deleteWorkspace,
@@ -104,8 +104,15 @@ export default function Terminal() {
 	);
 	// kind: critical (red badge, the default), watch (amber), notice (none).
 	const [toasts, setToasts] = useState<
-		{ id: string; title: string; kind?: "critical" | "watch" | "notice" }[]
+		{
+			id: string;
+			title: string;
+			kind?: "critical" | "watch" | "notice";
+			/** the event behind a critical toast: a tap opens it */
+			item?: LayerItem;
+		}[]
 	>([]);
+	const critSeeded = useRef(false);
 	// Link state only (up/down, reconnects). The last-message time changes
 	// on every 5 s heartbeat, so it lives in a ref: a heartbeat must not
 	// re-render the whole page.
@@ -516,11 +523,21 @@ export default function Terminal() {
 					(a) => a.severity === "critical" && !seenCrit.current.has(a.id),
 				);
 				for (const a of j.items) seenCrit.current.add(a.id);
+				// The first poll only learns what is already there: a page
+				// load used to fire every critical of the last 24 h at once.
+				if (!critSeeded.current) {
+					critSeeded.current = true;
+					return;
+				}
 				if (fresh.length) {
 					setAlertBadge((b) => b + fresh.length);
 					setToasts((t) =>
 						[
-							...fresh.map((a) => ({ id: a.id, title: a.title ?? a.id })),
+							...fresh.map((a) => ({
+								id: a.id,
+								title: a.title ?? a.id,
+								item: a,
+							})),
 							...t,
 						].slice(0, 5),
 					);
@@ -536,6 +553,10 @@ export default function Terminal() {
 				/* keep */
 			}
 		}
+		// Learn what is already there at load, so the first change after it
+		// toasts only what is new (not every critical of the last 24 h).
+		void checkToasts();
+		void checkWatch();
 		const known: Record<string, string> = {};
 		// Trailing throttle: worker ticks bump versions every ~60s across
 		// many layers, and every bump re-fetches + re-clusters (killing open
@@ -699,6 +720,42 @@ export default function Terminal() {
 	}
 
 	// A short-lived status toast (workspace saved, link copied…).
+	const dismissToast = useCallback(
+		(id: string) => setToasts((t) => t.filter((x) => x.id !== id)),
+		[],
+	);
+	function openToast(t: (typeof toasts)[number]) {
+		if (t.kind === "watch") {
+			setOsint({ kind: "watch", arg: "matches" });
+			setTab("object");
+			setPanel("insp", false);
+			document.getElementById("inspector")?.classList.add("open");
+			return;
+		}
+		const i = t.item;
+		const c = i?.geom?.coordinates;
+		if (!i) return;
+		const lon = Number(c?.[0]);
+		const lat = Number(c?.[1]);
+		if (Number.isFinite(lat) && Number.isFinite(lon))
+			mapRef.current?.flyTo({
+				center: [lon, lat],
+				zoom: Math.max(mapRef.current.getZoom(), 5),
+			});
+		selectFull({
+			id: i.id,
+			title: i.title || i.id,
+			url: i.url || "",
+			layer: i.layer,
+			severity: i.severity || "",
+			source: i.source,
+			ts: i.ts,
+			lon,
+			lat,
+			airline: "",
+			rot: 0,
+		});
+	}
 	const notice = useCallback((title: string) => {
 		const id = `notice:${Date.now()}`;
 		setToasts((t) =>
@@ -1261,24 +1318,42 @@ export default function Terminal() {
 					<span className="pt-label">{PANEL_LABEL[k]}</span>
 				</button>
 			))}
-			{toasts.length > 0 && (
-				<div className="toasts">
-					{toasts.map((t) => (
-						<div key={t.id} className={`toast toast-${t.kind ?? "critical"}`}>
-							{t.kind === "notice" ? null : t.kind === "watch" ? (
-								<>
-									<b style={{ color: "var(--amber)" }}>● WATCH</b> ·{" "}
-								</>
-							) : (
-								<>
-									<b style={{ color: "var(--red)" }}>● CRITICAL</b> ·{" "}
-								</>
-							)}
-							{t.title}
-						</div>
-					))}
-				</div>
-			)}
+			<div className="toasts" role="log" aria-live="polite" aria-label="alerts">
+				{toasts.map((t) => (
+					<div key={t.id} className={`toast toast-${t.kind ?? "critical"}`}>
+						{t.kind === "notice" ? (
+							<span className="toast-t">{t.title}</span>
+						) : (
+							<button
+								type="button"
+								className="toast-t"
+								title={
+									t.kind === "watch" ? "open watch matches" : "open this event"
+								}
+								onClick={() => {
+									dismissToast(t.id);
+									openToast(t);
+								}}
+							>
+								{t.kind === "watch" ? (
+									<b style={{ color: "var(--amber)" }}>● WATCH</b>
+								) : (
+									<b style={{ color: "var(--red)" }}>● CRITICAL</b>
+								)}{" "}
+								· {t.title}
+							</button>
+						)}
+						<button
+							type="button"
+							className="toast-x"
+							aria-label="dismiss"
+							onClick={() => dismissToast(t.id)}
+						>
+							✕
+						</button>
+					</div>
+				))}
+			</div>
 			{full && <CompleteView sel={full} onClose={() => setFull(null)} />}
 			{changelog && (
 				<div className="modal-veil" onClick={() => setChangelog(false)}>
