@@ -54,8 +54,8 @@ export default function ToolsSheet({
 		>
 			<SheetHead title="Tools" onClose={onClose} closeButton />
 			<div className="tools-body">
-				<h3>Map</h3>
-				<div className="tools-seg" role="group" aria-label="map style">
+				<h3 className="tools-h">Map</h3>
+				<fieldset className="tools-seg" aria-label="map style">
 					{(
 						[
 							["default", "Dark"],
@@ -73,8 +73,8 @@ export default function ToolsSheet({
 							{l}
 						</button>
 					))}
-				</div>
-				<div className="tools-seg" role="group" aria-label="view">
+				</fieldset>
+				<fieldset className="tools-seg" aria-label="view">
 					<button
 						type="button"
 						className={globe ? "on" : ""}
@@ -91,13 +91,13 @@ export default function ToolsSheet({
 					>
 						Cinema
 					</button>
-				</div>
+				</fieldset>
 				{GROUPS.map((g) => {
 					const items = actions.filter((a) => a.group === g && !SKIP.has(a.id));
 					if (!items.length) return null;
 					return (
 						<div key={g}>
-							<h3>{g}</h3>
+							<h3 className="tools-h">{g}</h3>
 							<div className="tools-list">
 								{items.map((a) => (
 									<button key={a.id} type="button" onClick={() => run(a)}>
