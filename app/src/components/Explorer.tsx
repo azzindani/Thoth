@@ -37,6 +37,17 @@ export default function Explorer({
 	onTheater: (key: string) => void;
 }) {
 	const [find, setFind] = useState("");
+	// Tablet: the rail expands into the full panel (labels, filters,
+	// missions, search) over the map; a tap outside folds it back.
+	const [expanded, setExpanded] = useState(false);
+	useEffect(() => {
+		if (!expanded) return;
+		const off = (e: PointerEvent) => {
+			if (!(e.target as HTMLElement).closest?.("#explorer")) setExpanded(false);
+		};
+		document.addEventListener("pointerdown", off);
+		return () => document.removeEventListener("pointerdown", off);
+	}, [expanded]);
 	const [errors, setErrors] = useState<Map<string, string>>(new Map());
 	useEffect(() => {
 		const on = () => setErrors(new Map(layerErrors));
@@ -56,7 +67,23 @@ export default function Explorer({
 			.catch(() => {});
 	}, []);
 	return (
-		<div className="explorer" id="explorer">
+		<div className={`explorer${expanded ? " expanded" : ""}`} id="explorer">
+			<button
+				type="button"
+				className="rail-expand tab-only"
+				aria-expanded={expanded}
+				aria-label={expanded ? "collapse layers panel" : "expand layers panel"}
+				title={expanded ? "collapse" : "layers, filters and missions"}
+				onClick={() => setExpanded((x) => !x)}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					{expanded ? (
+						<path d="m15 18-6-6 6-6" />
+					) : (
+						<path d="M4 6h16M4 12h16M4 18h16" />
+					)}
+				</svg>
+			</button>
 			<SheetHead title="Layers" onClose={onClose} closeButton />
 			<div className="expl-body">
 				<h3>View</h3>

@@ -3335,3 +3335,70 @@ body[data-bp="tab"] .tab-only {
 	display: inline-flex;
 	align-items: center;
 }
+
+/* ── tablet rail → full panel (Explorer.tsx) ──────────────────────────── */
+.rail-expand {
+	display: none;
+}
+body[data-bp="tab"] .rail-expand {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: var(--tap);
+	margin-bottom: 4px;
+	background: none;
+	border: none;
+	border-bottom: 1px solid var(--line);
+	color: var(--txt2);
+	cursor: pointer;
+}
+.rail-expand svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.75;
+	stroke-linecap: round;
+}
+body[data-bp="tab"] .explorer.expanded {
+	width: var(--expl);
+	padding: 8px 12px 12px;
+	z-index: 32;
+	background: var(--glass2);
+	box-shadow: var(--hl), var(--shadow-panel);
+}
+body[data-bp="tab"] .explorer.expanded .rail-expand {
+	justify-content: flex-start;
+	padding-left: 4px;
+}
+body[data-bp="tab"] .explorer.expanded .lrow .nm,
+body[data-bp="tab"] .explorer.expanded h3,
+body[data-bp="tab"] .explorer.expanded .credit,
+body[data-bp="tab"] .explorer.expanded .findbox,
+body[data-bp="tab"] .explorer.expanded .explorer-foot,
+body[data-bp="tab"] .explorer.expanded .lrow .sw {
+	display: block;
+}
+body[data-bp="tab"] .explorer.expanded .chips,
+body[data-bp="tab"] .explorer.expanded .mission,
+body[data-bp="tab"] .explorer.expanded .theater,
+body[data-bp="tab"] .explorer.expanded .lgroup {
+	display: flex;
+}
+body[data-bp="tab"] .explorer.expanded .lrow {
+	flex-direction: row;
+	justify-content: flex-start;
+	gap: 10px;
+	padding: 0 8px;
+	min-height: 40px;
+}
+body[data-bp="tab"] .explorer.expanded .lrow.off {
+	opacity: 1;
+}
+body[data-bp="tab"] .explorer.expanded .lrow b {
+	font-size: 11px;
+}
+body[data-bp="tab"] .explorer.expanded .lgroup {
+	min-height: 36px;
+}
