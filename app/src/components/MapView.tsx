@@ -295,6 +295,10 @@ export function setReplay(
 /** Layers whose last load failed (layer → reason), for the layer list.
  * Cleared as soon as a load of that layer succeeds. */
 export const layerErrors = new Map<string, string>();
+/** Features of a layer in the loaded slice, after the severity filter. */
+export function loadedCount(name: string): number {
+	return fullData[name]?.features.length ?? 0;
+}
 export const LAYER_STATUS_EVENT = "thoth:layer-status";
 function layerStatusChanged(): void {
 	window.dispatchEvent(new Event(LAYER_STATUS_EVENT));
@@ -344,8 +348,9 @@ export async function loadAll(
 		}),
 	);
 	raiseMapNotes(map);
-	if (!failed.length) return;
+	// data changed: the layer list re-reads errors and filtered counts
 	layerStatusChanged();
+	if (!failed.length) return;
 	if (attempt >= RETRY_BACKOFF_S.length) return;
 	const todo = failed.filter((n) => !retrying.has(n));
 	if (!todo.length) return;

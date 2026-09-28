@@ -9,7 +9,7 @@ import {
 } from "../lib/layer-catalog";
 import { SheetHead } from "../lib/sheet";
 import { Chip, Field, fmtCadence, LayerRow, Switch } from "../lib/ui";
-import { LAYER_STATUS_EVENT, layerErrors } from "./MapView";
+import { LAYER_STATUS_EVENT, layerErrors, loadedCount } from "./MapView";
 
 export default function Explorer({
 	counts,
@@ -49,8 +49,13 @@ export default function Explorer({
 		return () => document.removeEventListener("pointerdown", off);
 	}, [expanded]);
 	const [errors, setErrors] = useState<Map<string, string>>(new Map());
+	// bumps on every layer load, so severity-filtered counts stay current
+	const [, setTick] = useState(0);
 	useEffect(() => {
-		const on = () => setErrors(new Map(layerErrors));
+		const on = () => {
+			setErrors(new Map(layerErrors));
+			setTick((t) => t + 1);
+		};
 		window.addEventListener(LAYER_STATUS_EVENT, on);
 		return () => window.removeEventListener(LAYER_STATUS_EVENT, on);
 	}, []);
@@ -127,7 +132,28 @@ export default function Explorer({
 						</Chip>
 					))}
 				</div>
-				<h3 style={{ marginTop: 16 }}>Layers</h3>
+				<div className="legend" aria-label="map legend">
+					<span>
+						<i className="lg-ring" style={{ borderColor: "var(--red)" }} />
+						critical
+					</span>
+					<span>
+						<i className="lg-ring" style={{ borderColor: "var(--amber)" }} />
+						watch
+					</span>
+					<span>
+						<i className="lg-ring" />
+						info
+					</span>
+					<span>
+						<i className="lg-count">12</i>
+						grouped
+					</span>
+				</div>
+				<h3 style={{ marginTop: 16 }}>
+					Layers
+					{sev && <span className="h3-note"> · {sev} in view</span>}
+				</h3>
 				<div className="findbox" style={{ marginBottom: 2 }}>
 					<Field
 						placeholder="Find layers…"
@@ -136,6 +162,11 @@ export default function Explorer({
 					/>
 				</div>
 				<div id="layer-rows">
+					{shown.length === 0 && (
+						<div className="dim lrow-none">
+							No layer matches “{find.trim()}”.
+						</div>
+					)}
 					{groupedLayers(shown).map(([group, layers]) => {
 						const on = layers.filter((l) => visible[l]).length;
 						const all = on === layers.length;
@@ -163,7 +194,11 @@ export default function Explorer({
 									<Switch on={on > 0} mixed={on > 0 && !all} />
 								</div>
 								{layers.map((l) => {
-									const c = counts.get(l) ?? "0";
+									// With a severity filter the stored 24 h totals would not
+									// match the map: count what the map holds instead.
+									const c = sev
+										? String(loadedCount(l))
+										: (counts.get(l) ?? "0");
 									const cad = LAYERS[l]
 										? fmtCadence(LAYERS[l].intervalSec)
 										: "?";

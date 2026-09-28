@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { STREAMS } from "../lib/layer-catalog";
-import { Field, ItemRow } from "../lib/ui";
+import { Field, ItemRow, SourceLink } from "../lib/ui";
 import { MAP_NOTES_EVENT, WATCH_AREAS_EVENT } from "./MapView";
 
 export function FeedTab({ layer, title }: { layer: string; title: string }) {
@@ -193,7 +193,7 @@ export function BriefBlock() {
 			].map(({ a, sev }) => (
 				<div key={a.id} className="item sev-row" data-sev={sev}>
 					<span className="lyr">{a.layer}</span>
-					{a.title}
+					{a.title} <SourceLink url={a.url} source={a.source} />
 				</div>
 			))}
 			{b.gaps.length > 0 && (
