@@ -5,7 +5,12 @@ import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { ApiError, api, type CameraView, type LayerItem } from "../lib/api";
 import { bakeIcon, LAYER_NAMES, LAYERS } from "../lib/layer-catalog";
-import { PALETTE, SEV_INK } from "../lib/palette";
+import {
+	basemapStyle,
+	PALETTE,
+	SEV_INK,
+	syncPaletteFromDom,
+} from "../lib/palette";
 import { lastView, loadSettings } from "../lib/settings";
 import {
 	ensurePickHandler,
@@ -986,7 +991,7 @@ export default function MapView(props: Props) {
 		const touch = window.matchMedia("(pointer: coarse)").matches;
 		const map = new maplibregl.Map({
 			container: divRef.current as HTMLDivElement,
-			style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+			style: basemapStyle(syncPaletteFromDom()),
 			center: init.center,
 			zoom: init.zoom,
 			pixelRatio: touch

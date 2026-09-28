@@ -3,9 +3,9 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { LAYOUT_K, TEXT_K } from "../lib/settings";
 
-// Applies the saved size levels before first paint (no flash of the
-// default size); lib/settings.ts applies the full set once the app mounts.
-const EARLY = `try{var s=JSON.parse(localStorage.getItem("thoth.settings")||"null")||{};var L=${JSON.stringify(LAYOUT_K)},T=${JSON.stringify(TEXT_K)},h=document.documentElement;if(L[s.layout])h.style.setProperty("--lk",L[s.layout]);if(T[s.text])h.style.setProperty("--fk",T[s.text]);if(s.solid)h.classList.add("solid-panels");if(s.motion==="reduce")h.classList.add("reduce-motion")}catch(e){}`;
+// Applies the saved theme and size levels before first paint (no flash
+// of the default look); lib/settings.ts applies the full set once the app mounts.
+const EARLY = `try{var s=JSON.parse(localStorage.getItem("thoth.settings")||"null")||{};var L=${JSON.stringify(LAYOUT_K)},T=${JSON.stringify(TEXT_K)},h=document.documentElement;var th=s.theme==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"paper":"dark"):s.theme==="paper"?"paper":"dark";h.dataset.theme=th;if(L[s.layout])h.style.setProperty("--lk",L[s.layout]);if(T[s.text])h.style.setProperty("--fk",T[s.text]);if(s.solid)h.classList.add("solid-panels");if(s.motion==="reduce")h.classList.add("reduce-motion")}catch(e){}`;
 
 export const metadata: Metadata = {
 	title: "THOTH — live intelligence terminal",

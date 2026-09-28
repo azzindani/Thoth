@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PALETTE } from "../src/lib/palette";
+import {
+	basemapStyle,
+	DARK,
+	PALETTE,
+	PAPER,
+	SEV_INK,
+	setPaletteTheme,
+} from "../src/lib/palette";
 
 // palette.ts mirrors the :root tokens for map/canvas code. If a token
 // changes in CSS without the TS mirror (or vice versa), the map and the
@@ -12,6 +19,10 @@ const css = readFileSync(
 const root = css.slice(
 	css.indexOf(":root {"),
 	css.indexOf("}", css.indexOf(":root {")),
+);
+const paperBlock = css.slice(
+	css.indexOf(':root[data-theme="paper"] {'),
+	css.indexOf("}", css.indexOf(':root[data-theme="paper"] {')),
 );
 const TOKEN: Record<keyof typeof PALETTE, string> = {
 	bg: "--bg",
@@ -41,5 +52,25 @@ describe("palette mirrors CSS tokens", () => {
 			expect(v.toLowerCase()).not.toBe("#000000");
 			expect(v.toLowerCase()).not.toBe("#ffffff");
 		}
+	});
+});
+
+describe("paper theme", () => {
+	for (const [key, token] of Object.entries(TOKEN)) {
+		it(`paper ${key} === ${token}`, () => {
+			const m = new RegExp(`${token}:\\s*(#[0-9a-f]{6})`, "i").exec(paperBlock);
+			expect(m?.[1]?.toLowerCase(), `${token} in paper`).toBe(
+				PAPER[key as keyof typeof PAPER].toLowerCase(),
+			);
+		});
+	}
+	it("swaps the palette, the ink and the basemap, and back", () => {
+		setPaletteTheme("paper");
+		expect(PALETTE.bg).toBe(PAPER.bg);
+		expect(SEV_INK.critical).toBe(PAPER.critical);
+		expect(basemapStyle()).toContain("positron");
+		setPaletteTheme("dark");
+		expect(PALETTE).toEqual(DARK);
+		expect(basemapStyle()).toContain("dark-matter");
 	});
 });

@@ -7,6 +7,7 @@ import {
 	fmtStamp,
 	LAYOUT_K,
 	loadSettings,
+	resolveTheme,
 	sanitize,
 	saveSettings,
 	settings,
@@ -33,6 +34,21 @@ describe("settings", () => {
 		expect(s.time).toBe("local");
 		expect(s.hover).toBe(DEFAULTS.hover);
 		expect(Object.keys(s).sort()).toEqual(Object.keys(DEFAULTS).sort());
+	});
+
+	it("applies the theme to <html> and resolves 'system'", () => {
+		expect(sanitize({ theme: "neon" }).theme).toBe("dark");
+		saveSettings({ ...DEFAULTS, theme: "paper" });
+		expect(document.documentElement.dataset.theme).toBe("paper");
+		saveSettings({ ...DEFAULTS, theme: "dark" });
+		expect(document.documentElement.dataset.theme).toBe("dark");
+		const mm = window.matchMedia;
+		window.matchMedia = ((q: string) => ({
+			matches: q.includes("light"),
+		})) as unknown as typeof window.matchMedia;
+		expect(resolveTheme("system")).toBe("paper");
+		window.matchMedia = mm;
+		expect(resolveTheme("paper")).toBe("paper");
 	});
 
 	it("level M is the original design (multipliers of 1)", () => {
