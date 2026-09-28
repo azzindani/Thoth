@@ -18,7 +18,7 @@ their entry in the themed lists below.
    integrations).
 5. [x] Installable PWA with critical-alert notifications (Frontend).
 6. [x] Light "paper" theme (Frontend).
-7. [ ] Pop-out windows saved with workspaces (Analyst workflow).
+7. [x] Pop-out windows saved with workspaces (Analyst workflow).
 8. [ ] Explicit cross-layer rules (Intelligence).
 9. [ ] Removal of the deprecated single-file terminal, on or after
    2026-10-09 as announced (Frontend).
@@ -75,7 +75,6 @@ their entry in the themed lists below.
 
 - [ ] Country pages: sanctions and markets per country (needs ISO codes on
       each row).
-- [ ] Pop-out windows saved as part of workspaces.
 
 ## Frontend
 

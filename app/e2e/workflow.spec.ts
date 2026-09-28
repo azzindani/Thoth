@@ -241,3 +241,49 @@ test("map note pinned from the Area tab; sitrep of the view carries it", async (
 		});
 	}
 });
+
+test("a shared workspace reopens its pop-out windows", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	const ws = {
+		v: 1,
+		name: "with windows",
+		hidden: [],
+		camera: { c: [142.4, 38.3], z: 4 },
+		mission: "",
+		sev: "",
+		mode: "default",
+		globe: true,
+		tab: "object",
+		panels: { expl: false, insp: false, dock: false },
+		pops: [
+			{
+				key: "quakes:e2e:1",
+				p: {
+					id: "e2e:1",
+					title: "E2E pinned quake",
+					layer: "quakes",
+					severity: "watch",
+					source: "usgs",
+					url: "https://earthquake.usgs.gov/",
+					lon: 142.4,
+					lat: 38.3,
+				},
+				anchor: [142.4, 38.3],
+				x: 400,
+				y: 200,
+				min: false,
+				z: 2,
+			},
+		],
+	};
+	const token = Buffer.from(JSON.stringify(ws))
+		.toString("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=+$/, "");
+	await page.goto(`/#ws=${token}`);
+	await expect(page.locator("#map canvas")).toBeVisible({ timeout: 30000 });
+	const win = page.locator(".popwin");
+	await expect(win).toHaveCount(1, { timeout: 20000 });
+	await expect(win).toContainText("E2E pinned quake");
+});

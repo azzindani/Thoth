@@ -25,7 +25,11 @@ import {
 	ShortcutSheet,
 } from "../components/Palette";
 import PhoneNav, { type NavKey } from "../components/PhoneNav";
-import PopWindows, { LAYERS_EVENT } from "../components/PopWindows";
+import PopWindows, {
+	currentPops,
+	LAYERS_EVENT,
+	POPS_EVENT,
+} from "../components/PopWindows";
 import Replay from "../components/Replay";
 import SettingsPanel from "../components/SettingsPanel";
 import SinceDigest from "../components/SinceDigest";
@@ -50,6 +54,7 @@ import { useSettings } from "../lib/useSettings";
 import {
 	deleteWorkspace,
 	listWorkspaces,
+	packPop,
 	saveWorkspace,
 	type Workspace,
 	workspaceFromHash,
@@ -841,6 +846,7 @@ export default function Terminal() {
 			globe,
 			tab,
 			panels: hidden,
+			pops: currentPops().map(packPop),
 		};
 	}
 	const applyWorkspace = useCallback((w: Workspace) => {
@@ -857,6 +863,9 @@ export default function Terminal() {
 		setGlobe(w.globe);
 		setTab(w.tab as Tab);
 		setHidden(w.panels);
+		// Older workspaces carry no windows: leave the open ones alone.
+		if (w.pops)
+			window.dispatchEvent(new CustomEvent(POPS_EVENT, { detail: w.pops }));
 		mapRef.current?.jumpTo({
 			center: w.camera.c,
 			zoom: w.camera.z,

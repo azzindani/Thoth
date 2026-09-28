@@ -11,12 +11,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type LayerItem } from "../lib/api";
 import { sourceHome } from "../lib/sources";
 import { ageStr } from "../lib/ui";
+import { isSavedPop, MAX_POPS, type SavedPop } from "../lib/workspace";
 import { type ObjProps, POPOUT_EVENT, type PopoutDetail } from "./map-popups";
 
 /** page.tsx dispatches this with the layers an SSE tick changed. */
 export const LAYERS_EVENT = "thoth:layers";
+/** Replace the open windows (a workspace being applied); detail: SavedPop[]. */
+export const POPS_EVENT = "thoth:pops";
 const STORE_KEY = "thoth.pop";
-const MAX = 4;
+const MAX = MAX_POPS;
+
+/** The open windows, as persisted (for a workspace capture). */
+export function currentPops(): SavedPop[] {
+	try {
+		const xs = JSON.parse(localStorage.getItem(STORE_KEY) ?? "[]");
+		return Array.isArray(xs) ? xs.filter(isSavedPop).slice(-MAX) : [];
+	} catch {
+		return [];
+	}
+}
 const WIN_W = 300; // keep in sync with .popwin width
 const EDGE = 8;
 
@@ -107,6 +120,24 @@ export default function PopWindows({
 		} catch {
 			/* start empty */
 		}
+	}, []);
+	// A workspace brings its own windows (none = close them all).
+	useEffect(() => {
+		function onPops(e: Event) {
+			const saved = (e as CustomEvent<SavedPop[]>).detail
+				.filter(isSavedPop)
+				.slice(-MAX);
+			zTop.current = Math.max(1, ...saved.map((w) => w.z));
+			setWins(
+				saved.map((w) => ({
+					...w,
+					p: w.p as unknown as ObjProps,
+					...clampPos(w.x, w.y),
+				})),
+			);
+		}
+		window.addEventListener(POPS_EVENT, onPops);
+		return () => window.removeEventListener(POPS_EVENT, onPops);
 	}, []);
 	const restored = useRef(false);
 	useEffect(() => {
