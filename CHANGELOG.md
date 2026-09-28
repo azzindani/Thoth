@@ -10,6 +10,10 @@ listed in [Upgrading](docs/operations/upgrading.md).
 ## [Unreleased]
 
 ### Added
+- **Outbound webhooks** (`WEBHOOK_URLS`, `WEBHOOK_SECRET`): each URL gets
+  a signed JSON POST for every new critical alert and watch match, with
+  retries and a baseline so switching them on does not replay what is
+  already live. Migration `011_webhooks.sql` adds the delivery log.
 - **Reader API keys** (`API_READ_KEYS`, or `API_READ_KEYS_FILE` re-read
   on change): named read-only keys that identify their caller in the access
   log and can carry their own per-minute limit. `API_READ_REQUIRED=1`

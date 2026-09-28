@@ -43,6 +43,10 @@ const Env = z.object({
 	FINNHUB_KEY: z.string().default(""),
 	TELEGRAM_BOT_TOKEN: z.string().default(""),
 	TELEGRAM_CHAT_ID: z.string().default(""),
+	// Outbound webhooks (workers/webhooks.ts): comma-separated http(s) URLs
+	// that receive critical alerts and watch matches; the secret signs them.
+	WEBHOOK_URLS: z.string().default(""),
+	WEBHOOK_SECRET: z.string().default(""),
 	// Retention (worker prune job, hourly). Monitor history and the raw
 	// fetch log are operational and short-lived; events are intelligence,
 	// kept longer, and only pruned when neither observed nor re-seen within

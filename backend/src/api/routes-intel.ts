@@ -1,6 +1,10 @@
 import type express from "express";
 import { query } from "../db/client.js";
-import { getBrief, getLayerSlice as slice } from "../db/queries.js";
+import {
+	getBrief,
+	getLayerSlice as slice,
+	watchCondition,
+} from "../db/queries.js";
 import { pushTelegram } from "../workers/lib/push.js";
 import { queryImagery } from "./imagery.js";
 import {
@@ -168,29 +172,8 @@ export function registerIntel(app: express.Express): void {
 			res.json({ ok: true, count: 0, items: [] });
 			return;
 		}
-		const ors: string[] = [];
 		const params: unknown[] = [];
-		for (const w of watches) {
-			if (w.kind === "keyword") {
-				params.push(`%${w.value}%`);
-				ors.push(
-					`(title ILIKE $${params.length} OR body ILIKE $${params.length})`,
-				);
-			} else if (w.kind === "area") {
-				// Anything live inside the area; catalogs (airports…) never.
-				params.push(w.id);
-				ors.push(
-					`(source <> 'static' AND geom IS NOT NULL AND ST_Intersects(geom,
-					   (SELECT g.geom FROM watchlists g WHERE g.id = $${params.length})))`,
-				);
-			} else if (w.kind === "layer") {
-				params.push(w.value);
-				ors.push(`layer = $${params.length}`);
-			} else {
-				params.push(w.value);
-				ors.push(`severity = $${params.length}`);
-			}
-		}
+		const ors = watches.map((w) => watchCondition(w, params));
 		params.push(limit);
 		const items = await query(
 			`SELECT id, ts, source, layer, title, body, url, severity, confidence,
