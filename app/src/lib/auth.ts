@@ -132,7 +132,12 @@ export function isPublicPath(pathname: string): boolean {
 		// Vendored maplibre worker (public library code; the map breaks
 		// without it, and worker fetches must not depend on auth caching).
 		pathname.startsWith("/maplibre/") ||
-		pathname === "/favicon.ico"
+		pathname === "/favicon.ico" ||
+		// Install surface: browsers fetch the manifest without cookies.
+		pathname === "/manifest.webmanifest" ||
+		pathname === "/sw.js" ||
+		pathname.startsWith("/icons/") ||
+		pathname.startsWith("/icon.svg")
 	);
 }
 

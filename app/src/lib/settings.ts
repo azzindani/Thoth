@@ -38,6 +38,8 @@ export type Settings = {
 	critPopups: boolean;
 	/** watch-match popups */
 	watchPopups: boolean;
+	/** system notifications for criticals while the app is in the background */
+	notify: boolean;
 	/** hover previews on the map (desk) */
 	hover: boolean;
 	/** overview minimap (desk/tablet) */
@@ -56,6 +58,7 @@ export const DEFAULTS: Settings = {
 	time: "utc",
 	critPopups: true,
 	watchPopups: true,
+	notify: false,
 	hover: true,
 	minimap: true,
 	solid: false,
@@ -81,6 +84,7 @@ export function sanitize(raw: unknown): Settings {
 		time: r.time === "local" ? "local" : "utc",
 		critPopups: bool(r.critPopups, DEFAULTS.critPopups),
 		watchPopups: bool(r.watchPopups, DEFAULTS.watchPopups),
+		notify: bool(r.notify, DEFAULTS.notify),
 		hover: bool(r.hover, DEFAULTS.hover),
 		minimap: bool(r.minimap, DEFAULTS.minimap),
 		solid: bool(r.solid, DEFAULTS.solid),

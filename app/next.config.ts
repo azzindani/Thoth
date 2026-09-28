@@ -33,7 +33,14 @@ const nextConfig: NextConfig = {
 		NEXT_PUBLIC_THOTH_VERSION: VERSION,
 	},
 	async headers() {
-		return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+		return [
+			{ source: "/:path*", headers: SECURITY_HEADERS },
+			// A service worker must never be served stale from cache.
+			{
+				source: "/sw.js",
+				headers: [{ key: "Cache-Control", value: "no-cache" }],
+			},
+		];
 	},
 	async rewrites() {
 		return [

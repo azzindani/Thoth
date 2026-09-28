@@ -5,6 +5,7 @@
 // screen; on phones it fills the width and scrolls.
 import { useRef } from "react";
 import { useDialog } from "../lib/dialog";
+import { enableNotifications, notificationsSupported } from "../lib/pwa";
 import {
 	DEFAULTS,
 	LAYOUT_KEYS,
@@ -217,6 +218,20 @@ export default function SettingsPanel({
 						label="Watch match pop-ups"
 						on={s.watchPopups}
 						onChange={(watchPopups) => set({ watchPopups })}
+					/>
+					<Toggle
+						label="Critical alert notifications"
+						hint={
+							notificationsSupported()
+								? "System notifications while Thoth is in the background (another tab, or the installed app minimised)."
+								: "Not available in this browser."
+						}
+						on={s.notify}
+						onChange={async (notify) => {
+							if (!notify) return set({ notify });
+							if (await enableNotifications()) set({ notify: true });
+							else onNotice("Notifications are blocked for this site");
+						}}
 					/>
 
 					<h4>Reset</h4>

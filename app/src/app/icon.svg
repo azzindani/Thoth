@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Thoth</title>
+  <rect width="64" height="64" rx="14" fill="#0b0b0a"/>
+  <g fill="none" stroke="#4fbfae" stroke-width="3.2" stroke-linecap="round">
+    <circle cx="32" cy="32" r="19"/>
+    <ellipse cx="32" cy="32" rx="8" ry="19"/>
+    <path d="M13.5 32h37"/>
+  </g>
+  <circle cx="44.5" cy="19.5" r="4.6" fill="#f0a020" stroke="#0b0b0a" stroke-width="2"/>
+</svg>
