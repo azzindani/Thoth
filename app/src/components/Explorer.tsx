@@ -9,6 +9,7 @@ import {
 } from "../lib/layer-catalog";
 import { SheetHead } from "../lib/sheet";
 import { Chip, Field, fmtCadence, LayerRow, Switch } from "../lib/ui";
+import { LAYER_STATUS_EVENT, layerErrors } from "./MapView";
 
 export default function Explorer({
 	counts,
@@ -36,6 +37,12 @@ export default function Explorer({
 	onTheater: (key: string) => void;
 }) {
 	const [find, setFind] = useState("");
+	const [errors, setErrors] = useState<Map<string, string>>(new Map());
+	useEffect(() => {
+		const on = () => setErrors(new Map(layerErrors));
+		window.addEventListener(LAYER_STATUS_EVENT, on);
+		return () => window.removeEventListener(LAYER_STATUS_EVENT, on);
+	}, []);
 	const shown = LAYER_NAMES.filter((l) =>
 		l.includes(find.trim().toLowerCase()),
 	);
@@ -140,6 +147,7 @@ export default function Explorer({
 											count={c}
 											visible={visible[l]}
 											onToggle={() => onToggle(l)}
+											error={errors.get(l)}
 											title={`${l} · ${c} events · refresh every ${cad}${LAYERS[l]?.polygon ? " · polygon" : ""}`}
 										/>
 									);

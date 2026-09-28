@@ -1,9 +1,28 @@
 // Empty string = same-origin (/api/* served by the Next rewrite proxy).
 export const API = process.env.NEXT_PUBLIC_THOTH_API ?? "";
 
+/** A non-2xx answer, with what a caller needs to decide on a retry. */
+export class ApiError extends Error {
+	constructor(
+		readonly path: string,
+		readonly status: number,
+		/** seconds, from Retry-After (429/503) */
+		readonly retryAfter: number | null,
+	) {
+		super(`${path}: HTTP ${status}`);
+	}
+}
+
 async function get<T>(path: string): Promise<T> {
 	const r = await fetch(`${API}${path}`, { cache: "no-store" });
-	if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+	if (!r.ok) {
+		const ra = Number(r.headers.get("retry-after"));
+		throw new ApiError(
+			path,
+			r.status,
+			Number.isFinite(ra) && ra > 0 ? ra : null,
+		);
+	}
 	return (await r.json()) as T;
 }
 

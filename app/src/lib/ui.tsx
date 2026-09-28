@@ -102,12 +102,15 @@ export function LayerRow({
 	visible,
 	onToggle,
 	title,
+	error,
 }: {
 	name: string;
 	count: string | number;
 	visible: boolean;
 	onToggle: () => void;
 	title?: string;
+	/** last load failed: shown instead of the count */
+	error?: string;
 }) {
 	return (
 		<div
@@ -123,11 +126,11 @@ export function LayerRow({
 					onToggle();
 				}
 			}}
-			title={title}
+			title={error ? `${name} failed to load (${error}), retrying` : title}
 		>
 			<Glyph layer={name} />
 			<span className="nm">{name}</span>
-			<b>{count}</b>
+			{error ? <b className="lrow-err">!</b> : <b>{count}</b>}
 			<Switch on={visible} />
 		</div>
 	);

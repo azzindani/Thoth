@@ -59,7 +59,7 @@ services:
 |---|---|---|
 | `API_WRITE_KEY` | *(empty)* | Shared secret for POST, PUT, PATCH and DELETE on `/api`, sent as `Authorization: Bearer <key>` or `X-Thoth-Key`. When empty, writes are open in development and **refused** in production. Compose requires it. Generate with `openssl rand -hex 32`. |
 | `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Express `trust proxy` setting. It decides `req.ip`, which is used for rate limits and logs. Widen it only for proxy hops you know. |
-| `REQUESTS_PER_MIN` | `120` (compose: `300`) | Fixed-window rate limit per client IP. SSE and probes are exempt. Raise it only for load tests from a single IP. |
+| `REQUESTS_PER_MIN` | `300` | Fixed-window rate limit per client IP. SSE and probes are exempt. One page load requests every layer (about 45 calls), so keep this well above that; the app retries a limited layer after `Retry-After`. Raise it only for load tests from a single IP. |
 | `CORS_ORIGIN` | `*` | `*` or a comma-separated list of origins. Only matters when browsers call the API cross-origin. |
 | `SSE_MAX_CLIENTS` | `500` | Concurrent `/api/stream` clients. Beyond this, the API answers `503` with `Retry-After`. |
 
