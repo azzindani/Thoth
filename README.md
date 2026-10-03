@@ -10,6 +10,8 @@ database with full provenance, and shows it on an interactive globe.
 [![ci](https://github.com/azzindani/Thoth/actions/workflows/ci.yml/badge.svg)](https://github.com/azzindani/Thoth/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+![Thoth on a desktop: layer rail, live globe, inspector and threat timeline](docs/assets/screenshots/desktop.png)
+
 ## Features
 
 - **Keyless by default.** Every core feed works without an API key or a paid
@@ -31,6 +33,18 @@ database with full provenance, and shows it on an interactive globe.
 - **Integrations.** An OpenAPI 3.1 description of every route, named reader
   keys with their own rate limits, and signed outbound webhooks for
   critical alerts and watch matches.
+
+## Screenshots
+
+The same terminal on a tablet (820 × 1180), where the layer rail collapses
+to icons with live counts, and on a phone (390 × 844), where panels move
+behind a bottom tab bar. All three captures are from a live deployment.
+
+<p align="center">
+  <img src="docs/assets/screenshots/tablet.png" alt="Thoth on a tablet: icon layer rail, globe and threat timeline" height="560">
+  &nbsp;
+  <img src="docs/assets/screenshots/phone.png" alt="Thoth on a phone: full-screen globe with a bottom tab bar" height="560">
+</p>
 
 ## Architecture at a glance
 
