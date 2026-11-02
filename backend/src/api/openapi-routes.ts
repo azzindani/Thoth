@@ -27,7 +27,7 @@ export type RouteDoc = {
 	tag: string;
 	summary: string;
 	description?: string;
-	query?: z.AnyZodObject;
+	query?: z.ZodObject;
 	body?: z.ZodTypeAny;
 	/** text/event-stream */
 	stream?: boolean;
@@ -66,7 +66,7 @@ const lookup = (
 	path: string,
 	tag: string,
 	summary: string,
-	query: z.AnyZodObject,
+	query: z.ZodObject,
 ): RouteDoc => get(path, tag, summary, { query, upstream: true });
 
 const SYSTEM = "System";

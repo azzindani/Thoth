@@ -117,7 +117,7 @@ export const NoteParams = z.object({
 
 export const ScreenParams = z.object({
 	name: Slug,
-	spec: z.record(z.unknown()).default({}),
+	spec: z.record(z.string(), z.unknown()).default({}),
 });
 
 export const CountryParams = z.object({

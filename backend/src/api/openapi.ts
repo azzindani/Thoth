@@ -9,92 +9,112 @@ import { VERSION } from "./shared.js";
 // a registered route has no catalog entry, or the committed copy is stale.
 
 type Json = Record<string, unknown>;
+/** The parts of zod 4's schema definitions (`schema._zod.def`) read here. */
 type Def = {
-	typeName?: string;
-	description?: string;
-	checks?: {
-		kind: string;
-		value?: number;
-		inclusive?: boolean;
-		regex?: RegExp;
-	}[];
+	type: string;
+	checks?: { _zod: { def: Check } }[];
 	[k: string]: unknown;
 };
+type Check = {
+	check: string;
+	minimum?: number;
+	maximum?: number;
+	value?: number;
+	inclusive?: boolean;
+	format?: string;
+	pattern?: RegExp;
+};
 
-const defOf = (s: z.ZodTypeAny) => s._def as Def;
+const defOf = (s: z.ZodTypeAny) => s._zod.def as unknown as Def;
+const checksOf = (d: Def) => (d.checks ?? []).map((c) => c._zod.def);
+const INT_FORMATS = new Set(["safeint", "int32", "uint32"]);
+const STRING_FORMATS: Record<string, string> = {
+	datetime: "date-time",
+	email: "email",
+	url: "uri",
+};
 
 /** JSON Schema (2020-12, as OpenAPI 3.1 uses) for the zod subset the
  * routes use. Transforms and refinements document their input type. */
 export function toJsonSchema(s: z.ZodTypeAny): Json {
-	const d = defOf(s);
-	const out = convert(s, d);
-	if (d.description && out.description === undefined)
-		out.description = d.description;
+	const out = convert(defOf(s));
+	if (s.description && out.description === undefined)
+		out.description = s.description;
 	return out;
 }
 
-function convert(s: z.ZodTypeAny, d: Def): Json {
-	switch (d.typeName) {
-		case "ZodString": {
+function convert(d: Def): Json {
+	switch (d.type) {
+		case "string": {
 			const o: Json = { type: "string" };
-			for (const c of d.checks ?? []) {
-				if (c.kind === "min") o.minLength = c.value;
-				else if (c.kind === "max") o.maxLength = c.value;
-				else if (c.kind === "regex" && c.regex) o.pattern = c.regex.source;
-				else if (c.kind === "datetime") o.format = "date-time";
-				else if (c.kind === "email") o.format = "email";
-				else if (c.kind === "url") o.format = "uri";
+			for (const c of checksOf(d)) {
+				if (c.check === "min_length") o.minLength = c.minimum;
+				else if (c.check === "max_length") o.maxLength = c.maximum;
+				else if (c.check === "string_format" && c.format) {
+					if (c.format === "regex" && c.pattern) o.pattern = c.pattern.source;
+					else if (STRING_FORMATS[c.format])
+						o.format = STRING_FORMATS[c.format];
+				}
 			}
 			return o;
 		}
-		case "ZodNumber": {
+		case "number": {
 			const o: Json = { type: "number" };
-			for (const c of d.checks ?? []) {
-				if (c.kind === "int") o.type = "integer";
-				else if (c.kind === "min")
-					o[c.inclusive === false ? "exclusiveMinimum" : "minimum"] = c.value;
-				else if (c.kind === "max")
-					o[c.inclusive === false ? "exclusiveMaximum" : "maximum"] = c.value;
+			for (const c of checksOf(d)) {
+				if (c.check === "number_format" && INT_FORMATS.has(c.format ?? ""))
+					o.type = "integer";
+				else if (c.check === "greater_than")
+					o[c.inclusive ? "minimum" : "exclusiveMinimum"] = c.value;
+				else if (c.check === "less_than")
+					o[c.inclusive ? "maximum" : "exclusiveMaximum"] = c.value;
 			}
 			return o;
 		}
-		case "ZodBoolean":
+		case "boolean":
 			return { type: "boolean" };
-		case "ZodEnum":
-			return { type: "string", enum: [...(d.values as string[])] };
-		case "ZodLiteral":
-			return { const: d.value };
-		case "ZodOptional":
+		case "enum":
+			return {
+				type: "string",
+				enum: Object.values(d.entries as Record<string, string>),
+			};
+		case "literal":
+			return { const: (d.values as unknown[])[0] };
+		case "optional":
 			return toJsonSchema(d.innerType as z.ZodTypeAny);
-		case "ZodNullable":
+		case "nullable":
 			return {
 				anyOf: [toJsonSchema(d.innerType as z.ZodTypeAny), { type: "null" }],
 			};
-		case "ZodDefault":
+		case "default":
 			return {
 				...toJsonSchema(d.innerType as z.ZodTypeAny),
-				default: (d.defaultValue as () => unknown)(),
+				default: d.defaultValue,
 			};
-		case "ZodEffects":
-			return toJsonSchema(d.schema as z.ZodTypeAny);
-		case "ZodArray": {
+		case "pipe": {
+			// .transform() pipes into a transform; z.preprocess pipes out of one.
+			const inner = d.in as z.ZodTypeAny;
+			return toJsonSchema(
+				defOf(inner).type === "transform" ? (d.out as z.ZodTypeAny) : inner,
+			);
+		}
+		case "array": {
 			const o: Json = {
 				type: "array",
-				items: toJsonSchema(d.type as z.ZodTypeAny),
+				items: toJsonSchema(d.element as z.ZodTypeAny),
 			};
-			const min = d.minLength as { value: number } | null;
-			const max = d.maxLength as { value: number } | null;
-			if (min) o.minItems = min.value;
-			if (max) o.maxItems = max.value;
+			for (const c of checksOf(d)) {
+				if (c.check === "min_length") o.minItems = c.minimum;
+				else if (c.check === "max_length") o.maxItems = c.maximum;
+			}
 			return o;
 		}
-		case "ZodObject": {
-			const shape = (s as z.AnyZodObject).shape as Record<string, z.ZodTypeAny>;
+		case "object": {
+			const shape = d.shape as Record<string, z.ZodTypeAny>;
 			const properties: Json = {};
 			const required: string[] = [];
 			for (const [k, v] of Object.entries(shape)) {
 				properties[k] = toJsonSchema(v);
-				if (!v.isOptional()) required.push(k);
+				if (!v.safeParse(undefined).success) required.push(k);
 			}
 			return {
 				type: "object",
@@ -102,21 +122,17 @@ function convert(s: z.ZodTypeAny, d: Def): Json {
 				...(required.length ? { required } : {}),
 			};
 		}
-		case "ZodRecord":
+		case "record":
 			return {
 				type: "object",
 				additionalProperties: toJsonSchema(d.valueType as z.ZodTypeAny),
 			};
-		case "ZodUnion":
-			return {
-				anyOf: (d.options as z.ZodTypeAny[]).map((o) => toJsonSchema(o)),
-			};
-		case "ZodDiscriminatedUnion":
-			return {
-				oneOf: [...(d.options as z.ZodTypeAny[])].map((o) => toJsonSchema(o)),
-			};
+		case "union": {
+			const options = (d.options as z.ZodTypeAny[]).map((o) => toJsonSchema(o));
+			return d.discriminator ? { oneOf: options } : { anyOf: options };
+		}
 		default:
-			// ZodUnknown / ZodAny: anything
+			// unknown / any: anything
 			return {};
 	}
 }

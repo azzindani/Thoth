@@ -19,7 +19,7 @@ const Alert = z.object({
 			code: z.string().optional(),
 			name: z.string().optional(),
 			type: z.string().optional(),
-			attrs: z.record(z.string()).optional(),
+			attrs: z.record(z.string(), z.string()).optional(),
 		})
 		.optional(),
 });

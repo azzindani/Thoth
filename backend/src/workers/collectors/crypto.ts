@@ -22,7 +22,7 @@ const Ticker = z
 const Rates = z.object({
 	data: z.object({
 		currency: z.string().optional(),
-		rates: z.record(z.string()).optional(),
+		rates: z.record(z.string(), z.string()).optional(),
 	}),
 });
 

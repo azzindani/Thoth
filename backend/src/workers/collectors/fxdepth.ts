@@ -24,7 +24,7 @@ export function parseEcb(xml: string): {
 const FxRates = z.object({
 	base: z.string().optional(),
 	date: z.string().optional(),
-	rates: z.record(z.number()).optional(),
+	rates: z.record(z.string(), z.number()).optional(),
 });
 
 export async function collect() {

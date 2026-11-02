@@ -41,7 +41,12 @@ const COUNTRIES = [
 ];
 
 const Resp = z.object({
-	values: z.record(z.record(z.record(z.number().nullable()))).optional(),
+	values: z
+		.record(
+			z.string(),
+			z.record(z.string(), z.record(z.string(), z.number().nullable())),
+		)
+		.optional(),
 });
 
 export async function collect() {
