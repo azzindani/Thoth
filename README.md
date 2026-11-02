@@ -10,6 +10,13 @@ database with full provenance, and shows it on an interactive globe.
 [![ci](https://github.com/azzindani/Thoth/actions/workflows/ci.yml/badge.svg)](https://github.com/azzindani/Thoth/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+> **Archived 2026-11-02.** The live deployment was shut down. Its full
+> database (about 970k events from 2026-09-24 to 2026-11-02, raw payloads,
+> run logs and a `pg_dump` for restore) is published as the Hugging Face
+> dataset [Azzindani/thoth](https://huggingface.co/datasets/Azzindani/thoth).
+> To bring it back, follow the quick start below, then restore the dump as
+> described in the dataset card.
+
 ![Thoth on a desktop: layer rail, live globe, inspector and threat timeline](docs/assets/screenshots/desktop.png)
 
 ## Features
