@@ -4,7 +4,10 @@
 # collectors, and it asserts attempts (health rows), never upstream success.
 name: ci
 on:
+  # Branches only: a tag names a past release, whose locked dependencies are
+  # fixed on main and never in the tag, so a re-pushed tag would re-fail its audit.
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 
@@ -123,6 +126,8 @@ jobs:
             app/package-lock.json
             backend/package-lock.json
       - run: npm ci --no-audit --no-fund
+        working-directory: app
+      - run: npm audit --omit=dev --audit-level=high
         working-directory: app
       - run: npx tsc --noEmit
         working-directory: app
